@@ -11,44 +11,94 @@ by Jeffery Myers is marked with CC0 1.0. To view a copy of this license, visit h
 
 #include "resource_dir.h"	// utility header for SearchAndSetResourceDir
 
-int main ()
+//int main ()
+//{
+//	// Tell the window to use vsync and work on high DPI displays
+//	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+//
+//	// Create the window and OpenGL context
+//	InitWindow(1280, 800, "Hello Raylib");
+//
+//	// Utility function from resource_dir.h to find the resources folder and set it as the current working directory so we can load from it
+//	SearchAndSetResourceDir("resources");
+//
+//	// Load a texture from the resources directory
+//	Texture wabbit = LoadTexture("wabbit_alpha.png");
+//	
+//	// game loop
+//	while (!WindowShouldClose())		// run the loop untill the user presses ESCAPE or presses the Close button on the window
+//	{
+//		// drawing
+//		BeginDrawing();
+//
+//		// Setup the back buffer for drawing (clear color and depth buffers)
+//		ClearBackground(BLACK);
+//
+//		// draw some text using the default font
+//		DrawText("Hello Raylib", 200,200,20,WHITE);
+//
+//		// draw our texture to the screen
+//		DrawTexture(wabbit, 400, 200, WHITE);
+//		
+//		// end the frame and get ready for the next one  (display frame, poll input, etc...)
+//		EndDrawing();
+//	}
+//
+//	// cleanup
+//	// unload our texture so it can be cleaned up
+//	UnloadTexture(wabbit);
+//
+//	// destroy the window and cleanup the OpenGL context
+//	CloseWindow();
+//	return 0;
+//}
+
+int main(void) 
 {
-	// Tell the window to use vsync and work on high DPI displays
-	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+    SetConfigFlags(FLAG_FULLSCREEN_MODE);
+    InitWindow(GetScreenWidth(), GetScreenHeight(), "Borderless fullscreen");
 
-	// Create the window and OpenGL context
-	InitWindow(1280, 800, "Hello Raylib");
+    // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
 
-	// Utility function from resource_dir.h to find the resources folder and set it as the current working directory so we can load from it
-	SearchAndSetResourceDir("resources");
+    Image image = LoadImage("baixades/JotPK.png");     // Loaded in CPU memory (RAM)
+    Texture2D texture = LoadTextureFromImage(image);          // Image converted to texture, GPU memory (VRAM)
+    UnloadImage(image);   // Once image has been converted to texture and uploaded to VRAM, it can be unloaded from RAM
 
-	// Load a texture from the resources directory
-	Texture wabbit = LoadTexture("wabbit_alpha.png");
-	
-	// game loop
-	while (!WindowShouldClose())		// run the loop untill the user presses ESCAPE or presses the Close button on the window
-	{
-		// drawing
-		BeginDrawing();
 
-		// Setup the back buffer for drawing (clear color and depth buffers)
-		ClearBackground(BLACK);
 
-		// draw some text using the default font
-		DrawText("Hello Raylib", 200,200,20,WHITE);
 
-		// draw our texture to the screen
-		DrawTexture(wabbit, 400, 200, WHITE);
-		
-		// end the frame and get ready for the next one  (display frame, poll input, etc...)
-		EndDrawing();
-	}
+    //Para que el juego vaya a 60 FPS
 
-	// cleanup
-	// unload our texture so it can be cleaned up
-	UnloadTexture(wabbit);
+    SetTargetFPS(60);       
+    
 
-	// destroy the window and cleanup the OpenGL context
-	CloseWindow();
-	return 0;
+    // Main game loop
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        // Update
+   
+        // TODO: Update your variables here
+
+        // Draw
+
+        BeginDrawing();
+
+        ClearBackground(BLACK);
+
+        DrawTexture(texture, 200 / 2 - texture.width / 2, 200 / 2 - texture.height / 2, WHITE);
+
+        EndDrawing();
+
+    }
+
+    // De-Initialization 
+    
+    //Cierra la ventana y abre OpenGL context
+
+    UnloadTexture(texture);
+
+    CloseWindow();  
+
+
+    return 0;
 }
