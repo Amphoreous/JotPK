@@ -55,12 +55,16 @@ by Jeffery Myers is marked with CC0 1.0. To view a copy of this license, visit h
 
 int main(void) 
 {
-    SetConfigFlags(FLAG_FULLSCREEN_MODE);
-    InitWindow(GetScreenWidth(), GetScreenHeight(), "Borderless fullscreen");
+	// Initialization
+	SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED); // Set window configuration state using flags
+    InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Praire King"); // Initialize window and OpenGL context
+
+	// Utility function from resource_dir.h to find the resources folder and set it as the current working directory so we can load from it
+    SearchAndSetResourceDir("resources");
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
 
-    Image image = LoadImage("baixades/JotPK.png");     // Loaded in CPU memory (RAM)
+    Image image = LoadImage("JotPK.png");     // Loaded in CPU memory (RAM)
     Texture2D texture = LoadTextureFromImage(image);          // Image converted to texture, GPU memory (VRAM)
     UnloadImage(image);   // Once image has been converted to texture and uploaded to VRAM, it can be unloaded from RAM
 
