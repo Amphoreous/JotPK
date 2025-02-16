@@ -31,21 +31,21 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
 
     - name: Build project
       run: |
         sudo apt-get update
-        sudo apt-get install -y premake4 make gcc g++ libx11-dev libxrandr-dev libxi-dev libxxf86vm-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev libncurses5-dev libssl-dev libxcursor-dev
+        sudo apt-get install -y premake4 make gcc g++ libx11-dev libxrandr-dev libxi-dev libxxf86vm-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev libncurses5-dev libssl-dev libxcursor-dev libxinerama-dev
         cd build
         ./premake5 gmake2
         cd ..
         make config=release_x64
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
