@@ -40,11 +40,12 @@ jobs:
 
     - name: Build project
       run: |
-        sudo apt-get install -y premake4 make gcc g++
+        sudo apt-get update
+        sudo apt-get install -y premake4 make gcc g++ libx11-dev libxrandr-dev libxi-dev libxxf86vm-dev libgl1-mesa-dev libglu1-mesa-dev
         cd build
         ./premake5 gmake2
         cd ..
-        make
+        make config=release_x64
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
