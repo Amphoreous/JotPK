@@ -1,4 +1,4 @@
-#include "menu.h"
+#include "menu.h" // Include the header file with the function declarations
 
 void DrawMenu(Texture JotPKLogo, int selectedOption)
 {
