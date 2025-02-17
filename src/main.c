@@ -9,8 +9,15 @@ int main(void)
 {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
-    SetTargetFPS(60);
+
     SearchAndSetResourceDir("resources");
+
+    // Cargar el icono de la ventana
+    Image icon = LoadImage("icon.png");
+    SetWindowIcon(icon);
+    UnloadImage(icon); // No se necesita más el objeto Image después de establecer el icono
+
+    SetTargetFPS(60);
     Texture JotPKLogo = LoadTexture("JotPK.png");
 
     GameScreen currentScreen = MENU;
