@@ -1,6 +1,9 @@
 #include "raylib.h"
 #include "resource_dir.h"
 #include "menu.h"
+#include "game.h"
+#include "settings.h"
+#include "htp.h"
 
 int main(void)
 {
@@ -22,40 +25,15 @@ int main(void)
         }
         else if (currentScreen == GAME)
         {
-            BeginDrawing();
-            ClearBackground(BLACK);
-            DrawText("Juego en progreso...", 190, 200, 20, WHITE);
-            EndDrawing();
+            DrawGame();
         }
         else if (currentScreen == SETTINGS)
         {
-            BeginDrawing();
-            ClearBackground(BLACK);
-            int textWidth = MeasureText("SETTINGS", 50);
-            DrawText("SETTINGS", (GetScreenWidth() - textWidth) / 2, 100, 50, WHITE);
-            DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
-            DrawText("Back", 190, 500, 20, WHITE);
-            EndDrawing();
-
-            if (CheckCollisionPointRec(GetMousePosition(), (Rectangle) { 190, 500, MeasureText("Back", 20), 20 }) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-            {
-                currentScreen = MENU;
-            }
+            DrawSettings(&currentScreen);
         }
         else if (currentScreen == HTP)
         {
-            BeginDrawing();
-            ClearBackground(BLACK);
-            int textWidth = MeasureText("HOW TO PLAY", 50);
-            DrawText("HOW TO PLAY", (GetScreenWidth() - textWidth) / 2, 100, 50, WHITE);
-            DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
-            DrawText("Back", 190, 500, 20, WHITE);
-            EndDrawing();
-
-            if (CheckCollisionPointRec(GetMousePosition(), (Rectangle) { 190, 500, MeasureText("Back", 20), 20 }) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-            {
-                currentScreen = MENU;
-            }
+            DrawHTP(&currentScreen);
         }
     }
 
