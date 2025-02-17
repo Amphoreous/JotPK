@@ -1,7 +1,7 @@
 #include "raylib.h"
 #include "resource_dir.h"
 
-typedef enum { MENU, GAME, HTP } GameScreen;
+typedef enum { MENU, GAME, SETTINGS,HTP } GameScreen;
 
 int main(void)
 {
@@ -9,7 +9,7 @@ int main(void)
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
     SetTargetFPS(60);
     SearchAndSetResourceDir("resources");
-    Texture JotPKLogo = LoadTexture("JotPK_logo.png");
+    Texture JotPKLogo = LoadTexture("JotPK.png");
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
@@ -25,8 +25,7 @@ int main(void)
                 if (selectedOption == 0) currentScreen = GAME; // Iniciar juego
                 else if (selectedOption == 1) // Configuración
                 {
-
-
+                    currentScreen = SETTINGS;
                 }
                 else if (selectedOption == 2)
                 {
@@ -34,6 +33,7 @@ int main(void)
                 }
                 else if (selectedOption == 3) break; // Salir
             }
+
             BeginDrawing();
             ClearBackground(BLACK);
             DrawTexture(JotPKLogo, (GetScreenWidth() - JotPKLogo.width) / 2, 50, WHITE);
@@ -43,6 +43,7 @@ int main(void)
             DrawText("Quit", 190, 450, 20, selectedOption == 3 ? RED : WHITE);
             EndDrawing();
         }
+
         else if (currentScreen == GAME)
         {
             BeginDrawing();
@@ -50,13 +51,23 @@ int main(void)
             DrawText("Juego en progreso...", 190, 200, 20, WHITE);
             EndDrawing();
         }
-        else if (currentScreen == HTP) {
+        else if (currentScreen == SETTINGS) 
+        {
             ClearBackground(BLACK);
             BeginDrawing();
-            DrawText("HOW TO PLAY", GetScreenWidth() / 2, 50, WHITE);
+            DrawText("SETTINGS", (GetScreenWidth() / 2.5), 100, 50, WHITE);
             DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
             EndDrawing();
         }
+        else if (currentScreen == HTP) 
+        {
+            ClearBackground(BLACK);
+            BeginDrawing();
+            DrawText("HOW TO PLAY", (GetScreenWidth() / 2.6), 100, 50, WHITE);
+            DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
+            EndDrawing();
+        }
+
     }
 
     UnloadTexture(JotPKLogo);
