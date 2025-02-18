@@ -4,42 +4,41 @@
 #include "game.h"
 #include "settings.h"
 #include "htp.h"
+#include "intro.h"
 
-int main(void)
-{
+int main(void) {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
 
     SearchAndSetResourceDir("resources");
 
-    // Cargar el icono de la ventana
     Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
-    UnloadImage(icon); // No se necesita más el objeto Image después de establecer el icono
+    UnloadImage(icon);
 
     SetTargetFPS(60);
     Texture JotPKLogo = LoadTexture("JotPK.png");
 
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    ShowIntro(screenWidth, screenHeight); // Llamar a la función de la intro
+
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
 
-    while (!WindowShouldClose())
-    {
-        if (currentScreen == MENU)
-        {
+    while (!WindowShouldClose()) {
+        if (currentScreen == MENU) {
             DrawMenu(JotPKLogo, selectedOption);
             UpdateMenu(&currentScreen, &selectedOption);
         }
-        else if (currentScreen == GAME)
-        {
+        else if (currentScreen == GAME) {
             DrawGame();
         }
-        else if (currentScreen == SETTINGS)
-        {
+        else if (currentScreen == SETTINGS) {
             DrawSettings(&currentScreen);
         }
-        else if (currentScreen == HTP)
-        {
+        else if (currentScreen == HTP) {
             DrawHTP(&currentScreen);
         }
     }
