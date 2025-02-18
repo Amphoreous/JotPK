@@ -76,7 +76,7 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
     previousMousePosition = mousePoint;
 
     // Si se pulsa alguna tecla de navegación, se activa el modo teclado
-    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_DOWN))
+    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_LEFT))
     {
         usingMouse = false;
     }
@@ -136,14 +136,14 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
     {
         // MODO TECLADO:
         hoveredOption = -1;
-        if (IsKeyPressed(KEY_DOWN))
+        if (IsKeyPressed(KEY_RIGHT))
         {
             if (*selectedOption < 0)
                 *selectedOption = 0;
             else
                 *selectedOption = (*selectedOption + 1) % 4;
         }
-        if (IsKeyPressed(KEY_UP))
+        if (IsKeyPressed(KEY_LEFT))
         {
             if (*selectedOption < 0)
                 *selectedOption = 0;
