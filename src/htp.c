@@ -8,6 +8,19 @@ static int selectedOptionHTP = -1;           // Opción seleccionada por teclado
 static Vector2 previousMousePositionHTP = { 0, 0 };
 static bool usingMouseHTP = false;           // Flag: true = modo ratón, false = modo teclado
 
+// Variable estática para almacenar la textura de la imagen
+static Texture2D htpImage;
+
+void InitHTP() {
+    // Cargar la imagen "htp.png"
+    htpImage = LoadTexture("htp.png");
+}
+
+void UnloadHTP() {
+    // Descargar la imagen cuando ya no se necesite
+    UnloadTexture(htpImage);
+}
+
 void DrawHTP(GameScreen* currentScreen)
 {
     BeginDrawing();
@@ -16,7 +29,9 @@ void DrawHTP(GameScreen* currentScreen)
     // Título y contenido
     int titleWidth = MeasureText("HOW TO PLAY", 50);
     DrawText("HOW TO PLAY", (GetScreenWidth() - titleWidth) / 2, 100, 50, WHITE);
-    DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
+
+    // Dibujar la imagen en lugar del texto
+    DrawTexture(htpImage, 190, 250, WHITE);
 
     // Botón "Back"
     Color backColor = WHITE;
@@ -25,7 +40,8 @@ void DrawHTP(GameScreen* currentScreen)
     {
         backColor = RED;
     }
-    DrawText("Back", 190, 500, 20, backColor);
+    // Ajustar la posición del botón "Back" para que no se solape con la imagen
+    DrawText("Back", 190, 600, 20, backColor);
 
     EndDrawing();
 
@@ -52,7 +68,7 @@ void DrawHTP(GameScreen* currentScreen)
     {
         // --- MODO RATÓN ---
         selectedOptionHTP = -1;  // Limpiar la selección por teclado
-        if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 500, MeasureText("Back", 20), 20 }))
+        if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 600, MeasureText("Back", 20), 20 }))
         {
             hoveredOptionHTP = 0;
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))

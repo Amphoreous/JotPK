@@ -27,6 +27,9 @@ int main(void) {
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
 
+    // Inicializar la imagen de HTP
+    InitHTP();
+
     while (!WindowShouldClose()) {
         if (currentScreen == MENU) {
             DrawMenu(JotPKLogo, selectedOption);
@@ -42,6 +45,9 @@ int main(void) {
             DrawHTP(&currentScreen);
         }
     }
+
+    // Descargar la imagen de HTP
+    UnloadHTP();
 
     UnloadTexture(JotPKLogo);
     CloseWindow();
