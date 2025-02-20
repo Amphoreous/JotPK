@@ -6,17 +6,15 @@
 #include "htp.h"
 #include "intro.h"
 
-int main(void) 
+int main(void)
 {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
-
-    InitAudioDevice();                          // ESTA LINEA Y LA DE ABAJO JUSTO SON PARA EL SONIDITO ESTAN BIEN PUESTAS AQUI.
-    Sound fxStart = LoadSound("resources/Sound_Start.wav");
-    if (IsKeyPressed(KEY_SPACE)) PlaySound(fxStart); // ESTA TERCERA SE TIENE QUE PONER EN INTRO (SUPONGO) PERO NO SE PUEDE PORQUE NO ESTARA 'DEFINIDA'
-                                                     // SE DEFINE JUSTO EN LA ANTERIOR
-
     SearchAndSetResourceDir("resources");
+
+    InitAudioDevice();                          // Inicializar el dispositivo de audio
+
+    Sound fxStart = LoadSound("Sound_Start.wav");
 
     Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
@@ -28,7 +26,7 @@ int main(void)
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    ShowIntro(screenWidth, screenHeight); // Llamar a la función de la intro
+    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
@@ -37,28 +35,25 @@ int main(void)
 
     InitHTP();
 
-    while (!WindowShouldClose()) 
+    while (!WindowShouldClose())
     {
-        if (currentScreen == MENU) 
+        if (currentScreen == MENU)
         {
             DrawMenu(JotPKLogo, selectedOption);
             UpdateMenu(&currentScreen, &selectedOption);
         }
-        else if (currentScreen == GAME) 
+        else if (currentScreen == GAME)
         {
             DrawGame();
         }
-        else if (currentScreen == SETTINGS) 
+        else if (currentScreen == SETTINGS)
         {
             DrawSettings(&currentScreen);
         }
-        else if (currentScreen == HTP) 
+        else if (currentScreen == HTP)
         {
             DrawHTP(&currentScreen);
         }
-
-
-
     }
 
     // Descargar la imagen de HTP
