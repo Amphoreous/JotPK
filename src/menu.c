@@ -2,6 +2,7 @@
 #include <math.h>  // Necesario para fabs()
 
 // Variable estática interna para almacenar la opción "hovered" (sobre la que está el cursor)
+
 static int hoveredOption = -1;
 
 void DrawMenu(Texture JotPKLogo, int selectedOption)
@@ -10,15 +11,18 @@ void DrawMenu(Texture JotPKLogo, int selectedOption)
     int screenHeight = GetScreenHeight();
 
     // Calcular el tamaño del logo basado en las dimensiones de la pantalla
+
     int logoWidth = screenWidth / 2;
     int logoHeight = (JotPKLogo.height * logoWidth) / JotPKLogo.width;
 
     // Calcular la posición de las opciones del menú
+
     int menuY = screenHeight - 100;
     int spacing = screenWidth / 5;
 
     // Calcular la posición del logo para que esté centrado en el espacio entre
     // el borde superior y el inicio de las opciones del menú.
+
     int logoX = (screenWidth - logoWidth) / 2;
     int logoY = (menuY / 2) - (logoHeight / 2);
 
@@ -26,9 +30,11 @@ void DrawMenu(Texture JotPKLogo, int selectedOption)
     ClearBackground(BLACK);
 
     // Dibujar el logo centrado en el área disponible
+
     DrawTextureEx(JotPKLogo, (Vector2) { logoX, logoY }, 0.0f, (float)logoWidth / JotPKLogo.width, WHITE);
 
     // Colores por defecto para cada opción
+
     Color startColor = WHITE;
     Color settingsColor = WHITE;
     Color htpColor = WHITE;
@@ -37,6 +43,7 @@ void DrawMenu(Texture JotPKLogo, int selectedOption)
     // Se resalta en rojo la opción correspondiente:
     // Si se está en modo ratón (hoveredOption != -1) se resalta esa opción.
     // En caso contrario, si hay una selección por teclado, se resalta esa.
+
     if (hoveredOption >= 0)
     {
         if (hoveredOption == 0) startColor = RED;
@@ -53,6 +60,7 @@ void DrawMenu(Texture JotPKLogo, int selectedOption)
     }
 
     // Dibujar las opciones del menú horizontalmente
+
     DrawText("Start", spacing * 1 - MeasureText("Start", 20) / 2, menuY, 20, startColor);
     DrawText("Settings", spacing * 2 - MeasureText("Settings", 20) / 2, menuY, 20, settingsColor);
     DrawText("How to play", spacing * 3 - MeasureText("How to play", 20) / 2, menuY, 20, htpColor);
@@ -64,23 +72,31 @@ void DrawMenu(Texture JotPKLogo, int selectedOption)
 void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
 {
     // Variable estática para almacenar la posición del ratón del frame anterior
+
     static Vector2 previousMousePosition = { 0, 0 };
+
     // Flag para indicar si se está en "modo ratón" o "modo teclado"
+
     static bool usingMouse = false;
 
     Vector2 mousePoint = GetMousePosition();
+
     // Umbral para evitar que pequeñas fluctuaciones se consideren movimiento
+
     float threshold = 0.1f;
     bool currentMouseMoved = (fabs(mousePoint.x - previousMousePosition.x) > threshold ||
         fabs(mousePoint.y - previousMousePosition.y) > threshold);
     previousMousePosition = mousePoint;
 
     // Si se pulsa alguna tecla de navegación, se activa el modo teclado
+
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_LEFT))
     {
         usingMouse = false;
     }
+
     // Si se detecta movimiento significativo del ratón, se activa el modo ratón
+
     if (currentMouseMoved)
     {
         usingMouse = true;
@@ -95,8 +111,11 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
     {
         // MODO RATÓN:
         // Se limpia la selección por teclado
+
         *selectedOption = -1;
+
         // Detectar colisión con cada opción para asignar hoveredOption
+
         if (CheckCollisionPointRec(mousePoint,
             (Rectangle) {
             spacing * 1 - MeasureText("Start", 20) / 2, menuY, MeasureText("Start", 20), 20
@@ -128,6 +147,7 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
         else
         {
             // Si el ratón se mueve fuera de las áreas de las opciones, se limpian ambos indicadores
+
             hoveredOption = -1;
             *selectedOption = -1;
         }
@@ -135,6 +155,7 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
     else
     {
         // MODO TECLADO:
+
         hoveredOption = -1;
         if (IsKeyPressed(KEY_RIGHT))
         {
@@ -153,6 +174,7 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
     }
 
     // Ejecutar la acción de la opción seleccionada
+
     if (IsKeyPressed(KEY_ENTER))
     {
         if (*selectedOption == 0) *currentScreen = GAME;       // Iniciar juego

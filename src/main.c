@@ -6,9 +6,15 @@
 #include "htp.h"
 #include "intro.h"
 
-int main(void) {
+int main(void) 
+{
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
+
+    InitAudioDevice();                          // ESTA LINEA Y LA DE ABAJO JUSTO SON PARA EL SONIDITO ESTAN BIEN PUESTAS AQUI.
+    Sound fxStart = LoadSound("resources/Sound_Start.wav");
+    if (IsKeyPressed(KEY_SPACE)) PlaySound(fxStart); // ESTA TERCERA SE TIENE QUE PONER EN INTRO (SUPONGO) PERO NO SE PUEDE PORQUE NO ESTARA 'DEFINIDA'
+                                                     // SE DEFINE JUSTO EN LA ANTERIOR
 
     SearchAndSetResourceDir("resources");
 
@@ -28,26 +34,39 @@ int main(void) {
     int selectedOption = 0;
 
     // Inicializar la imagen de HTP
+
     InitHTP();
 
-    while (!WindowShouldClose()) {
-        if (currentScreen == MENU) {
+    while (!WindowShouldClose()) 
+    {
+        if (currentScreen == MENU) 
+        {
             DrawMenu(JotPKLogo, selectedOption);
             UpdateMenu(&currentScreen, &selectedOption);
         }
-        else if (currentScreen == GAME) {
+        else if (currentScreen == GAME) 
+        {
             DrawGame();
         }
-        else if (currentScreen == SETTINGS) {
+        else if (currentScreen == SETTINGS) 
+        {
             DrawSettings(&currentScreen);
         }
-        else if (currentScreen == HTP) {
+        else if (currentScreen == HTP) 
+        {
             DrawHTP(&currentScreen);
         }
+
+
+
     }
 
     // Descargar la imagen de HTP
+
     UnloadHTP();
+
+    UnloadSound(fxStart);
+    CloseAudioDevice();
 
     UnloadTexture(JotPKLogo);
     CloseWindow();

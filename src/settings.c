@@ -14,13 +14,17 @@ void DrawSettings(GameScreen* currentScreen)
     ClearBackground(BLACK);
 
     // Título y contenido
+
     int titleWidth = MeasureText("SETTINGS", 50);
     DrawText("SETTINGS", (GetScreenWidth() - titleWidth) / 2, 100, 50, WHITE);
     DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
 
     // Botón "Back"
+
     Color backColor = WHITE;
+
     // Resalta en rojo si el ratón está sobre "Back" o si está seleccionado por teclado
+
     if (hoveredOptionSettings == 0 || selectedOptionSettings == 0)
     {
         backColor = RED;
@@ -30,19 +34,25 @@ void DrawSettings(GameScreen* currentScreen)
     EndDrawing();
 
     // --- Actualización de input ---
+
     Vector2 mousePoint = GetMousePosition();
+
     // Umbral para evitar que pequeñas fluctuaciones activen el modo ratón
+
     float threshold = 0.1f;
     bool currentMouseMoved = (fabs(mousePoint.x - previousMousePositionSettings.x) > threshold ||
         fabs(mousePoint.y - previousMousePositionSettings.y) > threshold);
     previousMousePositionSettings = mousePoint;
 
     // Si se presiona una tecla de navegación, se activa el modo teclado
+
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT))
     {
         usingMouseSettings = false;
     }
+
     // Si se detecta movimiento significativo del ratón, se activa el modo ratón
+
     if (currentMouseMoved)
     {
         usingMouseSettings = true;
@@ -51,7 +61,9 @@ void DrawSettings(GameScreen* currentScreen)
     if (usingMouseSettings)
     {
         // --- MODO RATÓN ---
+
         selectedOptionSettings = -1;  // Limpiar la selección por teclado
+
         if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 500, MeasureText("Back", 20), 20 }))
         {
             hoveredOptionSettings = 0;
@@ -68,8 +80,11 @@ void DrawSettings(GameScreen* currentScreen)
     else
     {
         // --- MODO TECLADO ---
+
         hoveredOptionSettings = -1;
+
         // Si aún no hay opción seleccionada, se asigna la única opción (índice 0)
+
         if (selectedOptionSettings < 0)
         {
             selectedOptionSettings = 0;
