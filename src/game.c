@@ -12,66 +12,88 @@ void DrawGame()
     Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
     Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
     Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
-    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
-    Texture2D gifTexture = LoadTexture("Area_1.gif");
+    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png"); // Nueva textura para el estado idle
 
-    // Variables for animated gif
-    int gifFrameWidth = gifTexture.width / 18; // Assuming 18 frames in the gif
-    int gifFrameHeight = gifTexture.height;
-    int gifFrameCount = 18; // Número de frames en el gif
-    int currentGifFrame = 0;
-    int gifFrameSpeed = 8; // Velocidad de cambio de frame (8 frames por segundo)
-    int gifFrameCounter = 0;
+    // Load sprite sheet for background
+    Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
 
-    Vector2 position = { 350.0f, 280.0f }; // Character starting position
+    // Variables para la animación del sprite sheet del fondo
+    int spriteFrameCount = 18; // Número de frames en el sprite sheet
+    int spriteFrameWidth = backgroundSpriteSheet.width / spriteFrameCount;
+    int spriteFrameHeight = backgroundSpriteSheet.height;
+    int currentSpriteFrame = 0;
+    int spriteFrameSpeed = 18; // Velocidad de cambio de frame
+    int spriteFrameCounter = 0;
 
-    // Animation setup
+    // Calcular escala y dimensiones para el fondo
+    float scale = fminf((float)screenWidth / spriteFrameWidth, (float)screenHeight / spriteFrameHeight);
+    float scaledWidth = spriteFrameWidth * scale;
+    float scaledHeight = spriteFrameHeight * scale;
+    Vector2 spritePosition = { (screenWidth - scaledWidth) / 2.0f, (screenHeight - scaledHeight) / 2.0f };
+
+    // Calcular el tamaño del personaje usando scaledHeight / 16
+    float characterSize = scaledHeight / 16.0f;
+
+    // Posición inicial del personaje en el centro de la pantalla
+    Vector2 position = { screenWidth / 2.0f, screenHeight / 2.0f };
+
+    // Setup de animación para las texturas con sprite sheets
     int spriteColumns = 4;
     int currentFrame = 0;
     int framesCounter = 0;
     int framesSpeed = 8;
 
-    // Define frame rectangles for each texture
+    // Rectángulos fuente para las texturas en movimiento (sprite sheets)
     Rectangle frameRec_Right = { 0.0f, 0.0f, (float)Finn_Right.width / spriteColumns, (float)Finn_Right.height };
     Rectangle frameRec_Left = { 0.0f, 0.0f, (float)Finn_Left.width / spriteColumns, (float)Finn_Left.height };
     Rectangle frameRec_Up = { 0.0f, 0.0f, (float)Finn_Up.width / spriteColumns, (float)Finn_Up.height };
     Rectangle frameRec_Down = { 0.0f, 0.0f, (float)Finn_Down.width / spriteColumns, (float)Finn_Down.height };
-    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height };
+    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height }; // Rectángulo fuente para la textura idle
 
-    // Default texture for idle
-    Texture2D currentTexture = Finn_Idle;
-    Rectangle* currentFrameRec = &frameRec_Idle;
+    // Textura y rectángulo fuente por defecto (idle)
+    Texture2D currentTexture = Finn_Down;
+    Rectangle* currentFrameRec = &frameRec_Down;
 
-    // Movement speed
+    // Velocidad de movimiento
     float moveSpeed = 4.0f;
 
     while (!WindowShouldClose())
     {
-        // Movement flags
+        // Flags y variables de movimiento
         bool isMoving = false;
         float moveX = 0.0f;
         float moveY = 0.0f;
 
-        // Check movement separately for X and Y
-        if (IsKeyDown(KEY_D)) { moveX += 1.0f; }
-        if (IsKeyDown(KEY_A)) { moveX -= 1.0f; }
-        if (IsKeyDown(KEY_W)) { moveY -= 1.0f; }
-        if (IsKeyDown(KEY_S)) { moveY += 1.0f; }
+        if (IsKeyDown(KEY_D)) moveX += 1.0f;
+        if (IsKeyDown(KEY_A)) moveX -= 1.0f;
+        if (IsKeyDown(KEY_W)) moveY -= 1.0f;
+        if (IsKeyDown(KEY_S)) moveY += 1.0f;
 
-        // Check if the player is moving diagonally
         if (moveX != 0 || moveY != 0)
         {
             isMoving = true;
-
-            // Normalize diagonal movement to maintain speed
+            // Normalización para el movimiento diagonal
             float length = sqrtf(moveX * moveX + moveY * moveY);
             moveX = (moveX / length) * moveSpeed;
             moveY = (moveY / length) * moveSpeed;
 
-            position.x += moveX;
-            position.y += moveY;
+            // Verificar límites antes de actualizar la posición
+            float newX = position.x + moveX;
+            float newY = position.y + moveY;
 
-            // Set texture based on direction (priority: last key pressed)
+            // Definir el margen
+            float margin = characterSize;
+
+            if (newX - characterSize / 2.0f >= spritePosition.x + margin && newX + characterSize / 2.0f <= spritePosition.x + scaledWidth - margin)
+            {
+                position.x = newX;
+            }
+            if (newY - characterSize / 2.0f >= spritePosition.y + margin && newY + characterSize / 2.0f <= spritePosition.y + scaledHeight - margin)
+            {
+                position.y = newY;
+            }
+
+            // Seleccionar textura según la dirección
             if (moveY < 0) {
                 currentTexture = Finn_Up;
                 currentFrameRec = &frameRec_Up;
@@ -89,61 +111,61 @@ void DrawGame()
                 currentFrameRec = &frameRec_Left;
             }
         }
+        else
+        {
+            // Estado idle: usar la textura Finn_Idle
+            currentTexture = Finn_Idle;
+            currentFrameRec = &frameRec_Idle;
+        }
 
-        // Update animation if moving
+        // Actualizar animación de los sprites en movimiento
         if (isMoving)
         {
             framesCounter++;
             if (framesCounter >= (60 / framesSpeed))
             {
                 framesCounter = 0;
-                currentFrame = (currentFrame + 1) % spriteColumns;  // Loop through frames
+                currentFrame = (currentFrame + 1) % spriteColumns;
                 currentFrameRec->x = (float)currentFrame * currentFrameRec->width;
             }
         }
-        else
+
+        // Actualizar animación del sprite sheet de fondo
+        spriteFrameCounter++;
+        if (spriteFrameCounter >= (60 / spriteFrameSpeed))
         {
-            // If not moving, keep idle texture
-            currentTexture = Finn_Idle;
-            currentFrameRec = &frameRec_Idle;
-            currentFrameRec->x = 0.0f;  // Keeps the idle sprite at the first frame
+            spriteFrameCounter = 0;
+            currentSpriteFrame = (currentSpriteFrame + 1) % spriteFrameCount;
         }
 
-        // Update gif animation
-        gifFrameCounter++;
-        if (gifFrameCounter >= (60 / gifFrameSpeed))
-        {
-            gifFrameCounter = 0;
-            currentGifFrame = (currentGifFrame + 1) % gifFrameCount;
-        }
+        // Calcular el rectángulo fuente del frame actual del fondo
+        int frameX = currentSpriteFrame * spriteFrameWidth;
+        Rectangle spriteFrameRec = { (float)frameX, 0.0f, (float)spriteFrameWidth, (float)spriteFrameHeight };
 
-        // Adjust position for centering the texture (dynamic centering based on frame size)
+        BeginDrawing();
+        ClearBackground(BLACK);
+
+        // Dibujar el fondo
+        DrawTexturePro(backgroundSpriteSheet, spriteFrameRec, (Rectangle) { spritePosition.x, spritePosition.y, scaledWidth, scaledHeight }, (Vector2) { 0, 0 }, 0.0f, WHITE);
+
+        // Calcular el tamaño del personaje usando scaledHeight / 16
+        float characterSize = scaledHeight / 16.0f;
         Vector2 drawPosition = {
-            position.x - currentFrameRec->width / 2.0f,  // Center the texture horizontally
-            position.y - currentFrameRec->height / 2.0f  // Center the texture vertically
+            position.x - characterSize / 2.0f,
+            position.y - characterSize / 2.0f
         };
 
-        // Draw
-        BeginDrawing();
-        ClearBackground(BLACK); // Cambia el fondo a negro para los bordes
+        // Dibujar el personaje (en cualquier estado) con las medidas ajustadas
+        DrawTexturePro(currentTexture, *currentFrameRec, (Rectangle) { drawPosition.x, drawPosition.y, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
 
-        // Draw the current frame of the gif centered and scaled to fit the screen
-        Rectangle gifFrameRec = { (float)(currentGifFrame * gifFrameWidth), 0.0f, (float)gifFrameWidth, (float)gifFrameHeight };
-        float scale = fminf((float)screenWidth / gifFrameWidth, (float)screenHeight / gifFrameHeight);
-        float scaledWidth = gifFrameWidth * scale;
-        float scaledHeight = gifFrameHeight * scale;
-        Vector2 gifPosition = { (screenWidth - scaledWidth) / 2.0f, (screenHeight - scaledHeight) / 2.0f };
-        DrawTexturePro(gifTexture, gifFrameRec, (Rectangle) { gifPosition.x, gifPosition.y, scaledWidth, scaledHeight }, (Vector2) { 0, 0 }, 0.0f, WHITE);
-
-        DrawTextureRec(currentTexture, *currentFrameRec, drawPosition, WHITE);
         EndDrawing();
     }
 
-    // Cleanup
+    // Liberar recursos
     UnloadTexture(Finn_Right);
     UnloadTexture(Finn_Left);
     UnloadTexture(Finn_Up);
     UnloadTexture(Finn_Down);
-    UnloadTexture(Finn_Idle);
-    UnloadTexture(gifTexture);
+    UnloadTexture(Finn_Idle); // Liberar la textura idle
+    UnloadTexture(backgroundSpriteSheet);
 }
