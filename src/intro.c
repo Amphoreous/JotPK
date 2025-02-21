@@ -1,6 +1,8 @@
 #include "intro.h"
+#define MAX_SOUNDS 10
 
-void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration, int screenWidth, int screenHeight) {
+void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration, int screenWidth, int screenHeight) 
+{
     int fadeInDuration = fadeDuration / 2;
     int fadeOutDuration = fadeDuration / 2;
     int pauseDuration = 90;
@@ -11,9 +13,12 @@ void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration,
 
     int maxLogoHeight = screenHeight - companyTextSize - marginBetweenLogoAndText;
     float logoScale = 1.0f;
-    if (texture.height > maxLogoHeight) {
+
+    if (texture.height > maxLogoHeight) 
+    {
         logoScale = (float)maxLogoHeight / texture.height;
     }
+
     int logoDrawWidth = texture.width * logoScale;
     int logoDrawHeight = texture.height * logoScale;
 
@@ -26,15 +31,21 @@ void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration,
     int companyTextY = logoY + logoDrawHeight + marginBetweenLogoAndText;
 
     int framesCounter = 0;
-    while (framesCounter < totalDuration) {
+
+    while (framesCounter < totalDuration) 
+    {
         float alpha;
-        if (framesCounter < fadeInDuration) {
+
+        if (framesCounter < fadeInDuration) 
+        {
             alpha = (float)framesCounter / fadeInDuration;
         }
-        else if (framesCounter < fadeInDuration + pauseDuration) {
+        else if (framesCounter < fadeInDuration + pauseDuration) 
+        {
             alpha = 1.0f;
         }
-        else {
+        else 
+        {
             alpha = 1.0f - (float)(framesCounter - fadeInDuration - pauseDuration) / fadeOutDuration;
         }
 
@@ -50,7 +61,8 @@ void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration,
     }
 }
 
-void FadeInOutText(const char* text, int textSize, int fadeDuration, int screenWidth, int screenHeight) {
+void FadeInOutText(const char* text, int textSize, int fadeDuration, int screenWidth, int screenHeight) 
+{
     int fadeInDuration = fadeDuration / 2;
     int fadeOutDuration = fadeDuration / 2;
     int pauseDuration = 90;
@@ -60,15 +72,20 @@ void FadeInOutText(const char* text, int textSize, int fadeDuration, int screenW
     int textY = (screenHeight - textSize) / 2;
 
     int framesCounter = 0;
-    while (framesCounter < totalDuration) {
+
+    while (framesCounter < totalDuration) 
+    {
         float alpha;
-        if (framesCounter < fadeInDuration) {
+        if (framesCounter < fadeInDuration) 
+        {
             alpha = (float)framesCounter / fadeInDuration;
         }
-        else if (framesCounter < fadeInDuration + pauseDuration) {
+        else if (framesCounter < fadeInDuration + pauseDuration) 
+        {
             alpha = 1.0f;
         }
-        else {
+        else 
+        {
             alpha = 1.0f - (float)(framesCounter - fadeInDuration - pauseDuration) / fadeOutDuration;
         }
 
@@ -81,7 +98,8 @@ void FadeInOutText(const char* text, int textSize, int fadeDuration, int screenW
     }
 }
 
-void ShowIntro(int screenWidth, int screenHeight, Sound fxStart) {
+void ShowIntro(int screenWidth, int screenHeight, Sound fxStart) 
+{
     Texture2D icon = LoadTexture("icon.png");
     Texture2D JotPKLogo = LoadTexture("JotPK.png");
     Texture2D pressStart = LoadTexture("press_space.png");
@@ -111,9 +129,12 @@ void ShowIntro(int screenWidth, int screenHeight, Sound fxStart) {
     bool showPressStart = true;
     int framesCounter = 0;
 
-    while (!IsKeyPressed(KEY_SPACE)) {
+    while (!IsKeyPressed(KEY_SPACE)) 
+    {
         framesCounter++;
-        if (framesCounter % 60 < 30) {
+
+        if (framesCounter % 60 < 30) 
+        {
             showPressStart = true;
         }
         else {
@@ -123,30 +144,41 @@ void ShowIntro(int screenWidth, int screenHeight, Sound fxStart) {
         BeginDrawing();
         ClearBackground(BLACK);
         DrawTextureEx(JotPKLogo, (Vector2) { logoX, logoY }, 0.0f, (float)logoWidth / JotPKLogo.width, WHITE);
-        if (showPressStart) {
+
+        if (showPressStart) 
+        {
             DrawTexture(pressStart, pressStartX, pressStartY, WHITE);
         }
+
         DrawText(copyrightText, copyrightTextX, copyrightTextY, copyrightTextSize, WHITE);
         EndDrawing();
     }
 
     // Reproducir el sonido al presionar espacio
+
     PlaySound(fxStart);
 
     // Parpadeo rápido de "press_start" al presionar espacio
-    for (int i = 0; i < 10; i++) { // Aumentar el número de iteraciones para que dure más tiempo
+
+    for (int i = 0; i < 10; i++) // Aumentar el número de iteraciones para que dure más tiempo
+    { 
         BeginDrawing();
         ClearBackground(BLACK);
         DrawTextureEx(JotPKLogo, (Vector2) { logoX, logoY }, 0.0f, (float)logoWidth / JotPKLogo.width, WHITE);
-        if (i % 2 == 0) {
+
+        if (i % 2 == 0) 
+        {
             DrawTexture(pressStart, pressStartX, pressStartY, WHITE);
         }
+
         EndDrawing();
         WaitTime(0.1); // Esperar 0.1 segundos
     }
 
     // Pausa en negro durante 1.5 segundos con el logo de JotPK
-    for (int i = 0; i < 15; i++) {
+
+    for (int i = 0; i < 15; i++) 
+    {
         BeginDrawing();
         ClearBackground(BLACK);
         DrawTextureEx(JotPKLogo, (Vector2) { logoX, logoY }, 0.0f, (float)logoWidth / JotPKLogo.width, WHITE);

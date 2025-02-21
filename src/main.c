@@ -5,6 +5,10 @@
 #include "settings.h"
 #include "htp.h"
 #include "intro.h"
+#define MAX_SOUNDS 10                   // ESTAS 3 LINEAS PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
+
+Sound soundArray[MAX_SOUNDS] = { 0 };
+int currentSound;
 
 int main(void)
 {
@@ -13,8 +17,14 @@ int main(void)
     SearchAndSetResourceDir("resources");
 
     InitAudioDevice();                          // Inicializar el dispositivo de audio
-
     Sound fxStart = LoadSound("Sound_Start.wav");
+
+    for (int i = 1; i < MAX_SOUNDS; i++)                      // PARA SUBIR TMB EL VOLUMEN IG
+    {
+        soundArray[i] = LoadSoundAlias(soundArray[0]);        // Load an alias of the sound into slots 1-9. These do not own the sound data, but can be played
+    }
+    currentSound = 0;
+
 
     Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
