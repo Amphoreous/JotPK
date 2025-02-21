@@ -25,6 +25,9 @@ int main(void)
     //}
     //currentSound = 0;
 
+    //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
+	//No se si sirve de algo, de momento lo dejo comentado
+
 
     Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
