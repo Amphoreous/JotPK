@@ -1,6 +1,7 @@
 #include "intro.h"
 #define MAX_SOUNDS 10
 
+
 void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration, int screenWidth, int screenHeight) 
 {
     int fadeInDuration = fadeDuration / 2;
@@ -155,7 +156,7 @@ void ShowIntro(int screenWidth, int screenHeight, Sound fxStart)
     }
 
     // Reproducir el sonido al presionar espacio
-
+    SetSoundVolume(fxStart, 10); // ESTA LINEA PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
     PlaySound(fxStart);
 
     // Parpadeo rápido de "press_start" al presionar espacio
