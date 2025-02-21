@@ -156,7 +156,7 @@ void ShowIntro(int screenWidth, int screenHeight, Sound fxStart)
     }
 
     // Reproducir el sonido al presionar espacio
-    SetSoundVolume(fxStart, 10); // ESTA LINEA PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
+    SetSoundVolume(fxStart, 20); // ESTA LINEA PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
     PlaySound(fxStart);
 
     // Parpadeo rápido de "press_start" al presionar espacio
