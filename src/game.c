@@ -7,20 +7,21 @@ void DrawGame()
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    InitWindow(screenWidth, screenHeight, "Sprite Animation");
-
     // Load textures
     Texture2D Finn_Right = LoadTexture("Sprite_Sheet_Right.png");
     Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
     Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
     Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
     Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
+    Texture2D gifTexture = LoadTexture("Area_1.gif");
 
-    // Check if textures are loaded properly
-    if (Finn_Idle.id == 0 || Finn_Right.id == 0 || Finn_Left.id == 0 || Finn_Up.id == 0 || Finn_Down.id == 0) {
-        TraceLog(LOG_ERROR, "Failed to load one or more textures!");
-        return;
-    }
+    // Variables for animated gif
+    int gifFrameWidth = gifTexture.width / 18; // Assuming 18 frames in the gif
+    int gifFrameHeight = gifTexture.height;
+    int gifFrameCount = 18; // Número de frames en el gif
+    int currentGifFrame = 0;
+    int gifFrameSpeed = 8; // Velocidad de cambio de frame (8 frames por segundo)
+    int gifFrameCounter = 0;
 
     Vector2 position = { 350.0f, 280.0f }; // Character starting position
 
@@ -108,6 +109,14 @@ void DrawGame()
             currentFrameRec->x = 0.0f;  // Keeps the idle sprite at the first frame
         }
 
+        // Update gif animation
+        gifFrameCounter++;
+        if (gifFrameCounter >= (60 / gifFrameSpeed))
+        {
+            gifFrameCounter = 0;
+            currentGifFrame = (currentGifFrame + 1) % gifFrameCount;
+        }
+
         // Adjust position for centering the texture (dynamic centering based on frame size)
         Vector2 drawPosition = {
             position.x - currentFrameRec->width / 2.0f,  // Center the texture horizontally
@@ -116,7 +125,16 @@ void DrawGame()
 
         // Draw
         BeginDrawing();
-        ClearBackground(RAYWHITE);
+        ClearBackground(BLACK); // Cambia el fondo a negro para los bordes
+
+        // Draw the current frame of the gif centered and scaled to fit the screen
+        Rectangle gifFrameRec = { (float)(currentGifFrame * gifFrameWidth), 0.0f, (float)gifFrameWidth, (float)gifFrameHeight };
+        float scale = fminf((float)screenWidth / gifFrameWidth, (float)screenHeight / gifFrameHeight);
+        float scaledWidth = gifFrameWidth * scale;
+        float scaledHeight = gifFrameHeight * scale;
+        Vector2 gifPosition = { (screenWidth - scaledWidth) / 2.0f, (screenHeight - scaledHeight) / 2.0f };
+        DrawTexturePro(gifTexture, gifFrameRec, (Rectangle) { gifPosition.x, gifPosition.y, scaledWidth, scaledHeight }, (Vector2) { 0, 0 }, 0.0f, WHITE);
+
         DrawTextureRec(currentTexture, *currentFrameRec, drawPosition, WHITE);
         EndDrawing();
     }
@@ -127,6 +145,5 @@ void DrawGame()
     UnloadTexture(Finn_Up);
     UnloadTexture(Finn_Down);
     UnloadTexture(Finn_Idle);
-
-    CloseWindow();
+    UnloadTexture(gifTexture);
 }
