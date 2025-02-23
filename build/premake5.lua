@@ -41,6 +41,8 @@ end
 function check_discord_sdk()
     os.chdir("external")
     if(os.isdir("discord_game_sdk") == false) then
+        os.mkdir("discord_game_sdk")
+        os.chdir("discord_game_sdk")
         if(not os.isfile("discord_game_sdk.zip")) then
             print("Discord Game SDK not found, downloading from discord")
             local result_str, response_code = http.download("https://dl-game-sdk.discordapp.net/3.2.1/discord_game_sdk.zip", "discord_game_sdk.zip", {
@@ -49,8 +51,6 @@ function check_discord_sdk()
             })
         end
         print("Unzipping to " ..  os.getcwd())
-        mkdir("discord_game_sdk")
-        os.chdir("discord_game_sdk")
         zip.extract("discord_game_sdk.zip", os.getcwd())
         os.remove("discord_game_sdk.zip")
     end
