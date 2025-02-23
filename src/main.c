@@ -13,7 +13,7 @@ int currentSound;
 int main(void)
 {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
-    InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
+    InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of The Prairie King");
     SearchAndSetResourceDir("resources");
 
     InitAudioDevice();                          // Inicializar el dispositivo de audio
@@ -39,7 +39,7 @@ int main(void)
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
+    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la funciï¿½n de la intro
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
