@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "htp.h"
 #include "intro.h"
+#include "discord_presence.h"
 #define MAX_SOUNDS 10                   // ESTAS 3 LINEAS PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
 
 Sound soundArray[MAX_SOUNDS] = { 0 };
@@ -16,18 +17,9 @@ int main(void)
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of The Prairie King");
     SearchAndSetResourceDir("resources");
 
+    initDiscord();
     InitAudioDevice();                          // Inicializar el dispositivo de audio
     Sound fxStart = LoadSound("Sound_Start.wav");
-
-    //for (int i = 1; i < MAX_SOUNDS; i++)                      // PARA SUBIR TMB EL VOLUMEN IG
-    //{
-    //    soundArray[i] = LoadSoundAlias(soundArray[0]);        // Load an alias of the sound into slots 1-9. These do not own the sound data, but can be played
-    //}
-    //currentSound = 0;
-
-    //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^//
-	//No se si sirve de algo, de momento lo dejo comentado
-
 
     Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
@@ -39,17 +31,17 @@ int main(void)
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la funci�n de la intro
+    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
-
-    // Inicializar la imagen de HTP
 
     InitHTP();
 
     while (!WindowShouldClose())
     {
+        updateDiscord(); // Llamar a updateDiscord en cada iteración del bucle principal
+
         if (currentScreen == MENU)
         {
             DrawMenu(JotPKLogo, selectedOption);
@@ -69,13 +61,9 @@ int main(void)
         }
     }
 
-    // Descargar la imagen de HTP
-
     UnloadHTP();
-
     UnloadSound(fxStart);
     CloseAudioDevice();
-
     UnloadTexture(JotPKLogo);
     CloseWindow();
     return 0;

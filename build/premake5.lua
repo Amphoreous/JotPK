@@ -38,9 +38,27 @@ function check_raylib()
     os.chdir("../")
 end
 
+function check_discord_sdk()
+    os.chdir("external")
+    if(os.isdir("discord_game_sdk") == false) then
+        if(not os.isfile("discord_game_sdk.zip")) then
+            print("Discord Game SDK not found, downloading from discord")
+            local result_str, response_code = http.download("https://dl-game-sdk.discordapp.net/3.2.1/discord_game_sdk.zip", "discord_game_sdk.zip", {
+                progress = download_progress,
+                headers = { "From: Premake", "Referer: Premake" }
+            })
+        end
+        print("Unzipping to " ..  os.getcwd())
+        zip.extract("discord_game_sdk.zip", os.getcwd())
+        os.remove("discord_game_sdk.zip")
+    end
+    os.chdir("../")
+end
+
 function build_externals()
      print("calling externals")
      check_raylib()
+     check_discord_sdk()
 end
 
 function platform_defines()
@@ -90,7 +108,7 @@ end
 downloadRaylib = true
 raylib_dir = "external/raylib-master"
 
-workspaceName = 'MyGame'
+workspaceName = 'JotPK'
 baseName = path.getbasename(path.getdirectory(os.getcwd()));
 
 --if (baseName ~= 'raylib-quickstart') then
@@ -133,7 +151,7 @@ workspace (workspaceName)
 
 if (downloadRaylib) then
     build_externals()
-	end
+end
 
     startproject(workspaceName)
 
@@ -164,6 +182,14 @@ if (downloadRaylib) then
     
         includedirs { "../src" }
         includedirs { "../include" }
+        includedirs { "external/discord_game_sdk/cpp" }
+        libdirs { "external/discord_game_sdk/lib/x86_64" }
+        links { "discord_game_sdk.dll.lib" }
+
+        -- Copy the DLL to the output directory
+        postbuildcommands {
+            '{COPY} "%{wks.location}external/discord_game_sdk/lib/x86_64/discord_game_sdk.dll" "%{cfg.targetdir}"'
+        }
 
         links {"raylib"}
 
