@@ -49,6 +49,8 @@ function check_discord_sdk()
             })
         end
         print("Unzipping to " ..  os.getcwd())
+        mkdir("discord_game_sdk")
+        os.chdir("discord_game_sdk")
         zip.extract("discord_game_sdk.zip", os.getcwd())
         os.remove("discord_game_sdk.zip")
     end
