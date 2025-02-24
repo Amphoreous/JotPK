@@ -167,6 +167,7 @@ void DrawGame()
         {
             OrcFramesCounter = 0;
             OrcCurrentFrame = (OrcCurrentFrame + 1) % OrcSpriteColumns;
+            OrcCurrentFrameRec->x = (float)OrcCurrentFrame * OrcCurrentFrameRec->width;
         }
 
         // Calcular el rectángulo fuente del frame actual del fondo
@@ -186,9 +187,13 @@ void DrawGame()
             position.y - characterSize / 2.0f
         };
 
+        float orcSize = scaledHeight / 16.0f - 10.0f;
+
+
         // Dibujar el personaje (en cualquier estado) con las medidas ajustadas
         DrawTexturePro(currentTexture, *currentFrameRec, (Rectangle) { drawPosition.x, drawPosition.y, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
-        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) { screenWidth/2, screenHeight/2, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
+        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) { screenWidth/2, screenHeight/2, orcSize, orcSize
+        }, (Vector2) { 0, 0 }, 0.0f, WHITE);
 
         EndDrawing();
     }
