@@ -31,7 +31,7 @@ int main(void)
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    //ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
+    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
