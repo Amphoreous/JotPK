@@ -171,6 +171,20 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
             else
                 *selectedOption = (*selectedOption - 1 + 4) % 4;
         }
+        if (IsKeyPressed(KEY_D))
+        {
+            if (*selectedOption < 0)
+                *selectedOption = 0;
+            else
+                *selectedOption = (*selectedOption + 1) % 4;
+        }
+        if (IsKeyPressed(KEY_A))
+        {
+            if (*selectedOption < 0)
+                *selectedOption = 0;
+            else
+                *selectedOption = (*selectedOption - 1 + 4) % 4;
+        }
     }
 
     // Ejecutar la acción de la opción seleccionada
