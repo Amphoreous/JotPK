@@ -40,21 +40,39 @@ end
 
 function check_discord_sdk()
     os.chdir("external")
+    
+    -- Create discord_game_sdk directory if it doesn't exist
     if not os.isdir("discord_game_sdk") then
+        os.mkdir("discord_game_sdk")
+    end
+
+    -- Change to discord_game_sdk directory
+    os.chdir("discord_game_sdk")
+    
+    -- Check if lib folder exists
+    if not os.isdir("lib") then
+        -- Check for zip file
         if not os.isfile("discord_game_sdk.zip") then
             print("Discord SDK not found, downloading from discord.com")
-            local result_str, response_code = http.download("https://dl-game-sdk.discordapp.net/2.5.6/discord_game_sdk.zip", "discord_game_sdk.zip", {
-                progress = download_progress,
-                headers = { "From: Premake", "Referer: Premake" }
-            })
+            local result_str, response_code = http.download(
+                "https://dl-game-sdk.discordapp.net/2.5.6/discord_game_sdk.zip", 
+                "discord_game_sdk.zip", 
+                {
+                    progress = download_progress,
+                    headers = { "From: Premake", "Referer: Premake" }
+                }
+            )
         end
+        
+        -- Unzip the file
         print("Unzipping to " .. os.getcwd())
         zip.extract("discord_game_sdk.zip", os.getcwd())
         os.remove("discord_game_sdk.zip")
     end
-    os.chdir("../")
+    
+    -- Return to original directory
+    os.chdir("../../")
 end
-
 function build_externals()
     print("calling externals")
     check_raylib()
