@@ -7,12 +7,17 @@ void DrawGame()
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    // Load textures
+    // -------------------- Load textures -------------------- //
+
+    // Main character
     Texture2D Finn_Right = LoadTexture("Sprite_Sheet_Right.png");
     Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
     Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
     Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
-    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png"); // Nueva textura para el estado idle
+    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
+
+    // Enemies
+    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    // Orc
 
     // Load sprite sheet for background
     Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
@@ -22,8 +27,15 @@ void DrawGame()
     int spriteFrameWidth = backgroundSpriteSheet.width / spriteFrameCount;
     int spriteFrameHeight = backgroundSpriteSheet.height;
     int currentSpriteFrame = 0;
-    int spriteFrameSpeed = 18; // Velocidad de cambio de frame
+    int spriteFrameSpeed = 8; // Velocidad de cambio de frame
     int spriteFrameCounter = 0;
+    
+    // Orc animation setup
+    int OrcSpriteColumns = 6;
+    int OrcFramesCounter = 0;
+    int OrcFramesSpeed = 12;
+    int OrcCurrentFrame = 0;
+    
 
     // Calcular escala y dimensiones para el fondo
     float scale = fminf((float)screenWidth / spriteFrameWidth, (float)screenHeight / spriteFrameHeight);
@@ -48,11 +60,19 @@ void DrawGame()
     Rectangle frameRec_Left = { 0.0f, 0.0f, (float)Finn_Left.width / spriteColumns, (float)Finn_Left.height };
     Rectangle frameRec_Up = { 0.0f, 0.0f, (float)Finn_Up.width / spriteColumns, (float)Finn_Up.height };
     Rectangle frameRec_Down = { 0.0f, 0.0f, (float)Finn_Down.width / spriteColumns, (float)Finn_Down.height };
-    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height }; // Rectángulo fuente para la textura idle
+    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height }; 
+    Rectangle frameRec_Orc = { 0.0f, 0.0f, (float)Orc.width / OrcSpriteColumns, (float)Orc.height };
 
     // Textura y rectángulo fuente por defecto (idle)
     Texture2D currentTexture = Finn_Down;
     Rectangle* currentFrameRec = &frameRec_Down;
+
+    Rectangle* OrcCurrentFrameRec = &frameRec_Orc;
+
+    // Musica de fondo
+    Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
+    SetMusicVolume(BackgroundMusic_A1, 0.1f);
+    PlayMusicStream(BackgroundMusic_A1);
 
     // Velocidad de movimiento
     float moveSpeed = 4.0f;
@@ -68,6 +88,9 @@ void DrawGame()
         if (IsKeyDown(KEY_A)) moveX -= 1.0f;
         if (IsKeyDown(KEY_W)) moveY -= 1.0f;
         if (IsKeyDown(KEY_S)) moveY += 1.0f;
+
+        // Bucle de música
+        UpdateMusicStream(BackgroundMusic_A1);
 
         if (moveX != 0 || moveY != 0)
         {
@@ -138,6 +161,15 @@ void DrawGame()
             currentSpriteFrame = (currentSpriteFrame + 1) % spriteFrameCount;
         }
 
+        // Orc animation frame update
+        OrcFramesCounter++;
+        if (OrcFramesCounter >= (60 / OrcFramesSpeed))
+        {
+            OrcFramesCounter = 0;
+            OrcCurrentFrame = (OrcCurrentFrame + 1) % OrcSpriteColumns;
+            OrcCurrentFrameRec->x = (float)OrcCurrentFrame * OrcCurrentFrameRec->width;
+        }
+
         // Calcular el rectángulo fuente del frame actual del fondo
         int frameX = currentSpriteFrame * spriteFrameWidth;
         Rectangle spriteFrameRec = { (float)frameX, 0.0f, (float)spriteFrameWidth, (float)spriteFrameHeight };
@@ -155,8 +187,13 @@ void DrawGame()
             position.y - characterSize / 2.0f
         };
 
+        float orcSize = scaledHeight / 16.0f - 10.0f;
+
+
         // Dibujar el personaje (en cualquier estado) con las medidas ajustadas
         DrawTexturePro(currentTexture, *currentFrameRec, (Rectangle) { drawPosition.x, drawPosition.y, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
+        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) { screenWidth/2, screenHeight/2, orcSize, orcSize
+        }, (Vector2) { 0, 0 }, 0.0f, WHITE);
 
         EndDrawing();
     }
@@ -166,6 +203,8 @@ void DrawGame()
     UnloadTexture(Finn_Left);
     UnloadTexture(Finn_Up);
     UnloadTexture(Finn_Down);
-    UnloadTexture(Finn_Idle); // Liberar la textura idle
+    UnloadTexture(Finn_Idle);
+    UnloadTexture(Orc);
     UnloadTexture(backgroundSpriteSheet);
+    UnloadMusicStream(BackgroundMusic_A1);
 }
