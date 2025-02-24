@@ -22,7 +22,7 @@ void DrawGame()
     int spriteFrameWidth = backgroundSpriteSheet.width / spriteFrameCount;
     int spriteFrameHeight = backgroundSpriteSheet.height;
     int currentSpriteFrame = 0;
-    int spriteFrameSpeed = 18; // Velocidad de cambio de frame
+    int spriteFrameSpeed = 8; // Velocidad de cambio de frame
     int spriteFrameCounter = 0;
 
     // Calcular escala y dimensiones para el fondo
@@ -48,11 +48,16 @@ void DrawGame()
     Rectangle frameRec_Left = { 0.0f, 0.0f, (float)Finn_Left.width / spriteColumns, (float)Finn_Left.height };
     Rectangle frameRec_Up = { 0.0f, 0.0f, (float)Finn_Up.width / spriteColumns, (float)Finn_Up.height };
     Rectangle frameRec_Down = { 0.0f, 0.0f, (float)Finn_Down.width / spriteColumns, (float)Finn_Down.height };
-    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height }; // Rectángulo fuente para la textura idle
+    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height }; 
 
     // Textura y rectángulo fuente por defecto (idle)
     Texture2D currentTexture = Finn_Down;
     Rectangle* currentFrameRec = &frameRec_Down;
+
+    // Musica de fondo
+    Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
+    SetMusicVolume(BackgroundMusic_A1, 0.1f);
+    PlayMusicStream(BackgroundMusic_A1);
 
     // Velocidad de movimiento
     float moveSpeed = 4.0f;
@@ -68,6 +73,10 @@ void DrawGame()
         if (IsKeyDown(KEY_A)) moveX -= 1.0f;
         if (IsKeyDown(KEY_W)) moveY -= 1.0f;
         if (IsKeyDown(KEY_S)) moveY += 1.0f;
+
+        // Bucle de música
+        
+        UpdateMusicStream(BackgroundMusic_A1);
 
         if (moveX != 0 || moveY != 0)
         {
@@ -166,6 +175,7 @@ void DrawGame()
     UnloadTexture(Finn_Left);
     UnloadTexture(Finn_Up);
     UnloadTexture(Finn_Down);
-    UnloadTexture(Finn_Idle); // Liberar la textura idle
+    UnloadTexture(Finn_Idle);
     UnloadTexture(backgroundSpriteSheet);
+    UnloadMusicStream(BackgroundMusic_A1);
 }
