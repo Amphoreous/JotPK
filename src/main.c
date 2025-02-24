@@ -14,7 +14,7 @@ int currentSound;
 int main(void)
 {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
-    InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of The Prairie King");
+    InitWindow(GetScreenWidth(), GetScreenHeight(), "The Journey of the Prairie King");
     SearchAndSetResourceDir("resources");
 
     initDiscord();
