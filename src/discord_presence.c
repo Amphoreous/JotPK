@@ -9,8 +9,8 @@ struct IDiscordActivityManager* activityManager;
 void initDiscord() {
     struct DiscordCreateParams params;
     DiscordCreateParamsSetDefault(&params);
-    params.client_id = 1342619188707197019;  // Reemplaza YOUR_CLIENT_ID con tu ID de cliente de Discord
-    params.flags = DiscordCreateFlags_Default;
+    params.client_id = 1342619188707197019;
+    params.flags = DiscordCreateFlags_NoRequireDiscord;  // Permitir que el juego se ejecute sin Discord
     enum EDiscordResult result = DiscordCreate(DISCORD_VERSION, &params, &core);
     if (result != DiscordResult_Ok) {
         printf("Error al inicializar Discord: %d\n", result);
@@ -26,6 +26,9 @@ void initDiscord() {
     strcpy(activity.assets.large_image, "icon");
 
     activityManager->update_activity(activityManager, &activity, NULL, NULL);
+
+    // Llamar a updateDiscord inmediatamente después de inicializar Discord
+    updateDiscord();
 }
 
 void updateDiscord() {
