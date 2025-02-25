@@ -31,9 +31,9 @@ void DrawGame()
     int spriteFrameCounter = 0;
     
     // Orc animation setup
-    int OrcSpriteColumns = 6;
+    int OrcSpriteColumns = 4;
     int OrcFramesCounter = 0;
-    int OrcFramesSpeed = 12;
+    int OrcFramesSpeed = 8;
     int OrcCurrentFrame = 0;
     
 
