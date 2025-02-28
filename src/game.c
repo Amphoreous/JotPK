@@ -1,6 +1,16 @@
 #include "raylib.h"
 #include "game.h"
-#include <math.h> // Needed for sqrt()
+#include <math.h>
+#include <stdlib.h>
+
+#define SHOOT_RATE 0.3f // Tiempo en segundos entre disparos
+
+typedef struct Bullet
+{
+    Rectangle frameRec_Bullet;
+    Vector2 direction;
+    bool active;
+} Bullet;
 
 void DrawGame()
 {
@@ -16,6 +26,9 @@ void DrawGame()
     Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
     Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
 
+    // Bullet
+    Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
+
     // Enemies
     Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    // Orc
 
@@ -29,13 +42,13 @@ void DrawGame()
     int currentSpriteFrame = 0;
     int spriteFrameSpeed = 8; // Velocidad de cambio de frame
     int spriteFrameCounter = 0;
-    
+
     // Orc animation setup
     int OrcSpriteColumns = 4;
     int OrcFramesCounter = 0;
     int OrcFramesSpeed = 8;
     int OrcCurrentFrame = 0;
-    
+
 
     // Calcular escala y dimensiones para el fondo
     float scale = fminf((float)screenWidth / spriteFrameWidth, (float)screenHeight / spriteFrameHeight);
@@ -60,7 +73,7 @@ void DrawGame()
     Rectangle frameRec_Left = { 0.0f, 0.0f, (float)Finn_Left.width / spriteColumns, (float)Finn_Left.height };
     Rectangle frameRec_Up = { 0.0f, 0.0f, (float)Finn_Up.width / spriteColumns, (float)Finn_Up.height };
     Rectangle frameRec_Down = { 0.0f, 0.0f, (float)Finn_Down.width / spriteColumns, (float)Finn_Down.height };
-    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height }; 
+    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height };
     Rectangle frameRec_Orc = { 0.0f, 0.0f, (float)Orc.width / OrcSpriteColumns, (float)Orc.height };
 
     // Textura y rectángulo fuente por defecto (idle)
@@ -68,6 +81,7 @@ void DrawGame()
     Rectangle* currentFrameRec = &frameRec_Down;
 
     Rectangle* OrcCurrentFrameRec = &frameRec_Orc;
+
 
     // Musica de fondo
     Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
@@ -77,8 +91,26 @@ void DrawGame()
     // Velocidad de movimiento
     float moveSpeed = 4.0f;
 
+    // Initialize bullets
+    Bullet* bullets = NULL;
+    int bulletCount = 0;
+
+    float shootTimer = 0.0f;
+
+    // Tamaño de la bala
+    float bulletSize = 20.0f;
+
+    // Margen para las balas
+    float bulletMarginLeft = -15.0f;
+    float bulletMarginRight = -.08f;
+    float bulletMarginTop = -5.0f;
+    float bulletMarginBottom = -5.0f;
+
     while (!WindowShouldClose())
     {
+        float deltaTime = GetFrameTime();
+        shootTimer += deltaTime;
+
         // Flags y variables de movimiento
         bool isMoving = false;
         float moveX = 0.0f;
@@ -88,6 +120,62 @@ void DrawGame()
         if (IsKeyDown(KEY_A)) moveX -= 1.0f;
         if (IsKeyDown(KEY_W)) moveY -= 1.0f;
         if (IsKeyDown(KEY_S)) moveY += 1.0f;
+
+        // Shoot bullets
+        Vector2 bulletDirection = { 0.0f, 0.0f };
+        if (IsKeyDown(KEY_RIGHT)) bulletDirection.x += 1.0f;
+        if (IsKeyDown(KEY_LEFT)) bulletDirection.x -= 1.0f;
+        if (IsKeyDown(KEY_UP)) bulletDirection.y -= 1.0f;
+        if (IsKeyDown(KEY_DOWN)) bulletDirection.y += 1.0f;
+
+        if ((bulletDirection.x != 0.0f || bulletDirection.y != 0.0f) && shootTimer >= SHOOT_RATE)
+        {
+            // Normalizar la dirección del disparo
+            float length = sqrtf(bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y);
+            bulletDirection.x /= length;
+            bulletDirection.y /= length;
+
+            bullets = realloc(bullets, (bulletCount + 1) * sizeof(Bullet));
+            bullets[bulletCount].frameRec_Bullet = (Rectangle){ position.x, position.y, bulletSize, bulletSize };
+            bullets[bulletCount].direction = bulletDirection;
+            bullets[bulletCount].active = true;
+            bulletCount++;
+            shootTimer = 0.0f; // Reiniciar el temporizador de disparo
+        }
+
+        // Update bullets
+        for (int i = 0; i < bulletCount; i++)
+        {
+            if (bullets[i].active)
+            {
+                bullets[i].frameRec_Bullet.x += bullets[i].direction.x * 10.0f;
+                bullets[i].frameRec_Bullet.y += bullets[i].direction.y * 10.0f;
+
+                // Verificar límites antes de actualizar la posición de la bala
+                if (bullets[i].frameRec_Bullet.x - bulletSize / 2.0f < spritePosition.x + bulletMarginLeft ||
+                    bullets[i].frameRec_Bullet.x + bulletSize / 2.0f > spritePosition.x + scaledWidth - bulletMarginRight ||
+                    bullets[i].frameRec_Bullet.y - bulletSize / 2.0f < spritePosition.y + bulletMarginTop ||
+                    bullets[i].frameRec_Bullet.y + bulletSize / 2.0f > spritePosition.y + scaledHeight - bulletMarginBottom)
+                {
+                    bullets[i].active = false;
+                }
+            }
+        }
+
+        // Remove inactive bullets
+        for (int i = 0; i < bulletCount; i++)
+        {
+            if (!bullets[i].active)
+            {
+                for (int j = i; j < bulletCount - 1; j++)
+                {
+                    bullets[j] = bullets[j + 1];
+                }
+                bulletCount--;
+                bullets = realloc(bullets, bulletCount * sizeof(Bullet));
+                i--;
+            }
+        }
 
         // Bucle de música
         UpdateMusicStream(BackgroundMusic_A1);
@@ -189,10 +277,24 @@ void DrawGame()
 
         float orcSize = scaledHeight / 16.0f - 10.0f;
 
-
+        // Draw bullets
+        for (int i = 0; i < bulletCount; i++)
+        {
+            if (bullets[i].active)
+            {
+                DrawTexturePro(Bullet_1, (Rectangle) { 0.0f, 0.0f, (float)Bullet_1.width, (float)Bullet_1.height },
+                    (Rectangle) {
+                    bullets[i].frameRec_Bullet.x, bullets[i].frameRec_Bullet.y, bulletSize, bulletSize
+                },
+                    (Vector2) {
+                    0.0f, 0.0f
+                }, 0.0f, WHITE);
+            }
+        }
         // Dibujar el personaje (en cualquier estado) con las medidas ajustadas
         DrawTexturePro(currentTexture, *currentFrameRec, (Rectangle) { drawPosition.x, drawPosition.y, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
-        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) { screenWidth/2, screenHeight/2, orcSize, orcSize
+        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) {
+            screenWidth / 2, screenHeight / 2, orcSize, orcSize
         }, (Vector2) { 0, 0 }, 0.0f, WHITE);
 
         EndDrawing();
@@ -206,5 +308,12 @@ void DrawGame()
     UnloadTexture(Finn_Idle);
     UnloadTexture(Orc);
     UnloadTexture(backgroundSpriteSheet);
+    UnloadTexture(Bullet_1);
     UnloadMusicStream(BackgroundMusic_A1);
+
+    // Liberar memoria de las balas
+    free(bullets);
 }
+
+
+
