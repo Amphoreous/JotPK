@@ -62,6 +62,9 @@ void DrawGame()
     // Calcular el tamaño del personaje usando scaledHeight / 16
     float characterSize = scaledHeight / 16.0f;
 
+    // Tamaño de la bala
+    float bulletSize = characterSize / 4.0f;
+
     // Posición inicial del personaje en el centro de la pantalla
     Vector2 position = { screenWidth / 2.0f, screenHeight / 2.0f };
 
@@ -98,9 +101,6 @@ void DrawGame()
     int bulletCount = 0;
 
     float shootTimer = 0.0f;
-
-    // Tamaño de la bala
-    float bulletSize = 20.0f;
 
     // Margen para las balas
     float bulletMarginLeft = -15.0f;
