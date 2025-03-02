@@ -25,6 +25,10 @@ void DrawGame()
     Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
     Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
     Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
+    Texture2D Finn_Shooting_Right = LoadTexture("PJ_Idle_Right.png");
+    Texture2D Finn_Shooting_Left = LoadTexture("PJ_Idle_Left.png");
+    Texture2D Finn_Shooting_Up = LoadTexture("PJ_Idle_Up.png");
+    Texture2D Finn_Shooting_Down = LoadTexture("PJ_Idle_Shoot_Down.png");
 
     // Bullet
     Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
@@ -48,7 +52,6 @@ void DrawGame()
     int OrcFramesCounter = 0;
     int OrcFramesSpeed = 8;
     int OrcCurrentFrame = 0;
-
 
     // Calcular escala y dimensiones para el fondo
     float scale = fminf((float)screenWidth / spriteFrameWidth, (float)screenHeight / spriteFrameHeight);
@@ -82,7 +85,6 @@ void DrawGame()
 
     Rectangle* OrcCurrentFrameRec = &frameRec_Orc;
 
-
     // Musica de fondo
     Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
     SetMusicVolume(BackgroundMusic_A1, 0.1f);
@@ -106,6 +108,9 @@ void DrawGame()
     float bulletMarginTop = -5.0f;
     float bulletMarginBottom = -5.0f;
 
+    // Dirección de disparo actual
+    Vector2 bulletDirection = { 0.0f, 0.0f };
+
     while (!WindowShouldClose())
     {
         float deltaTime = GetFrameTime();
@@ -122,7 +127,7 @@ void DrawGame()
         if (IsKeyDown(KEY_S)) moveY += 1.0f;
 
         // Shoot bullets
-        Vector2 bulletDirection = { 0.0f, 0.0f };
+        bulletDirection = (Vector2){ 0.0f, 0.0f };
         if (IsKeyDown(KEY_RIGHT)) bulletDirection.x += 1.0f;
         if (IsKeyDown(KEY_LEFT)) bulletDirection.x -= 1.0f;
         if (IsKeyDown(KEY_UP)) bulletDirection.y -= 1.0f;
@@ -203,8 +208,31 @@ void DrawGame()
             {
                 position.y = newY;
             }
+        }
 
-            // Seleccionar textura según la dirección
+        // Seleccionar textura según la dirección de disparo
+        if (bulletDirection.x != 0.0f || bulletDirection.y != 0.0f)
+        {
+            if (bulletDirection.y < 0) {
+                currentTexture = Finn_Up;
+                currentFrameRec = &frameRec_Up;
+            }
+            if (bulletDirection.y > 0) {
+                currentTexture = Finn_Down;
+                currentFrameRec = &frameRec_Down;
+            }
+            if (bulletDirection.x > 0) {
+                currentTexture = Finn_Right;
+                currentFrameRec = &frameRec_Right;
+            }
+            if (bulletDirection.x < 0) {
+                currentTexture = Finn_Left;
+                currentFrameRec = &frameRec_Left;
+            }
+        }
+        else if (isMoving)
+        {
+            // Seleccionar textura según la dirección de movimiento
             if (moveY < 0) {
                 currentTexture = Finn_Up;
                 currentFrameRec = &frameRec_Up;
@@ -314,6 +342,3 @@ void DrawGame()
     // Liberar memoria de las balas
     free(bullets);
 }
-
-
-
