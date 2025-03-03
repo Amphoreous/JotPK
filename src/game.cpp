@@ -66,8 +66,14 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
 
     Rectangle* OrcCurrentFrameRec = &frameRec_Orc;
 
-    // Velocidad de movimiento
-    float moveSpeed = 4.0f;
+    // Velocidad de movimiento base
+    float baseMoveSpeed = 4.0f;
+
+    // Factor de escala basado en la altura de la pantalla
+    float scaleFactor = screenHeight / 1080.0f; // Asumiendo 1080p como referencia
+
+    // Ajustar la velocidad de movimiento
+    float moveSpeed = baseMoveSpeed * scaleFactor;
 
     // Initialize bullets
     Bullet* bullets = nullptr;
