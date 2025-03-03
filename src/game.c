@@ -21,20 +21,31 @@ void DrawGame()
 
     // Main character
     Texture2D Finn_Right = LoadTexture("Sprite_Sheet_Right.png");
+    SetTextureFilter(Finn_Right, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
+    SetTextureFilter(Finn_Left, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
+    SetTextureFilter(Finn_Up, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
+    SetTextureFilter(Finn_Down, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
+    SetTextureFilter(Finn_Idle, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Shooting_Right = LoadTexture("PJ_Idle_Right.png");
+    SetTextureFilter(Finn_Shooting_Right, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Shooting_Left = LoadTexture("PJ_Idle_Left.png");
+    SetTextureFilter(Finn_Shooting_Left, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Shooting_Up = LoadTexture("PJ_Idle_Up.png");
+    SetTextureFilter(Finn_Shooting_Up, TEXTURE_FILTER_BILINEAR);
     Texture2D Finn_Shooting_Down = LoadTexture("PJ_Idle_Shoot_Down.png");
+    SetTextureFilter(Finn_Shooting_Down, TEXTURE_FILTER_BILINEAR);
 
     // Bullet
     Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
+    SetTextureFilter(Bullet_1, TEXTURE_FILTER_BILINEAR);
 
     // Enemies
-    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    // Orc
+    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");
+    SetTextureFilter(Orc, TEXTURE_FILTER_BILINEAR);
 
     // Load sprite sheet for background
     Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
