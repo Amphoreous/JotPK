@@ -1,12 +1,14 @@
 #include "raylib.h"
 #include "settings.h"
-#include <math.h>  // Para fabs()
+#include <math.h>  // For fabs()
 
 // Variables estáticas internas para almacenar estados
+
 static int hoveredOptionSettings = -1;            // Opción sobre la que está el cursor
 static int selectedOptionSettings = -1;           // Opción seleccionada por teclado
 static Vector2 previousMousePositionSettings = { 0, 0 };
 static bool usingMouseSettings = false;           // Flag: true = modo ratón, false = modo teclado
+
 
 void DrawSettings(GameScreen* currentScreen)
 {
@@ -19,7 +21,7 @@ void DrawSettings(GameScreen* currentScreen)
     DrawText("SETTINGS", (GetScreenWidth() - titleWidth) / 2, 100, 50, WHITE);
     DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
 
-    // Botón "Back"
+    // "Back" Button
 
     Color backColor = WHITE;
 

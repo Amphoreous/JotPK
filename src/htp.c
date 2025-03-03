@@ -39,9 +39,13 @@ void DrawHTP(GameScreen* currentScreen)
 
     // Dibujar la imagen en lugar del texto
 
-    DrawTexture(htpImage, 190, 250, WHITE);
+    int htpImageWidth = GetScreenWidth() / 2;
+    int htpImageHeight = GetScreenHeight() / 2;
 
-    // Botón "Back"
+
+    DrawTexture(htpImage,  htpImageWidth/1.54, (GetScreenHeight() - htpImageHeight) -180, WHITE);
+
+    // "Back" Button
 
     Color backColor = WHITE;
 
@@ -54,7 +58,7 @@ void DrawHTP(GameScreen* currentScreen)
 
     // Ajustar la posición del botón "Back" para que no se solape con la imagen
 
-    DrawText("Back", 190, 600, 20, backColor);
+    DrawText("Back", 190, 900, 20, backColor);
 
     EndDrawing();
 
@@ -89,7 +93,7 @@ void DrawHTP(GameScreen* currentScreen)
 
         selectedOptionHTP = -1;  // Limpiar la selección por teclado
 
-        if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 600, MeasureText("Back", 20), 20 }))
+        if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 900, MeasureText("Back", 20), 20 }))
         {
             hoveredOptionHTP = 0;
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))

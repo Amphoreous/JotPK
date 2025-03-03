@@ -7,10 +7,13 @@
 
 typedef struct Bullet
 {
+
     Rectangle frameRec_Bullet;
     Vector2 direction;
     bool active;
+
 } Bullet;
+
 
 void DrawGame()
 {
@@ -34,7 +37,7 @@ void DrawGame()
     Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
 
     // Enemies
-    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    // Orc
+    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    
 
     // Load sprite sheet for background
     Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
@@ -213,19 +216,23 @@ void DrawGame()
         // Seleccionar textura según la dirección de disparo
         if (bulletDirection.x != 0.0f || bulletDirection.y != 0.0f)
         {
-            if (bulletDirection.y < 0) {
+            if (bulletDirection.y < 0) 
+            {
                 currentTexture = Finn_Up;
                 currentFrameRec = &frameRec_Up;
             }
-            if (bulletDirection.y > 0) {
+            if (bulletDirection.y > 0) 
+            {
                 currentTexture = Finn_Down;
                 currentFrameRec = &frameRec_Down;
             }
-            if (bulletDirection.x > 0) {
+            if (bulletDirection.x > 0) 
+            {
                 currentTexture = Finn_Right;
                 currentFrameRec = &frameRec_Right;
             }
-            if (bulletDirection.x < 0) {
+            if (bulletDirection.x < 0) 
+            {
                 currentTexture = Finn_Left;
                 currentFrameRec = &frameRec_Left;
             }
@@ -233,19 +240,23 @@ void DrawGame()
         else if (isMoving)
         {
             // Seleccionar textura según la dirección de movimiento
-            if (moveY < 0) {
+            if (moveY < 0) 
+            {
                 currentTexture = Finn_Up;
                 currentFrameRec = &frameRec_Up;
             }
-            if (moveY > 0) {
+            if (moveY > 0) 
+            {
                 currentTexture = Finn_Down;
                 currentFrameRec = &frameRec_Down;
             }
-            if (moveX > 0) {
+            if (moveX > 0) 
+            {
                 currentTexture = Finn_Right;
                 currentFrameRec = &frameRec_Right;
             }
-            if (moveX < 0) {
+            if (moveX < 0) 
+            {
                 currentTexture = Finn_Left;
                 currentFrameRec = &frameRec_Left;
             }
@@ -298,7 +309,8 @@ void DrawGame()
 
         // Calcular el tamaño del personaje usando scaledHeight / 16
         float characterSize = scaledHeight / 16.0f;
-        Vector2 drawPosition = {
+        Vector2 drawPosition = 
+        {
             position.x - characterSize / 2.0f,
             position.y - characterSize / 2.0f
         };
@@ -311,17 +323,15 @@ void DrawGame()
             if (bullets[i].active)
             {
                 DrawTexturePro(Bullet_1, (Rectangle) { 0.0f, 0.0f, (float)Bullet_1.width, (float)Bullet_1.height },
-                    (Rectangle) {
-                    bullets[i].frameRec_Bullet.x, bullets[i].frameRec_Bullet.y, bulletSize, bulletSize
-                },
-                    (Vector2) {
-                    0.0f, 0.0f
-                }, 0.0f, WHITE);
+                    (Rectangle) {bullets[i].frameRec_Bullet.x, bullets[i].frameRec_Bullet.y, bulletSize, bulletSize},
+                    (Vector2) {0.0f, 0.0f}, 0.0f, WHITE);
             }
         }
+
         // Dibujar el personaje (en cualquier estado) con las medidas ajustadas
         DrawTexturePro(currentTexture, *currentFrameRec, (Rectangle) { drawPosition.x, drawPosition.y, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
-        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) {
+        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) 
+        {
             screenWidth / 2, screenHeight / 2, orcSize, orcSize
         }, (Vector2) { 0, 0 }, 0.0f, WHITE);
 
