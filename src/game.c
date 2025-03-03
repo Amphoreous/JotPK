@@ -40,11 +40,11 @@ void DrawGame()
     Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
 
     // Variables para la animación del sprite sheet del fondo
-    int spriteFrameCount = 18; // Número de frames en el sprite sheet
+    int spriteFrameCount = 2; // Número de frames en el sprite sheet
     int spriteFrameWidth = backgroundSpriteSheet.width / spriteFrameCount;
     int spriteFrameHeight = backgroundSpriteSheet.height;
     int currentSpriteFrame = 0;
-    int spriteFrameSpeed = 8; // Velocidad de cambio de frame
+    int spriteFrameSpeed = 1; // Velocidad de cambio de frame
     int spriteFrameCounter = 0;
 
     // Orc animation setup
