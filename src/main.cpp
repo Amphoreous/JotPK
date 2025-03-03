@@ -1,24 +1,31 @@
-#include "raylib.h"
+#include <raylib.h>
+#include <iostream>
+#include <string>
 #include "resource_dir.h"
 #include "menu.h"
 #include "game.h"
 #include "settings.h"
 #include "htp.h"
 #include "intro.h"
-#include "discord_presence.h"
-#define MAX_SOUNDS 10                   // ESTAS 3 LINEAS PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
+#include "discord/discord_manager.h"
+
+#define MAX_SOUNDS 10
 
 Sound soundArray[MAX_SOUNDS] = { 0 };
 int currentSound;
 
-int main(void)
-{
+int main() {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "The Journey of the Prairie King");
     SearchAndSetResourceDir("resources");
 
-    initDiscord();
-    InitAudioDevice();                          // Inicializar el dispositivo de audio
+    // Inicializar Discord Rich Presence
+    bool discordInitialized = discord_sdk::initialize();
+    if (!discordInitialized) {
+        std::cerr << "Error al inicializar Discord" << std::endl;
+    }
+
+    InitAudioDevice();
     Sound fxStart = LoadSound("Sound_Start.wav");
 
     Image icon = LoadImage("icon.png");
@@ -49,32 +56,29 @@ int main(void)
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    //ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
+    ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
 
     InitHTP();
 
-    while (!WindowShouldClose())
-    {
-        updateDiscord(); // Llamar a updateDiscord en cada iteración del bucle principal
+    while (!WindowShouldClose()) {
+        if (discordInitialized) {
+            discord_sdk::update();
+        }
 
-        if (currentScreen == MENU)
-        {
+        if (currentScreen == MENU) {
             DrawMenu(JotPKLogo, selectedOption);
             UpdateMenu(&currentScreen, &selectedOption);
         }
-        else if (currentScreen == GAME)
-        {
+        else if (currentScreen == GAME) {
             DrawGame(Finn_Right, Finn_Left, Finn_Up, Finn_Down, Finn_Idle, Finn_Shooting_Right, Finn_Shooting_Left, Finn_Shooting_Up, Finn_Shooting_Down, Bullet_1, Orc, backgroundSpriteSheet, BackgroundMusic_A1);
         }
-        else if (currentScreen == SETTINGS)
-        {
+        else if (currentScreen == SETTINGS) {
             DrawSettings(&currentScreen);
         }
-        else if (currentScreen == HTP)
-        {
+        else if (currentScreen == HTP) {
             DrawHTP(&currentScreen);
         }
     }
@@ -98,6 +102,11 @@ int main(void)
     UnloadTexture(Orc);
     UnloadTexture(backgroundSpriteSheet);
     UnloadMusicStream(BackgroundMusic_A1);
+
+    // Cerrar Discord Rich Presence
+    if (discordInitialized) {
+        discord_sdk::shutdown();
+    }
 
     CloseWindow();
     return 0;

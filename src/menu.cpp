@@ -1,5 +1,5 @@
 #include "menu.h"
-#include <math.h>  // Necesario para fabs()
+#include <cmath>  // Necesario para fabs()
 
 // Variable estática interna para almacenar la opción "hovered" (sobre la que está el cursor)
 
@@ -31,7 +31,7 @@ void DrawMenu(Texture JotPKLogo, int selectedOption)
 
     // Dibujar el logo centrado en el área disponible
 
-    DrawTextureEx(JotPKLogo, (Vector2) { logoX, logoY }, 0.0f, (float)logoWidth / JotPKLogo.width, WHITE);
+    DrawTextureEx(JotPKLogo, Vector2{ static_cast<float>(logoX), static_cast<float>(logoY) }, 0.0f, static_cast<float>(logoWidth) / JotPKLogo.width, WHITE);
 
     // Colores por defecto para cada opción
 
@@ -84,8 +84,8 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
     // Umbral para evitar que pequeñas fluctuaciones se consideren movimiento
 
     float threshold = 0.1f;
-    bool currentMouseMoved = (fabs(mousePoint.x - previousMousePosition.x) > threshold ||
-        fabs(mousePoint.y - previousMousePosition.y) > threshold);
+    bool currentMouseMoved = (std::fabs(mousePoint.x - previousMousePosition.x) > threshold ||
+        std::fabs(mousePoint.y - previousMousePosition.y) > threshold);
     previousMousePosition = mousePoint;
 
     // Si se pulsa alguna tecla de navegación, se activa el modo teclado
@@ -117,30 +117,22 @@ void UpdateMenu(GameScreen* currentScreen, int* selectedOption)
         // Detectar colisión con cada opción para asignar hoveredOption
 
         if (CheckCollisionPointRec(mousePoint,
-            (Rectangle) {
-            spacing * 1 - MeasureText("Start", 20) / 2, menuY, MeasureText("Start", 20), 20
-        }))
+            Rectangle{ static_cast<float>(spacing * 1 - MeasureText("Start", 20) / 2), static_cast<float>(menuY), static_cast<float>(MeasureText("Start", 20)), 20 }))
         {
             hoveredOption = 0;
         }
         else if (CheckCollisionPointRec(mousePoint,
-            (Rectangle) {
-            spacing * 2 - MeasureText("Settings", 20) / 2, menuY, MeasureText("Settings", 20), 20
-        }))
+            Rectangle{ static_cast<float>(spacing * 2 - MeasureText("Settings", 20) / 2), static_cast<float>(menuY), static_cast<float>(MeasureText("Settings", 20)), 20 }))
         {
             hoveredOption = 1;
         }
         else if (CheckCollisionPointRec(mousePoint,
-            (Rectangle) {
-            spacing * 3 - MeasureText("How to play", 20) / 2, menuY, MeasureText("How to play", 20), 20
-        }))
+            Rectangle{ static_cast<float>(spacing * 3 - MeasureText("How to play", 20) / 2), static_cast<float>(menuY), static_cast<float>(MeasureText("How to play", 20)), 20 }))
         {
             hoveredOption = 2;
         }
         else if (CheckCollisionPointRec(mousePoint,
-            (Rectangle) {
-            spacing * 4 - MeasureText("Quit", 20) / 2, menuY, MeasureText("Quit", 20), 20
-        }))
+            Rectangle{ static_cast<float>(spacing * 4 - MeasureText("Quit", 20) / 2), static_cast<float>(menuY), static_cast<float>(MeasureText("Quit", 20)), 20 }))
         {
             hoveredOption = 3;
         }

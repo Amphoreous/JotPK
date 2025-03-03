@@ -1,17 +1,15 @@
 #include "raylib.h"
 #include "game.h"
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 #define SHOOT_RATE 0.3f // Tiempo en segundos entre disparos
 
 typedef struct Bullet
 {
-
     Rectangle frameRec_Bullet;
     Vector2 direction;
     bool active;
-
 } Bullet;
 
 void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Texture2D Finn_Down, Texture2D Finn_Idle, Texture2D Finn_Shooting_Right, Texture2D Finn_Shooting_Left, Texture2D Finn_Shooting_Up, Texture2D Finn_Shooting_Down, Texture2D Bullet_1, Texture2D Orc, Texture2D backgroundSpriteSheet, Music BackgroundMusic_A1)
@@ -19,8 +17,8 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    // Variables para la animaci�n del sprite sheet del fondo
-    int spriteFrameCount = 18; // N�mero de frames en el sprite sheet
+    // Variables para la animación del sprite sheet del fondo
+    int spriteFrameCount = 18; // Número de frames en el sprite sheet
     int spriteFrameWidth = backgroundSpriteSheet.width / spriteFrameCount;
     int spriteFrameHeight = backgroundSpriteSheet.height;
     int currentSpriteFrame = 0;
@@ -34,35 +32,35 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
     int OrcCurrentFrame = 0;
 
     // Calcular escala y dimensiones para el fondo
-    float scale = fminf((float)screenWidth / spriteFrameWidth, (float)screenHeight / spriteFrameHeight);
+    float scale = fminf(static_cast<float>(screenWidth) / spriteFrameWidth, static_cast<float>(screenHeight) / spriteFrameHeight);
     float scaledWidth = spriteFrameWidth * scale;
     float scaledHeight = spriteFrameHeight * scale;
     Vector2 spritePosition = { (screenWidth - scaledWidth) / 2.0f, (screenHeight - scaledHeight) / 2.0f };
 
-    // Calcular el tama�o del personaje usando scaledHeight / 16
+    // Calcular el tamaño del personaje usando scaledHeight / 16
     float characterSize = scaledHeight / 16.0f;
 
-    // Tama�o de la bala
+    // Tamaño de la bala
     float bulletSize = characterSize / 4.0f;
 
-    // Posici�n inicial del personaje en el centro de la pantalla
+    // Posición inicial del personaje en el centro de la pantalla
     Vector2 position = { screenWidth / 2.0f, screenHeight / 2.0f };
 
-    // Setup de animaci�n para las texturas con sprite sheets
+    // Setup de animación para las texturas con sprite sheets
     int spriteColumns = 4;
     int currentFrame = 0;
     int framesCounter = 0;
     int framesSpeed = 8;
 
-    // Rect�ngulos fuente para las texturas en movimiento (sprite sheets)
-    Rectangle frameRec_Right = { 0.0f, 0.0f, (float)Finn_Right.width / spriteColumns, (float)Finn_Right.height };
-    Rectangle frameRec_Left = { 0.0f, 0.0f, (float)Finn_Left.width / spriteColumns, (float)Finn_Left.height };
-    Rectangle frameRec_Up = { 0.0f, 0.0f, (float)Finn_Up.width / spriteColumns, (float)Finn_Up.height };
-    Rectangle frameRec_Down = { 0.0f, 0.0f, (float)Finn_Down.width / spriteColumns, (float)Finn_Down.height };
-    Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height };
-    Rectangle frameRec_Orc = { 0.0f, 0.0f, (float)Orc.width / OrcSpriteColumns, (float)Orc.height };
+    // Rectángulos fuente para las texturas en movimiento (sprite sheets)
+    Rectangle frameRec_Right = { 0.0f, 0.0f, static_cast<float>(Finn_Right.width) / spriteColumns, static_cast<float>(Finn_Right.height) };
+    Rectangle frameRec_Left = { 0.0f, 0.0f, static_cast<float>(Finn_Left.width) / spriteColumns, static_cast<float>(Finn_Left.height) };
+    Rectangle frameRec_Up = { 0.0f, 0.0f, static_cast<float>(Finn_Up.width) / spriteColumns, static_cast<float>(Finn_Up.height) };
+    Rectangle frameRec_Down = { 0.0f, 0.0f, static_cast<float>(Finn_Down.width) / spriteColumns, static_cast<float>(Finn_Down.height) };
+    Rectangle frameRec_Idle = { 0.0f, 0.0f, static_cast<float>(Finn_Idle.width), static_cast<float>(Finn_Idle.height) };
+    Rectangle frameRec_Orc = { 0.0f, 0.0f, static_cast<float>(Orc.width) / OrcSpriteColumns, static_cast<float>(Orc.height) };
 
-    // Textura y rect�ngulo fuente por defecto (idle)
+    // Textura y rectángulo fuente por defecto (idle)
     Texture2D currentTexture = Finn_Down;
     Rectangle* currentFrameRec = &frameRec_Down;
 
@@ -72,7 +70,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
     float moveSpeed = 4.0f;
 
     // Initialize bullets
-    Bullet* bullets = NULL;
+    Bullet* bullets = nullptr;
     int bulletCount = 0;
 
     float shootTimer = 0.0f;
@@ -83,7 +81,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
     float bulletMarginTop = -5.0f;
     float bulletMarginBottom = -5.0f;
 
-    // Direcci�n de disparo actual
+    // Dirección de disparo actual
     Vector2 bulletDirection = { 0.0f, 0.0f };
 
     while (!WindowShouldClose())
@@ -102,7 +100,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         if (IsKeyDown(KEY_S)) moveY += 1.0f;
 
         // Shoot bullets
-        bulletDirection = (Vector2){ 0.0f, 0.0f };
+        bulletDirection = { 0.0f, 0.0f };
         if (IsKeyDown(KEY_RIGHT)) bulletDirection.x += 1.0f;
         if (IsKeyDown(KEY_LEFT)) bulletDirection.x -= 1.0f;
         if (IsKeyDown(KEY_UP)) bulletDirection.y -= 1.0f;
@@ -110,13 +108,13 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
 
         if ((bulletDirection.x != 0.0f || bulletDirection.y != 0.0f) && shootTimer >= SHOOT_RATE)
         {
-            // Normalizar la direcci�n del disparo
-            float length = sqrtf(bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y);
+            // Normalizar la dirección del disparo
+            float length = std::sqrt(bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y);
             bulletDirection.x /= length;
             bulletDirection.y /= length;
 
-            bullets = realloc(bullets, (bulletCount + 1) * sizeof(Bullet));
-            bullets[bulletCount].frameRec_Bullet = (Rectangle){ position.x, position.y, bulletSize, bulletSize };
+            bullets = static_cast<Bullet*>(std::realloc(bullets, (bulletCount + 1) * sizeof(Bullet)));
+            bullets[bulletCount].frameRec_Bullet = { position.x, position.y, bulletSize, bulletSize };
             bullets[bulletCount].direction = bulletDirection;
             bullets[bulletCount].active = true;
             bulletCount++;
@@ -131,7 +129,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
                 bullets[i].frameRec_Bullet.x += bullets[i].direction.x * 10.0f;
                 bullets[i].frameRec_Bullet.y += bullets[i].direction.y * 10.0f;
 
-                // Verificar l�mites antes de actualizar la posici�n de la bala
+                // Verificar límites antes de actualizar la posición de la bala
                 if (bullets[i].frameRec_Bullet.x - bulletSize / 2.0f < spritePosition.x + bulletMarginLeft ||
                     bullets[i].frameRec_Bullet.x + bulletSize / 2.0f > spritePosition.x + scaledWidth - bulletMarginRight ||
                     bullets[i].frameRec_Bullet.y - bulletSize / 2.0f < spritePosition.y + bulletMarginTop ||
@@ -152,23 +150,23 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
                     bullets[j] = bullets[j + 1];
                 }
                 bulletCount--;
-                bullets = realloc(bullets, bulletCount * sizeof(Bullet));
+                bullets = static_cast<Bullet*>(std::realloc(bullets, bulletCount * sizeof(Bullet)));
                 i--;
             }
         }
 
-        // Bucle de m�sica
+        // Bucle de música
         UpdateMusicStream(BackgroundMusic_A1);
 
         if (moveX != 0 || moveY != 0)
         {
             isMoving = true;
-            // Normalizaci�n para el movimiento diagonal
-            float length = sqrtf(moveX * moveX + moveY * moveY);
+            // Normalización para el movimiento diagonal
+            float length = std::sqrt(moveX * moveX + moveY * moveY);
             moveX = (moveX / length) * moveSpeed;
             moveY = (moveY / length) * moveSpeed;
 
-            // Verificar l�mites antes de actualizar la posici�n
+            // Verificar límites antes de actualizar la posición
             float newX = position.x + moveX;
             float newY = position.y + moveY;
 
@@ -185,25 +183,25 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
             }
         }
 
-        // Seleccionar textura seg�n la direcci�n de disparo
+        // Seleccionar textura según la dirección de disparo
         if (bulletDirection.x != 0.0f || bulletDirection.y != 0.0f)
         {
-            if (bulletDirection.y < 0) 
+            if (bulletDirection.y < 0)
             {
                 currentTexture = Finn_Up;
                 currentFrameRec = &frameRec_Up;
             }
-            if (bulletDirection.y > 0) 
+            if (bulletDirection.y > 0)
             {
                 currentTexture = Finn_Down;
                 currentFrameRec = &frameRec_Down;
             }
-            if (bulletDirection.x > 0) 
+            if (bulletDirection.x > 0)
             {
                 currentTexture = Finn_Right;
                 currentFrameRec = &frameRec_Right;
             }
-            if (bulletDirection.x < 0) 
+            if (bulletDirection.x < 0)
             {
                 currentTexture = Finn_Left;
                 currentFrameRec = &frameRec_Left;
@@ -211,23 +209,23 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         }
         else if (isMoving)
         {
-            // Seleccionar textura seg�n la direcci�n de movimiento
-            if (moveY < 0) 
+            // Seleccionar textura según la dirección de movimiento
+            if (moveY < 0)
             {
                 currentTexture = Finn_Up;
                 currentFrameRec = &frameRec_Up;
             }
-            if (moveY > 0) 
+            if (moveY > 0)
             {
                 currentTexture = Finn_Down;
                 currentFrameRec = &frameRec_Down;
             }
-            if (moveX > 0) 
+            if (moveX > 0)
             {
                 currentTexture = Finn_Right;
                 currentFrameRec = &frameRec_Right;
             }
-            if (moveX < 0) 
+            if (moveX < 0)
             {
                 currentTexture = Finn_Left;
                 currentFrameRec = &frameRec_Left;
@@ -240,7 +238,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
             currentFrameRec = &frameRec_Idle;
         }
 
-        // Actualizar animaci�n de los sprites en movimiento
+        // Actualizar animación de los sprites en movimiento
         if (isMoving)
         {
             framesCounter++;
@@ -248,11 +246,11 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
             {
                 framesCounter = 0;
                 currentFrame = (currentFrame + 1) % spriteColumns;
-                currentFrameRec->x = (float)currentFrame * currentFrameRec->width;
+                currentFrameRec->x = static_cast<float>(currentFrame) * currentFrameRec->width;
             }
         }
 
-        // Actualizar animaci�n del sprite sheet de fondo
+        // Actualizar animación del sprite sheet de fondo
         spriteFrameCounter++;
         if (spriteFrameCounter >= (60 / spriteFrameSpeed))
         {
@@ -266,22 +264,22 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         {
             OrcFramesCounter = 0;
             OrcCurrentFrame = (OrcCurrentFrame + 1) % OrcSpriteColumns;
-            OrcCurrentFrameRec->x = (float)OrcCurrentFrame * OrcCurrentFrameRec->width;
+            OrcCurrentFrameRec->x = static_cast<float>(OrcCurrentFrame) * OrcCurrentFrameRec->width;
         }
 
-        // Calcular el rect�ngulo fuente del frame actual del fondo
+        // Calcular el rectángulo fuente del frame actual del fondo
         int frameX = currentSpriteFrame * spriteFrameWidth;
-        Rectangle spriteFrameRec = { (float)frameX, 0.0f, (float)spriteFrameWidth, (float)spriteFrameHeight };
+        Rectangle spriteFrameRec = { static_cast<float>(frameX), 0.0f, static_cast<float>(spriteFrameWidth), static_cast<float>(spriteFrameHeight) };
 
         BeginDrawing();
         ClearBackground(BLACK);
 
         // Dibujar el fondo
-        DrawTexturePro(backgroundSpriteSheet, spriteFrameRec, (Rectangle) { spritePosition.x, spritePosition.y, scaledWidth, scaledHeight }, (Vector2) { 0, 0 }, 0.0f, WHITE);
+        DrawTexturePro(backgroundSpriteSheet, spriteFrameRec, { spritePosition.x, spritePosition.y, scaledWidth, scaledHeight }, { 0, 0 }, 0.0f, WHITE);
 
-        // Calcular el tama�o del personaje usando scaledHeight / 16
+        // Calcular el tamaño del personaje usando scaledHeight / 16
         float characterSize = scaledHeight / 16.0f;
-        Vector2 drawPosition = 
+        Vector2 drawPosition =
         {
             position.x - characterSize / 2.0f,
             position.y - characterSize / 2.0f
@@ -294,22 +292,19 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         {
             if (bullets[i].active)
             {
-                DrawTexturePro(Bullet_1, (Rectangle) { 0.0f, 0.0f, (float)Bullet_1.width, (float)Bullet_1.height },
-                    (Rectangle) {bullets[i].frameRec_Bullet.x, bullets[i].frameRec_Bullet.y, bulletSize, bulletSize},
-                    (Vector2) {0.0f, 0.0f}, 0.0f, WHITE);
+                DrawTexturePro(Bullet_1, { 0.0f, 0.0f, static_cast<float>(Bullet_1.width), static_cast<float>(Bullet_1.height) },
+                    { bullets[i].frameRec_Bullet.x, bullets[i].frameRec_Bullet.y, bulletSize, bulletSize },
+                    { 0.0f, 0.0f }, 0.0f, WHITE);
             }
         }
 
         // Dibujar el personaje (en cualquier estado) con las medidas ajustadas
-        DrawTexturePro(currentTexture, *currentFrameRec, (Rectangle) { drawPosition.x, drawPosition.y, characterSize, characterSize }, (Vector2) { 0, 0 }, 0.0f, WHITE);
-        DrawTexturePro(Orc, frameRec_Orc, (Rectangle) 
-        {
-            screenWidth / 2, screenHeight / 2, orcSize, orcSize
-        }, (Vector2) { 0, 0 }, 0.0f, WHITE);
+        DrawTexturePro(currentTexture, *currentFrameRec, { drawPosition.x, drawPosition.y, characterSize, characterSize }, { 0, 0 }, 0.0f, WHITE);
+        DrawTexturePro(Orc, frameRec_Orc, { static_cast<float>(screenWidth) / 2.0f, static_cast<float>(screenHeight) / 2.0f, orcSize, orcSize }, { 0, 0 }, 0.0f, WHITE);
 
         EndDrawing();
     }
 
     // Liberar memoria de las balas
-    free(bullets);
+    std::free(bullets);
 }

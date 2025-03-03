@@ -1,6 +1,6 @@
 #include "raylib.h"
 #include "htp.h"
-#include <math.h>  // Para fabs()
+#include <cmath>  // Para fabs()
 
 // Variables estáticas internas para almacenar estados
 
@@ -13,14 +13,14 @@ static bool usingMouseHTP = false;           // Flag: true = modo ratón, false =
 
 static Texture2D htpImage;
 
-void InitHTP() 
+void InitHTP()
 {
     // Cargar la imagen "htp.png"
 
     htpImage = LoadTexture("htp.png");
 }
 
-void UnloadHTP() 
+void UnloadHTP()
 {
     // Descargar la imagen cuando ya no se necesite
 
@@ -42,8 +42,7 @@ void DrawHTP(GameScreen* currentScreen)
     int htpImageWidth = GetScreenWidth() / 2;
     int htpImageHeight = GetScreenHeight() / 2;
 
-
-    DrawTexture(htpImage,  htpImageWidth/1.54, (GetScreenHeight() - htpImageHeight) -180, WHITE);
+    DrawTexture(htpImage, static_cast<int>(htpImageWidth / 1.54), (GetScreenHeight() - htpImageHeight) - 180, WHITE);
 
     // "Back" Button
 
@@ -69,8 +68,8 @@ void DrawHTP(GameScreen* currentScreen)
     // Umbral para evitar que pequeñas fluctuaciones activen el modo ratón
 
     float threshold = 0.1f;
-    bool currentMouseMoved = (fabs(mousePoint.x - previousMousePositionHTP.x) > threshold ||
-        fabs(mousePoint.y - previousMousePositionHTP.y) > threshold);
+    bool currentMouseMoved = (std::fabs(mousePoint.x - previousMousePositionHTP.x) > threshold ||
+        std::fabs(mousePoint.y - previousMousePositionHTP.y) > threshold);
     previousMousePositionHTP = mousePoint;
 
     // Si se presiona una tecla de navegación, se activa el modo teclado
@@ -93,7 +92,8 @@ void DrawHTP(GameScreen* currentScreen)
 
         selectedOptionHTP = -1;  // Limpiar la selección por teclado
 
-        if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 900, MeasureText("Back", 20), 20 }))
+        Rectangle backButtonRect = { 190, 900, static_cast<float>(MeasureText("Back", 20)), 20 };
+        if (CheckCollisionPointRec(mousePoint, backButtonRect))
         {
             hoveredOptionHTP = 0;
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
