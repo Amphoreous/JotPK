@@ -1,6 +1,6 @@
 #ifndef GAME_H
 #define GAME_H
 
-void DrawGame();
+void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Texture2D Finn_Down, Texture2D Finn_Idle, Texture2D Finn_Shooting_Right, Texture2D Finn_Shooting_Left, Texture2D Finn_Shooting_Up, Texture2D Finn_Shooting_Down, Texture2D Bullet_1, Texture2D Orc, Texture2D backgroundSpriteSheet, Music BackgroundMusic_A1);
 
 #endif // GAME_H

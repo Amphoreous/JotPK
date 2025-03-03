@@ -14,36 +14,13 @@ typedef struct Bullet
 
 } Bullet;
 
-
-void DrawGame()
+void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Texture2D Finn_Down, Texture2D Finn_Idle, Texture2D Finn_Shooting_Right, Texture2D Finn_Shooting_Left, Texture2D Finn_Shooting_Up, Texture2D Finn_Shooting_Down, Texture2D Bullet_1, Texture2D Orc, Texture2D backgroundSpriteSheet, Music BackgroundMusic_A1)
 {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    // -------------------- Load textures -------------------- //
-
-    // Main character
-    Texture2D Finn_Right = LoadTexture("Sprite_Sheet_Right.png");
-    Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
-    Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
-    Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
-    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
-    Texture2D Finn_Shooting_Right = LoadTexture("PJ_Idle_Right.png");
-    Texture2D Finn_Shooting_Left = LoadTexture("PJ_Idle_Left.png");
-    Texture2D Finn_Shooting_Up = LoadTexture("PJ_Idle_Up.png");
-    Texture2D Finn_Shooting_Down = LoadTexture("PJ_Idle_Shoot_Down.png");
-
-    // Bullet
-    Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
-
-    // Enemies
-    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    
-
-    // Load sprite sheet for background
-    Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
-
-    // Variables para la animación del sprite sheet del fondo
-    int spriteFrameCount = 18; // Número de frames en el sprite sheet
+    // Variables para la animaciï¿½n del sprite sheet del fondo
+    int spriteFrameCount = 18; // Nï¿½mero de frames en el sprite sheet
     int spriteFrameWidth = backgroundSpriteSheet.width / spriteFrameCount;
     int spriteFrameHeight = backgroundSpriteSheet.height;
     int currentSpriteFrame = 0;
@@ -62,22 +39,22 @@ void DrawGame()
     float scaledHeight = spriteFrameHeight * scale;
     Vector2 spritePosition = { (screenWidth - scaledWidth) / 2.0f, (screenHeight - scaledHeight) / 2.0f };
 
-    // Calcular el tamaño del personaje usando scaledHeight / 16
+    // Calcular el tamaï¿½o del personaje usando scaledHeight / 16
     float characterSize = scaledHeight / 16.0f;
 
-    // Tamaño de la bala
+    // Tamaï¿½o de la bala
     float bulletSize = characterSize / 4.0f;
 
-    // Posición inicial del personaje en el centro de la pantalla
+    // Posiciï¿½n inicial del personaje en el centro de la pantalla
     Vector2 position = { screenWidth / 2.0f, screenHeight / 2.0f };
 
-    // Setup de animación para las texturas con sprite sheets
+    // Setup de animaciï¿½n para las texturas con sprite sheets
     int spriteColumns = 4;
     int currentFrame = 0;
     int framesCounter = 0;
     int framesSpeed = 8;
 
-    // Rectángulos fuente para las texturas en movimiento (sprite sheets)
+    // Rectï¿½ngulos fuente para las texturas en movimiento (sprite sheets)
     Rectangle frameRec_Right = { 0.0f, 0.0f, (float)Finn_Right.width / spriteColumns, (float)Finn_Right.height };
     Rectangle frameRec_Left = { 0.0f, 0.0f, (float)Finn_Left.width / spriteColumns, (float)Finn_Left.height };
     Rectangle frameRec_Up = { 0.0f, 0.0f, (float)Finn_Up.width / spriteColumns, (float)Finn_Up.height };
@@ -85,16 +62,11 @@ void DrawGame()
     Rectangle frameRec_Idle = { 0.0f, 0.0f, (float)Finn_Idle.width, (float)Finn_Idle.height };
     Rectangle frameRec_Orc = { 0.0f, 0.0f, (float)Orc.width / OrcSpriteColumns, (float)Orc.height };
 
-    // Textura y rectángulo fuente por defecto (idle)
+    // Textura y rectï¿½ngulo fuente por defecto (idle)
     Texture2D currentTexture = Finn_Down;
     Rectangle* currentFrameRec = &frameRec_Down;
 
     Rectangle* OrcCurrentFrameRec = &frameRec_Orc;
-
-    // Musica de fondo
-    Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
-    SetMusicVolume(BackgroundMusic_A1, 0.1f);
-    PlayMusicStream(BackgroundMusic_A1);
 
     // Velocidad de movimiento
     float moveSpeed = 4.0f;
@@ -111,7 +83,7 @@ void DrawGame()
     float bulletMarginTop = -5.0f;
     float bulletMarginBottom = -5.0f;
 
-    // Dirección de disparo actual
+    // Direcciï¿½n de disparo actual
     Vector2 bulletDirection = { 0.0f, 0.0f };
 
     while (!WindowShouldClose())
@@ -138,7 +110,7 @@ void DrawGame()
 
         if ((bulletDirection.x != 0.0f || bulletDirection.y != 0.0f) && shootTimer >= SHOOT_RATE)
         {
-            // Normalizar la dirección del disparo
+            // Normalizar la direcciï¿½n del disparo
             float length = sqrtf(bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y);
             bulletDirection.x /= length;
             bulletDirection.y /= length;
@@ -159,7 +131,7 @@ void DrawGame()
                 bullets[i].frameRec_Bullet.x += bullets[i].direction.x * 10.0f;
                 bullets[i].frameRec_Bullet.y += bullets[i].direction.y * 10.0f;
 
-                // Verificar límites antes de actualizar la posición de la bala
+                // Verificar lï¿½mites antes de actualizar la posiciï¿½n de la bala
                 if (bullets[i].frameRec_Bullet.x - bulletSize / 2.0f < spritePosition.x + bulletMarginLeft ||
                     bullets[i].frameRec_Bullet.x + bulletSize / 2.0f > spritePosition.x + scaledWidth - bulletMarginRight ||
                     bullets[i].frameRec_Bullet.y - bulletSize / 2.0f < spritePosition.y + bulletMarginTop ||
@@ -185,18 +157,18 @@ void DrawGame()
             }
         }
 
-        // Bucle de música
+        // Bucle de mï¿½sica
         UpdateMusicStream(BackgroundMusic_A1);
 
         if (moveX != 0 || moveY != 0)
         {
             isMoving = true;
-            // Normalización para el movimiento diagonal
+            // Normalizaciï¿½n para el movimiento diagonal
             float length = sqrtf(moveX * moveX + moveY * moveY);
             moveX = (moveX / length) * moveSpeed;
             moveY = (moveY / length) * moveSpeed;
 
-            // Verificar límites antes de actualizar la posición
+            // Verificar lï¿½mites antes de actualizar la posiciï¿½n
             float newX = position.x + moveX;
             float newY = position.y + moveY;
 
@@ -213,7 +185,7 @@ void DrawGame()
             }
         }
 
-        // Seleccionar textura según la dirección de disparo
+        // Seleccionar textura segï¿½n la direcciï¿½n de disparo
         if (bulletDirection.x != 0.0f || bulletDirection.y != 0.0f)
         {
             if (bulletDirection.y < 0) 
@@ -239,7 +211,7 @@ void DrawGame()
         }
         else if (isMoving)
         {
-            // Seleccionar textura según la dirección de movimiento
+            // Seleccionar textura segï¿½n la direcciï¿½n de movimiento
             if (moveY < 0) 
             {
                 currentTexture = Finn_Up;
@@ -268,7 +240,7 @@ void DrawGame()
             currentFrameRec = &frameRec_Idle;
         }
 
-        // Actualizar animación de los sprites en movimiento
+        // Actualizar animaciï¿½n de los sprites en movimiento
         if (isMoving)
         {
             framesCounter++;
@@ -280,7 +252,7 @@ void DrawGame()
             }
         }
 
-        // Actualizar animación del sprite sheet de fondo
+        // Actualizar animaciï¿½n del sprite sheet de fondo
         spriteFrameCounter++;
         if (spriteFrameCounter >= (60 / spriteFrameSpeed))
         {
@@ -297,7 +269,7 @@ void DrawGame()
             OrcCurrentFrameRec->x = (float)OrcCurrentFrame * OrcCurrentFrameRec->width;
         }
 
-        // Calcular el rectángulo fuente del frame actual del fondo
+        // Calcular el rectï¿½ngulo fuente del frame actual del fondo
         int frameX = currentSpriteFrame * spriteFrameWidth;
         Rectangle spriteFrameRec = { (float)frameX, 0.0f, (float)spriteFrameWidth, (float)spriteFrameHeight };
 
@@ -307,7 +279,7 @@ void DrawGame()
         // Dibujar el fondo
         DrawTexturePro(backgroundSpriteSheet, spriteFrameRec, (Rectangle) { spritePosition.x, spritePosition.y, scaledWidth, scaledHeight }, (Vector2) { 0, 0 }, 0.0f, WHITE);
 
-        // Calcular el tamaño del personaje usando scaledHeight / 16
+        // Calcular el tamaï¿½o del personaje usando scaledHeight / 16
         float characterSize = scaledHeight / 16.0f;
         Vector2 drawPosition = 
         {
@@ -337,17 +309,6 @@ void DrawGame()
 
         EndDrawing();
     }
-
-    // Liberar recursos
-    UnloadTexture(Finn_Right);
-    UnloadTexture(Finn_Left);
-    UnloadTexture(Finn_Up);
-    UnloadTexture(Finn_Down);
-    UnloadTexture(Finn_Idle);
-    UnloadTexture(Orc);
-    UnloadTexture(backgroundSpriteSheet);
-    UnloadTexture(Bullet_1);
-    UnloadMusicStream(BackgroundMusic_A1);
 
     // Liberar memoria de las balas
     free(bullets);
