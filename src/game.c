@@ -38,6 +38,7 @@ void DrawGame()
 
     // Load sprite sheet for background
     Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
+    SetTextureFilter(backgroundSpriteSheet, TEXTURE_FILTER_BILINEAR);
 
     // Variables para la animación del sprite sheet del fondo
     int spriteFrameCount = 2; // Número de frames en el sprite sheet
