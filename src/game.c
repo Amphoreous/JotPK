@@ -12,39 +12,10 @@ typedef struct Bullet
     bool active;
 } Bullet;
 
-void DrawGame()
+void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Texture2D Finn_Down, Texture2D Finn_Idle, Texture2D Finn_Shooting_Right, Texture2D Finn_Shooting_Left, Texture2D Finn_Shooting_Up, Texture2D Finn_Shooting_Down, Texture2D Bullet_1, Texture2D Orc, Texture2D backgroundSpriteSheet, Music BackgroundMusic_A1)
 {
-    // Detectar la resolución de la pantalla
-    int monitorWidth = GetMonitorWidth(0);
-    int monitorHeight = GetMonitorHeight(0);
-
-    // Ajustar la resolución del juego
-    SetWindowSize(monitorWidth, monitorHeight);
-
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
-
-    // -------------------- Load textures -------------------- //
-
-    // Main character
-    Texture2D Finn_Right = LoadTexture("Sprite_Sheet_Right.png");
-    Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
-    Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
-    Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
-    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
-    Texture2D Finn_Shooting_Right = LoadTexture("PJ_Idle_Right.png");
-    Texture2D Finn_Shooting_Left = LoadTexture("PJ_Idle_Left.png");
-    Texture2D Finn_Shooting_Up = LoadTexture("PJ_Idle_Up.png");
-    Texture2D Finn_Shooting_Down = LoadTexture("PJ_Idle_Shoot_Down.png");
-
-    // Bullet
-    Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
-
-    // Enemies
-    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");    // Orc
-
-    // Load sprite sheet for background
-    Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
 
     // Variables para la animación del sprite sheet del fondo
     int spriteFrameCount = 18; // Número de frames en el sprite sheet
@@ -94,11 +65,6 @@ void DrawGame()
     Rectangle* currentFrameRec = &frameRec_Down;
 
     Rectangle* OrcCurrentFrameRec = &frameRec_Orc;
-
-    // Musica de fondo
-    Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
-    SetMusicVolume(BackgroundMusic_A1, 0.1f);
-    PlayMusicStream(BackgroundMusic_A1);
 
     // Velocidad de movimiento
     float moveSpeed = 4.0f;
@@ -334,17 +300,6 @@ void DrawGame()
 
         EndDrawing();
     }
-
-    // Liberar recursos
-    UnloadTexture(Finn_Right);
-    UnloadTexture(Finn_Left);
-    UnloadTexture(Finn_Up);
-    UnloadTexture(Finn_Down);
-    UnloadTexture(Finn_Idle);
-    UnloadTexture(Orc);
-    UnloadTexture(backgroundSpriteSheet);
-    UnloadTexture(Bullet_1);
-    UnloadMusicStream(BackgroundMusic_A1);
 
     // Liberar memoria de las balas
     free(bullets);
