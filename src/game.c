@@ -14,6 +14,13 @@ typedef struct Bullet
 
 void DrawGame()
 {
+    // Detectar la resolución de la pantalla
+    int monitorWidth = GetMonitorWidth(0);
+    int monitorHeight = GetMonitorHeight(0);
+
+    // Ajustar la resolución del juego
+    SetWindowSize(monitorWidth, monitorHeight);
+
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
