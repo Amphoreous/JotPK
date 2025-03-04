@@ -188,10 +188,18 @@ end
         }
         files {"../src/**.c", "../src/**.cpp", "../src/**.h", "../src/**.hpp", "../include/**.h", "../include/**.hpp"}
     
+        -- Exclude Discord manager implementation files
+        removefiles {
+            "../src/discord/**.cpp", 
+            "../src/discord/**.h", 
+            "../include/discord/**.h", 
+            "../include/discord/**.hpp"
+        }
+
         includedirs { "../src" }
         includedirs { "../include" }
 
-        links {"raylib"}
+        links { "raylib", "discord_game_sdk" }
 
         cdialect "C17"
         cppdialect "C++17"
@@ -257,3 +265,52 @@ end
             compileas "Objective-C"
 
         filter{}
+
+-- Add this after the raylib project section
+
+project "discord_game_sdk"
+    kind "StaticLib"
+    language "C++"
+    cppdialect "C++17"
+    
+    location "build_files/"
+    targetdir "../bin/%{cfg.buildcfg}"
+    
+    -- Define paths
+    local discord_sdk_dir = "external/discord_game_sdk"
+    
+    -- Include directories
+    includedirs { "../include" }
+    includedirs { discord_sdk_dir .. "/cpp" }
+    
+    -- Set up source files
+    vpaths 
+    {
+        ["Header Files"] = { 
+            discord_sdk_dir .. "/cpp/**.h",
+            "../include/discord/**.h"
+        },
+        ["Source Files"] = { 
+            discord_sdk_dir .. "/cpp/**.cpp",
+            "../src/discord/**.cpp" 
+        },
+    }
+    
+    -- Add files - SDK header files + our wrapper implementation
+    files { 
+        discord_sdk_dir .. "/cpp/**.h", 
+        discord_sdk_dir .. "/cpp/**.cpp",
+        "../include/discord/**.h",
+        "../src/discord/**.cpp"
+    }
+    
+    -- Platform-specific settings
+    filter "action:vs*"
+        defines { "_WINSOCK_DEPRECATED_NO_WARNINGS", "_CRT_SECURE_NO_WARNINGS" }
+        characterset ("Unicode")
+        buildoptions { "/Zc:__cplusplus" }
+        
+    filter "system:windows"
+        defines { "_WIN32" }
+        
+    filter {}

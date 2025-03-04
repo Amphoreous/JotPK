@@ -1,6 +1,6 @@
 #include "raylib.h"
 #include "settings.h"
-#include <math.h>  // For fabs()
+#include <cmath>  // For fabs()
 
 // Variables estáticas internas para almacenar estados
 
@@ -8,7 +8,6 @@ static int hoveredOptionSettings = -1;            // Opción sobre la que está el
 static int selectedOptionSettings = -1;           // Opción seleccionada por teclado
 static Vector2 previousMousePositionSettings = { 0, 0 };
 static bool usingMouseSettings = false;           // Flag: true = modo ratón, false = modo teclado
-
 
 void DrawSettings(GameScreen* currentScreen)
 {
@@ -42,8 +41,8 @@ void DrawSettings(GameScreen* currentScreen)
     // Umbral para evitar que pequeñas fluctuaciones activen el modo ratón
 
     float threshold = 0.1f;
-    bool currentMouseMoved = (fabs(mousePoint.x - previousMousePositionSettings.x) > threshold ||
-        fabs(mousePoint.y - previousMousePositionSettings.y) > threshold);
+    bool currentMouseMoved = (std::fabs(mousePoint.x - previousMousePositionSettings.x) > threshold ||
+        std::fabs(mousePoint.y - previousMousePositionSettings.y) > threshold);
     previousMousePositionSettings = mousePoint;
 
     // Si se presiona una tecla de navegación, se activa el modo teclado
@@ -66,7 +65,8 @@ void DrawSettings(GameScreen* currentScreen)
 
         selectedOptionSettings = -1;  // Limpiar la selección por teclado
 
-        if (CheckCollisionPointRec(mousePoint, (Rectangle) { 190, 500, MeasureText("Back", 20), 20 }))
+        Rectangle backButtonRect = { 190, 500, static_cast<float>(MeasureText("Back", 20)), 20 };
+        if (CheckCollisionPointRec(mousePoint, backButtonRect))
         {
             hoveredOptionSettings = 0;
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
