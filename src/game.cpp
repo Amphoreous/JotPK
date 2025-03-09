@@ -97,23 +97,37 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
     // Dirección de disparo actual
     Vector2 bulletDirection = { 0.0f, 0.0f };
 
+    // Game state variables
+    int lives = 3;
+    int coins = 0;
+    int score = 0;
+    int level = 1;
+    bool gameOver = false;
+    bool levelComplete = false;
+
+    // Load UI elements
+    Texture2D counterLives = LoadTexture("Counter_Lives.png");
+    Texture2D counterCoins = LoadTexture("Counter_Coins.png");
+
     while (!WindowShouldClose())
     {
         float deltaTime = GetFrameTime();
         shootTimer += deltaTime;
         orcSpawnTimer += deltaTime;
+        float orcSize = characterSize - 10.0f;
 
         // Variables de movimiento del jugador
         bool isMoving = false;
         float moveX = 0.0f;
         float moveY = 0.0f;
 
-        if (IsKeyDown(KEY_D)) moveX += 1.0f;
-        if (IsKeyDown(KEY_A)) moveX -= 1.0f;
+        // Movement using WASD
         if (IsKeyDown(KEY_W)) moveY -= 1.0f;
         if (IsKeyDown(KEY_S)) moveY += 1.0f;
+        if (IsKeyDown(KEY_A)) moveX -= 1.0f;
+        if (IsKeyDown(KEY_D)) moveX += 1.0f;
 
-        // Configurar dirección de disparo
+        // Configurar dirección de disparo con arrow keys
         bulletDirection = { 0.0f, 0.0f };
         if (IsKeyDown(KEY_RIGHT)) bulletDirection.x += 1.0f;
         if (IsKeyDown(KEY_LEFT))  bulletDirection.x -= 1.0f;
@@ -243,6 +257,16 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
                     {
                         orcs[i].active = false;
                         bullets[j].active = false;
+                        
+                        // Add coins and score when defeating an enemy
+                        coins += 1;
+                        score += 10;
+                        
+                        // Random chance to drop a powerup
+                        if (GetRandomValue(0, 100) < 10) {
+                            // TODO: Implement power-up system
+                        }
+                        
                         break;
                     }
                 }
@@ -256,6 +280,59 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
                     orcs[i].active = false;
                 }
             }
+        }
+
+        // Add this in your game loop, after updating orcs but before drawing
+
+        // Check for collisions between player and orcs
+        for (int i = 0; i < orcCount; i++) {
+            if (orcs[i].active) {
+                // Create rectangles for collision detection
+                Rectangle playerRect = { 
+                    position.x - characterSize / 3.0f, 
+                    position.y - characterSize / 3.0f, 
+                    characterSize / 1.5f, 
+                    characterSize / 1.5f 
+                };
+                
+                Rectangle orcRect = { 
+                    orcs[i].frameRec_Orc.x + orcSize / 4.0f, 
+                    orcs[i].frameRec_Orc.y + orcSize / 4.0f, 
+                    orcSize / 2.0f, 
+                    orcSize / 2.0f 
+                };
+                
+                if (CheckCollisionRecs(playerRect, orcRect)) {
+                    lives--;
+                    orcs[i].active = false;
+                    
+                    if (lives <= 0) {
+                        gameOver = true;
+                    }
+                    
+                    // Implement a short invincibility period here
+                    break;
+                }
+            }
+        }
+
+        // Check for game restart
+        if (gameOver && IsKeyPressed(KEY_R)) {
+            // Reset game state
+            lives = 3;
+            coins = 0;
+            score = 0;
+            level = 1;
+            gameOver = false;
+            
+            // Reset player position
+            position = { screenWidth / 2.0f, screenHeight / 2.0f };
+            
+            // Clear all enemies and bullets
+            bulletCount = 0;
+            bullets = static_cast<Bullet*>(std::realloc(bullets, bulletCount * sizeof(Bullet)));
+            orcCount = 0;
+            orcs = static_cast<Orc*>(std::realloc(orcs, orcCount * sizeof(Orc)));
         }
 
         // Eliminar balas inactivas
@@ -411,7 +488,6 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
 
         // Recalcular posición para dibujar al jugador centrado
         Vector2 drawPosition = { position.x - characterSize / 2.0f, position.y - characterSize / 2.0f };
-        float orcSize = characterSize - 10.0f;
 
         // Dibujar balas
         for (int i = 0; i < bulletCount; i++)
@@ -439,6 +515,45 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         DrawTexturePro(currentTexture, *currentFrameRec,
             { drawPosition.x, drawPosition.y, characterSize, characterSize },
             { 0, 0 }, 0.0f, WHITE);
+
+        // Draw UI elements
+        float uiScale = characterSize / 32.0f; // Adjust scale based on character size
+        int padding = 10;
+
+        // Draw lives counter
+        for (int i = 0; i < lives; i++) {
+            DrawTexture(counterLives, padding + i * (counterLives.width + 5), padding, WHITE);
+        }
+
+        // Draw coins counter
+        DrawTexture(counterCoins, padding, padding + counterLives.height + 5, WHITE);
+        DrawText(TextFormat("%d", coins), padding + counterCoins.width + 5, 
+                 padding + counterLives.height + 5 + counterCoins.height/4, 20, WHITE);
+
+        // Draw score
+        DrawText(TextFormat("SCORE: %d", score), screenWidth - 150, padding, 20, WHITE);
+
+        // Draw level indicator
+        DrawText(TextFormat("LEVEL: %d", level), screenWidth - 150, padding + 25, 20, WHITE);
+
+        // Draw Game Over message if applicable
+        if (gameOver) {
+            const char* gameOverText = "GAME OVER - PRESS R TO RESTART";
+            DrawText(gameOverText, 
+                     screenWidth / 2 - MeasureText(gameOverText, 30) / 2,
+                     screenHeight / 2, 
+                     30, RED);
+        }
+
+        // Draw Level Complete message if applicable
+        if (levelComplete) {
+            const char* levelCompleteText = "LEVEL COMPLETE!";
+            DrawText(levelCompleteText, 
+                     screenWidth / 2 - MeasureText(levelCompleteText, 30) / 2,
+                     screenHeight / 2, 
+                     30, GREEN);
+        }
+
         EndDrawing();
     }
 
