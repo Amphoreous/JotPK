@@ -6,10 +6,16 @@
 #define SHOOT_RATE 0.3f      // Tiempo en segundos entre disparos
 #define ORC_SPAWN_RATE 2.0f  // Tiempo en segundos entre spawns de orcos
 
+// Global variables for game over management
+static Sound gameOverSound;
+static bool isGameOverSoundPlayed = false;
+
+// Update the DrawGameOver function to make the overlay completely black
 void DrawGameOver(int screenWidth, int screenHeight)
 {
+    // Draw a completely black overlay (alpha set to 255 for full opacity)
+    DrawRectangle(0, 0, screenWidth, screenHeight, Color{0, 0, 0, 255});
     
-    ClearBackground(BLACK);
     const char* gameOverText = "GAME OVER - PRESS R TO RESTART";
     DrawText(gameOverText,
         screenWidth / 2 - MeasureText(gameOverText, 30) / 2,
@@ -36,6 +42,10 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
 {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
+
+    // Load game over sound
+    gameOverSound = LoadSound("Audio/FX/Cowboy_Dead.wav");
+    isGameOverSoundPlayed = false;
 
     // Variables para la animación del sprite sheet del fondo
     int spriteFrameCount = 18; // Número de frames en el sprite sheet
@@ -132,38 +142,63 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         float moveX = 0.0f;
         float moveY = 0.0f;
 
-        // Movement using WASD
-        if (IsKeyDown(KEY_W)) moveY -= 1.0f;
-        if (IsKeyDown(KEY_S)) moveY += 1.0f;
-        if (IsKeyDown(KEY_A)) moveX -= 1.0f;
-        if (IsKeyDown(KEY_D)) moveX += 1.0f;
+        // Check for game restart
+        if (gameOver && IsKeyPressed(KEY_R)) {
+            // Reset game state
+            lives = 3;
+            coins = 0;
+            score = 0;
+            level = 1;
+            gameOver = false;
+            isGameOverSoundPlayed = false;
+            
+            // Reset player position
+            position = { screenWidth / 2.0f, screenHeight / 2.0f };
+            
+            // Clear all enemies and bullets
+            bulletCount = 0;
+            bullets = static_cast<Bullet*>(std::realloc(bullets, bulletCount * sizeof(Bullet)));
+            orcCount = 0;
+            orcs = static_cast<Orc*>(std::realloc(orcs, orcCount * sizeof(Orc)));
+            PlayMusicStream(Overworld);
+        }
 
-        // Configurar dirección de disparo con arrow keys
-        bulletDirection = { 0.0f, 0.0f };
-        if (IsKeyDown(KEY_RIGHT)) bulletDirection.x += 1.0f;
-        if (IsKeyDown(KEY_LEFT))  bulletDirection.x -= 1.0f;
-        if (IsKeyDown(KEY_UP))    bulletDirection.y -= 1.0f;
-        if (IsKeyDown(KEY_DOWN))  bulletDirection.y += 1.0f;
+        // Only process movement and shooting if not game over
+        if (!gameOver) {
+            // Movement using WASD
+            if (IsKeyDown(KEY_W)) moveY -= 1.0f;
+            if (IsKeyDown(KEY_S)) moveY += 1.0f;
+            if (IsKeyDown(KEY_A)) moveX -= 1.0f;
+            if (IsKeyDown(KEY_D)) moveX += 1.0f;
 
-        // Disparo de balas
-        if ((bulletDirection.x != 0.0f || bulletDirection.y != 0.0f) && shootTimer >= SHOOT_RATE)
-        {
-            float length = std::sqrt(bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y);
-            bulletDirection.x /= length;
-            bulletDirection.y /= length;
+            // Configurar dirección de disparo con arrow keys
+            bulletDirection = { 0.0f, 0.0f };
+            if (IsKeyDown(KEY_RIGHT)) bulletDirection.x += 1.0f;
+            if (IsKeyDown(KEY_LEFT))  bulletDirection.x -= 1.0f;
+            if (IsKeyDown(KEY_UP))    bulletDirection.y -= 1.0f;
+            if (IsKeyDown(KEY_DOWN))  bulletDirection.y += 1.0f;
 
-            bullets = static_cast<Bullet*>(std::realloc(bullets, (bulletCount + 1) * sizeof(Bullet)));
-            bullets[bulletCount].frameRec_Bullet = { position.x, position.y, bulletSize, bulletSize };
-            bullets[bulletCount].direction = bulletDirection;
-            bullets[bulletCount].active = true;
-            bulletCount++;
-            shootTimer = 0.0f; // Reiniciar temporizador de disparo
+            // Disparo de balas
+            if ((bulletDirection.x != 0.0f || bulletDirection.y != 0.0f) && shootTimer >= SHOOT_RATE)
+            {
+                float length = std::sqrt(bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y);
+                bulletDirection.x /= length;
+                bulletDirection.y /= length;
+
+                bullets = static_cast<Bullet*>(std::realloc(bullets, (bulletCount + 1) * sizeof(Bullet)));
+                bullets[bulletCount].frameRec_Bullet = { position.x, position.y, bulletSize, bulletSize };
+                bullets[bulletCount].direction = bulletDirection;
+                bullets[bulletCount].active = true;
+                bulletCount++;
+                shootTimer = 0.0f; // Reiniciar temporizador de disparo
+            }
         }
 
         // ---------------------------------------------------------------------
         // Spawn de orcos: el spawn se restringe a la zona central de 3/16 partes
         // de cada borde (dejando 6,5/16 partes en cada extremo sin spawn)
-        if (orcSpawnTimer >= ORC_SPAWN_RATE)
+        // Only spawn new orcs if not game over
+        if (!gameOver && orcSpawnTimer >= ORC_SPAWN_RATE)
         {
             // Dividir el borde en 16 partes
             float segmentWidth = scaledWidth / 16.0f;
@@ -296,54 +331,47 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         // Add this in your game loop, after updating orcs but before drawing
 
         // Check for collisions between player and orcs
-        for (int i = 0; i < orcCount; i++) {
-            if (orcs[i].active) {
-                // Create rectangles for collision detection
-                Rectangle playerRect = { 
-                    position.x - characterSize / 3.0f, 
-                    position.y - characterSize / 3.0f, 
-                    characterSize / 1.5f, 
-                    characterSize / 1.5f 
-                };
-                
-                Rectangle orcRect = { 
-                    orcs[i].frameRec_Orc.x + orcSize / 4.0f, 
-                    orcs[i].frameRec_Orc.y + orcSize / 4.0f, 
-                    orcSize / 2.0f, 
-                    orcSize / 2.0f 
-                };
-                
-                if (CheckCollisionRecs(playerRect, orcRect)) {
-                    lives--;
-                    orcs[i].active = false;
+        if (!gameOver) {
+            for (int i = 0; i < orcCount; i++) {
+                if (orcs[i].active) {
+                    // Create rectangles for collision detection
+                    Rectangle playerRect = { 
+                        position.x - characterSize / 3.0f, 
+                        position.y - characterSize / 3.0f, 
+                        characterSize / 1.5f, 
+                        characterSize / 1.5f 
+                    };
                     
-                    if (lives <= 0) {
-                        gameOver = true;
+                    Rectangle orcRect = { 
+                        orcs[i].frameRec_Orc.x + orcSize / 4.0f, 
+                        orcs[i].frameRec_Orc.y + orcSize / 4.0f, 
+                        orcSize / 2.0f, 
+                        orcSize / 2.0f 
+                    };
+                    
+                    if (CheckCollisionRecs(playerRect, orcRect)) {
+                        lives--;
+                        orcs[i].active = false;
+                        
+                        if (lives <= 0) {
+                            gameOver = true;
+                            // Stop the music when game over occurs
+                            StopMusicStream(Overworld);
+                        }
+                        
+                        // Implement a short invincibility period here
+                        break;
                     }
-                    
-                    // Implement a short invincibility period here
-                    break;
                 }
             }
         }
-
-        // Check for game restart
-        if (gameOver && IsKeyPressed(KEY_R)) {
-            // Reset game state
-            lives = 3;
-            coins = 0;
-            score = 0;
-            level = 1;
-            gameOver = false;
-            
-            // Reset player position
-            position = { screenWidth / 2.0f, screenHeight / 2.0f };
-            
-            // Clear all enemies and bullets
-            bulletCount = 0;
-            bullets = static_cast<Bullet*>(std::realloc(bullets, bulletCount * sizeof(Bullet)));
-            orcCount = 0;
-            orcs = static_cast<Orc*>(std::realloc(orcs, orcCount * sizeof(Orc)));
+        
+        // Play game over sound once when game over state is triggered
+        if (gameOver && !isGameOverSoundPlayed) {
+            PlaySound(gameOverSound);
+            isGameOverSoundPlayed = true;
+            // Ensure music is stopped when game over happens
+            StopMusicStream(Overworld);
         }
 
         // Eliminar balas inactivas
@@ -379,8 +407,8 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         // Actualizar música de fondo
         UpdateMusicStream(Overworld);
 
-        // Movimiento del jugador
-        if (moveX != 0 || moveY != 0)
+        // Movimiento del jugador - only if not game over
+        if (!gameOver && (moveX != 0 || moveY != 0))
         {
             isMoving = true;
             float length = std::sqrt(moveX * moveX + moveY * moveY);
@@ -547,7 +575,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         // Draw level indicator
         DrawText(TextFormat("LEVEL: %d", level), screenWidth - 150, padding + 25, 20, WHITE);
 
-        // Draw Game Over message if applicable
+        // Draw Game Over overlay if applicable
         if (gameOver)
         {
             DrawGameOver(screenWidth, screenHeight);
@@ -568,4 +596,5 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
     // Liberar memoria
     std::free(bullets);
     std::free(orcs);
+    UnloadSound(gameOverSound);
 }
