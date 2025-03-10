@@ -21,7 +21,7 @@ typedef struct Orc {
 void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Texture2D Finn_Down,
     Texture2D Finn_Idle, Texture2D Finn_Shooting_Right, Texture2D Finn_Shooting_Left,
     Texture2D Finn_Shooting_Up, Texture2D Finn_Shooting_Down, Texture2D Bullet_1,
-    Texture2D OrcTexture, Texture2D backgroundSpriteSheet, Music BackgroundMusic_A1)
+    Texture2D OrcTexture, Texture2D backgroundSpriteSheet, Music Overworld)
 {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -366,7 +366,7 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         }
 
         // Actualizar música de fondo
-        UpdateMusicStream(BackgroundMusic_A1);
+        UpdateMusicStream(Overworld);
 
         // Movimiento del jugador
         if (moveX != 0 || moveY != 0)

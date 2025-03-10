@@ -49,9 +49,9 @@ int main() {
     Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");
     Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
 
-    Music BackgroundMusic_A1 = LoadMusicStream("BackgroundMusic_A1.mp3");
-    SetMusicVolume(BackgroundMusic_A1, 0.1f);
-    PlayMusicStream(BackgroundMusic_A1);
+    Music Overworld = LoadMusicStream("Audio/Music/Journey Of The Prairie King - Overworld.mp3");
+    SetMusicVolume(Overworld, 1.0f);
+    PlayMusicStream(Overworld);
 
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -73,7 +73,7 @@ int main() {
             UpdateMenu(&currentScreen, &selectedOption);
         }
         else if (currentScreen == GAME) {
-            DrawGame(Finn_Right, Finn_Left, Finn_Up, Finn_Down, Finn_Idle, Finn_Shooting_Right, Finn_Shooting_Left, Finn_Shooting_Up, Finn_Shooting_Down, Bullet_1, Orc, backgroundSpriteSheet, BackgroundMusic_A1);
+            DrawGame(Finn_Right, Finn_Left, Finn_Up, Finn_Down, Finn_Idle, Finn_Shooting_Right, Finn_Shooting_Left, Finn_Shooting_Up, Finn_Shooting_Down, Bullet_1, Orc, backgroundSpriteSheet, Overworld);
         }
         else if (currentScreen == SETTINGS) {
             DrawSettings(&currentScreen);
@@ -101,7 +101,7 @@ int main() {
     UnloadTexture(Bullet_1);
     UnloadTexture(Orc);
     UnloadTexture(backgroundSpriteSheet);
-    UnloadMusicStream(BackgroundMusic_A1);
+    UnloadMusicStream(Overworld);
 
     // Cerrar Discord Rich Presence
     if (discordInitialized) {
