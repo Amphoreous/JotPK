@@ -6,6 +6,17 @@
 #define SHOOT_RATE 0.3f      // Tiempo en segundos entre disparos
 #define ORC_SPAWN_RATE 2.0f  // Tiempo en segundos entre spawns de orcos
 
+void DrawGameOver(int screenWidth, int screenHeight)
+{
+    
+    ClearBackground(BLACK);
+    const char* gameOverText = "GAME OVER - PRESS R TO RESTART";
+    DrawText(gameOverText,
+        screenWidth / 2 - MeasureText(gameOverText, 30) / 2,
+        screenHeight / 2,
+        30, RED);
+}
+
 typedef struct Bullet {
     Rectangle frameRec_Bullet;
     Vector2 direction;
@@ -537,12 +548,9 @@ void DrawGame(Texture2D Finn_Right, Texture2D Finn_Left, Texture2D Finn_Up, Text
         DrawText(TextFormat("LEVEL: %d", level), screenWidth - 150, padding + 25, 20, WHITE);
 
         // Draw Game Over message if applicable
-        if (gameOver) {
-            const char* gameOverText = "GAME OVER - PRESS R TO RESTART";
-            DrawText(gameOverText, 
-                     screenWidth / 2 - MeasureText(gameOverText, 30) / 2,
-                     screenHeight / 2, 
-                     30, RED);
+        if (gameOver)
+        {
+            DrawGameOver(screenWidth, screenHeight);
         }
 
         // Draw Level Complete message if applicable
