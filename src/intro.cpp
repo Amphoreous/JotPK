@@ -21,8 +21,8 @@ void FadeInOutLogo(Texture2D texture, const char* companyText, int fadeDuration,
         logoScale = static_cast<float>(maxLogoHeight) / texture.height;
     }
 
-    int logoDrawWidth = texture.width * logoScale;
-    int logoDrawHeight = texture.height * logoScale;
+    int logoDrawWidth = static_cast<int>(texture.width * logoScale);
+    int logoDrawHeight = static_cast<int>(texture.height * logoScale);
 
     int headerContentHeight = logoDrawHeight + marginBetweenLogoAndText + companyTextSize;
     int headerContentY = (screenHeight - headerContentHeight) / 2;
@@ -160,9 +160,9 @@ void ShowIntro(int screenWidth, int screenHeight, Sound fxStart)
     SetSoundVolume(fxStart, 20); // ESTA LINEA PARA PODER SUBIR EL VOLUMEN DEL SONIDITO START
     PlaySound(fxStart);
 
-    // Parpadeo rápido de "press_start" al presionar espacio
+    // Parpadeo rï¿½pido de "press_start" al presionar espacio
 
-    for (int i = 0; i < 10; i++) // Aumentar el número de iteraciones para que dure más tiempo
+    for (int i = 0; i < 10; i++) // Aumentar el nï¿½mero de iteraciones para que dure mï¿½s tiempo
     {
         BeginDrawing();
         ClearBackground(BLACK);

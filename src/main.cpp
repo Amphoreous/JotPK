@@ -2,53 +2,73 @@
 #include <iostream>
 #include <string>
 #include "resource_dir.h"
+#include "resource_manager.h"
 #include "menu.h"
 #include "game.h"
 #include "settings.h"
 #include "htp.h"
 #include "intro.h"
 #include "discord/discord_manager.h"
+#include "game/game_state.h"
+#include "game/assets_manager.h"
 
 #define MAX_SOUNDS 10
 
+// Global variables
 Sound soundArray[MAX_SOUNDS] = { 0 };
 int currentSound;
+GameStateManager* gameManager = nullptr;
+
+// Function to load all game resources
+void LoadGameResources();
+
+// Function to unload all game resources
+void UnloadGameResources();
+
+#ifdef _DEBUG
+void CreatePlaceholderAssets();
+#endif
 
 int main() {
+#ifdef _DEBUG
+    if (!FileExists("resources/assets.png")) {
+        CreatePlaceholderAssets();
+    }
+#endif
+    // Initialize window
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "The Journey of the Prairie King");
     SearchAndSetResourceDir("resources");
 
-    // Inicializar Discord Rich Presence
+    // Initialize Discord Rich Presence
     bool discordInitialized = discord_sdk::initialize();
     if (!discordInitialized) {
-        std::cerr << "Error al inicializar Discord" << std::endl;
+        std::cerr << "Error initializing Discord" << std::endl;
     }
 
+    // Initialize audio
     InitAudioDevice();
     Sound fxStart = LoadSound("Sound_Start.wav");
 
+    // Set window icon
     Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
     UnloadImage(icon);
 
     SetTargetFPS(60);
+
+    // Initialize assets manager
+    AssetsManager::getInstance().initialize();
+
+    // Load game resources
     Texture JotPKLogo = LoadTexture("JotPK.png");
+    LoadGameResources();
 
-    // Cargar texturas del juego
-    Texture2D Finn_Right = LoadTexture("Sprite_Sheet_Right.png");
-    Texture2D Finn_Left = LoadTexture("Sprite_Sheet_Left.png");
-    Texture2D Finn_Up = LoadTexture("Sprite_Sheet_Up.png");
-    Texture2D Finn_Down = LoadTexture("Sprite_Sheet_Down.png");
-    Texture2D Finn_Idle = LoadTexture("PJ_Idle.png");
-    Texture2D Finn_Shooting_Right = LoadTexture("PJ_Idle_Right.png");
-    Texture2D Finn_Shooting_Left = LoadTexture("PJ_Idle_Left.png");
-    Texture2D Finn_Shooting_Up = LoadTexture("PJ_Idle_Up.png");
-    Texture2D Finn_Shooting_Down = LoadTexture("PJ_Idle_Shoot_Down.png");
-    Texture2D Bullet_1 = LoadTexture("Bullet_1.png");
-    Texture2D Orc = LoadTexture("Sprite_Sheet_Orc.png");
-    Texture2D backgroundSpriteSheet = LoadTexture("Sprite_Sheet_A1.png");
+    // Create game state manager
+    gameManager = new GameStateManager();
+    gameManager->Initialize();
 
+    // Background music
     Music Overworld = LoadMusicStream("Audio/Music/Journey Of The Prairie King - Overworld.mp3");
     SetMusicVolume(Overworld, 1.0f);
     PlayMusicStream(Overworld);
@@ -56,58 +76,96 @@ int main() {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    //ShowIntro(screenWidth, screenHeight, fxStart); // Pasar el sonido a la función de la intro
+    // Uncomment to show intro
+    // ShowIntro(screenWidth, screenHeight, fxStart);
 
     GameScreen currentScreen = MENU;
     int selectedOption = 0;
 
     InitHTP();
 
+    // Main game loop
     while (!WindowShouldClose()) {
+        float deltaTime = GetFrameTime();
+        
+        // Update Discord status
         if (discordInitialized) {
             discord_sdk::update();
         }
 
-        if (currentScreen == MENU) {
-            DrawMenu(JotPKLogo, selectedOption);
-            UpdateMenu(&currentScreen, &selectedOption);
-        }
-        else if (currentScreen == GAME) {
-            DrawGame(Finn_Right, Finn_Left, Finn_Up, Finn_Down, Finn_Idle, Finn_Shooting_Right, Finn_Shooting_Left, Finn_Shooting_Up, Finn_Shooting_Down, Bullet_1, Orc, backgroundSpriteSheet, Overworld);
-        }
-        else if (currentScreen == SETTINGS) {
-            DrawSettings(&currentScreen);
-        }
-        else if (currentScreen == HTP) {
-            DrawHTP(&currentScreen);
+        // Update music
+        UpdateMusicStream(Overworld);
+
+        // Handle different game screens
+        switch (currentScreen) {
+            case MENU:
+                DrawMenu(JotPKLogo, selectedOption);
+                UpdateMenu(&currentScreen, &selectedOption);
+                break;
+                
+            case GAME:
+                // Update game state
+                gameManager->Update(deltaTime);
+                
+                // Draw game
+                BeginDrawing();
+                ClearBackground(BLACK);
+                gameManager->Draw();
+                
+                // Handle game state transitions
+                if (gameManager->GetCurrentState() == GAME_OVER) {
+                    if (IsKeyPressed(KEY_R)) {
+                        // Reset game
+                        delete gameManager;
+                        gameManager = new GameStateManager();
+                        gameManager->Initialize();
+                        PlayMusicStream(Overworld);
+                    }
+                }
+                
+                EndDrawing();
+                break;
+                
+            case SETTINGS:
+                DrawSettings(&currentScreen);
+                break;
+                
+            case HTP:
+                DrawHTP(&currentScreen);
+                break;
         }
     }
 
+    // Clean up resources
     UnloadHTP();
     UnloadSound(fxStart);
-    CloseAudioDevice();
     UnloadTexture(JotPKLogo);
-
-    // Unload game textures
-    UnloadTexture(Finn_Right);
-    UnloadTexture(Finn_Left);
-    UnloadTexture(Finn_Up);
-    UnloadTexture(Finn_Down);
-    UnloadTexture(Finn_Idle);
-    UnloadTexture(Finn_Shooting_Right);
-    UnloadTexture(Finn_Shooting_Left);
-    UnloadTexture(Finn_Shooting_Up);
-    UnloadTexture(Finn_Shooting_Down);
-    UnloadTexture(Bullet_1);
-    UnloadTexture(Orc);
-    UnloadTexture(backgroundSpriteSheet);
     UnloadMusicStream(Overworld);
+    UnloadGameResources();
+    
+    if (gameManager) {
+        delete gameManager;
+        gameManager = nullptr;
+    }
 
-    // Cerrar Discord Rich Presence
+    // Shutdown Discord Rich Presence
     if (discordInitialized) {
         discord_sdk::shutdown();
     }
 
+    CloseAudioDevice();
     CloseWindow();
+    
     return 0;
+}
+
+// Resource management functions
+void LoadGameResources() {
+    // Just load the single sprite sheet using AssetsManager
+    // Already handled in AssetsManager::initialize()
+}
+
+void UnloadGameResources() {
+    // Unload the sprite sheet
+    AssetsManager::getInstance().unload();
 }
