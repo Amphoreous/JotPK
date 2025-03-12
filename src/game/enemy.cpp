@@ -4,6 +4,7 @@
 #include "game/assets_manager.h"
 #include <cmath>
 #include <stdlib.h>
+#include "raymath.h" // Add this line
 
 // Constants for enemy behavior
 #define ANIMATION_SPEED_DEFAULT 0.15f
@@ -150,6 +151,9 @@ Enemy::~Enemy() {
 
 bool Enemy::update(Vector2 playerPos, float deltaTime) {
     if (!active) return false;
+
+    // Calculate distance to player
+    float distToPlayer = Vector2Distance(position, playerPos);
     
     // Update timers
     animationTimer += deltaTime;

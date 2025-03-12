@@ -2,10 +2,25 @@
 #include "game/game_defs.h"
 #include "game/raylib_wrapper.h"
 #include "game/assets_manager.h"
-#include "raymath.h"  // Add this for Clamp function
+#include "raylib.h"
+#include "raymath.h"
 #include <cmath>
 #include <algorithm>
 #include <iostream>
+
+#include "game/vector2_helpers.h"
+
+// Ensure position and targetPosition are declared
+Vector2 position;
+Vector2 targetPosition;
+
+// If you need to calculate distance, prefer raymath's implementation:
+float distance = Vector2Distance(position, targetPosition);
+
+// Or use our wrapper if raymath is not available:
+#if !defined(RAYMATH_H)
+float distance = Vector2Distance(position, targetPosition);
+#endif
 
 // Don't redefine Clamp here - use the one from game_defs.h
 
@@ -29,7 +44,8 @@ Player::Player() :
     lastMoveWasKeyboard(true),
     shootTimer(0),
     baseShootDelay(PLAYER_BASE_SHOOT_DELAY),
-    invincibilityTimer(0)
+    invincibilityTimer(0),
+    currentShootDirection({0.0f, -1.0f}) // Inicialización estilo C++11
 {
 }
 
@@ -159,6 +175,10 @@ void Player::HandleGamepadInput(float deltaTime) {
         GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y)
     };
     
+    // Use individual component assignment
+    currentShootDirection.x = leftStick.x;
+    currentShootDirection.y = leftStick.y;
+    
     // Apply deadzone
     float deadZone = 0.25f;
     if (fabsf(leftStick.x) < deadZone) leftStick.x = 0;
@@ -171,39 +191,39 @@ void Player::HandleGamepadInput(float deltaTime) {
     }
 }
 
-void Player::Move(Vector2 direction, float deltaTime) {
-    // Normalize direction if it's not zero
-    if (direction.x != 0 || direction.y != 0) {
-        float length = sqrtf(direction.x * direction.x + direction.y * direction.y);
-        if (length > 0) { // Avoid division by zero
-            direction.x /= length;
-            direction.y /= length;
+void Player::Move(Vector2 moveDir, float deltaTime) {
+    if (moveDir.x != 0 || moveDir.y != 0) {
+        float length = sqrtf(moveDir.x * moveDir.x + moveDir.y * moveDir.y);
+        if (length > 0) {
+            // Normalize movement vector
+            float normalizedX = moveDir.x / length;
+            float normalizedY = moveDir.y / length;
+            
+            // Update position using normalized direction
+            position.x += normalizedX * movementSpeed * deltaTime;
+            position.y += normalizedY * movementSpeed * deltaTime;
+            
+            // Convert to player direction enum
+            if (moveDir.x == 0 && moveDir.y < 0) {
+                direction = UP;
+            } else if (moveDir.x > 0 && moveDir.y < 0) {
+                direction = UP_RIGHT;
+            } else if (moveDir.x > 0 && moveDir.y == 0) {
+                direction = RIGHT;
+            } else if (moveDir.x > 0 && moveDir.y > 0) {
+                direction = DOWN_RIGHT;
+            } else if (moveDir.x == 0 && moveDir.y > 0) {
+                direction = DOWN;
+            } else if (moveDir.x < 0 && moveDir.y > 0) {
+                direction = DOWN_LEFT;
+            } else if (moveDir.x < 0 && moveDir.y == 0) {
+                direction = LEFT;
+            } else if (moveDir.x < 0 && moveDir.y < 0) {
+                direction = UP_LEFT;
+            }
         }
-    }
-    
-    // Apply movement speed
-    position.x += direction.x * movementSpeed * deltaTime;
-    position.y += direction.y * movementSpeed * deltaTime;
-    
-    // Set player direction based on movement (using 8-direction system)
-    if (direction.x == 0 && direction.y == 0) {
-        this->direction = IDLE;
-    } else if (direction.x == 0 && direction.y < 0) {
-        this->direction = UP;
-    } else if (direction.x > 0 && direction.y < 0) {
-        this->direction = UP_RIGHT;
-    } else if (direction.x > 0 && direction.y == 0) {
-        this->direction = RIGHT;
-    } else if (direction.x > 0 && direction.y > 0) {
-        this->direction = DOWN_RIGHT;
-    } else if (direction.x == 0 && direction.y > 0) {
-        this->direction = DOWN;
-    } else if (direction.x < 0 && direction.y > 0) {
-        this->direction = DOWN_LEFT;
-    } else if (direction.x < 0 && direction.y == 0) {
-        this->direction = LEFT;
-    } else if (direction.x < 0 && direction.y < 0) {
-        this->direction = UP_LEFT;
+    } else {
+        direction = IDLE;
     }
     
     // Keep player within screen bounds - use raymath's Clamp function
@@ -227,19 +247,37 @@ void Player::UpdateAnimation(float deltaTime) {
     }
 }
 
-void Player::Draw(Texture2D* /*playerTextures*/) {
+void Player::Draw(Texture2D* playerTextures) {
     AssetsManager& assets = AssetsManager::getInstance();
     
-    // Get the sprite rectangle for current direction and animation frame
-    Rectangle src = assets.getPlayerSprite((int)direction, currentFrame);
+    // Solo renderizar pies si el jugador se está moviendo
+    if (direction != IDLE) {
+        // Dibujar pies primero (están detrás del cuerpo)
+        Rectangle feetSrc = assets.getPlayerFeetSprite(animationTimer);
+        DrawTexturePro(
+            assets.spriteSheet,
+            feetSrc,
+            Rectangle{position.x + 4.0f, position.y + 13.0f, 10.0f, 3.0f},
+            Vector2{0.0f, 0.0f},
+            0.0f,
+            WHITE
+        );
+    }
     
-    // Draw with the correct size and position
-    // The original game uses 16×16 sprites scaled to 48×48
+    // Convertir el sistema de 8 direcciones a 4 direcciones para el renderizado
+    int facingDirection;
+    if (direction == UP || direction == UP_RIGHT || direction == UP_LEFT) facingDirection = 0;
+    else if (direction == RIGHT || direction == DOWN_RIGHT) facingDirection = 1;
+    else if (direction == DOWN || direction == DOWN_LEFT) facingDirection = 2;
+    else facingDirection = 3; // LEFT
+    
+    // Dibujar el cuerpo del jugador
+    Rectangle src = assets.getPlayerSprite(facingDirection, 0);
     DrawTexturePro(
         assets.spriteSheet,
         src,
-        Rectangle{position.x - 16, position.y - 16, 32, 32},
-        Vector2{16, 16},
+        Rectangle{position.x, position.y, 16.0f, 16.0f},
+        Vector2{0.0f, 0.0f},
         0.0f,
         WHITE
     );
@@ -353,3 +391,14 @@ int Player::GetBulletDamage() const {
 int Player::GetAnimationFrame() const {
     return currentFrame;
 }
+
+// Remove or comment out the duplicate definition of MakeVector2
+/*
+Vector2 MakeVector2(float x, float y) {
+    Vector2 result = {x, y};
+    return result;
+}
+*/
+
+// Asegúrate de que las funciones que estás llamando no tengan sobrecargas ambiguas
+// Revisa las líneas 231 y 232 y asegúrate de que los parámetros sean correctos

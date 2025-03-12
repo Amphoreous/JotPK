@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include "game/game_defs.h"
 #include <string>
 #include <map>
 
@@ -27,6 +28,24 @@ public:
     Rectangle getPowerupSprite(int powerupType);
     Rectangle getMenuSprite(int spriteIndex);
     Rectangle getUISprite(const char* element);
+    
+    // Add this new declaration
+    Rectangle getPlayerFeetSprite(float animationTimer);
+    
+    // Add these helper methods
+    static float GetZoom() { return PIXEL_ZOOM; }
+    static Vector2 GetScreenCenter() {
+        return {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+    }
+    static Vector2 GetGameOffset() {
+        // Center a 16x16 tile game board (adjust dimensions as needed)
+        int gameWidth = 16 * TILE_SIZE;
+        int gameHeight = 16 * TILE_SIZE;
+        return {
+            (GetScreenWidth() - gameWidth) / 2.0f,
+            (GetScreenHeight() - gameHeight) / 2.0f
+        };
+    }
     
     // Assets
     Texture2D spriteSheet;

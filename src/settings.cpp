@@ -96,6 +96,7 @@ void DrawSettings(GameScreen* currentScreen)
     }
 
     // Back button
+    Rectangle backButtonRect = { 190, GetScreenHeight() - 100, (float)MeasureText("Back", optionFontSize), optionFontSize };
     Color backColor = (hoveredOptionSettings == SETTINGS_OPTIONS || selectedOptionSettings == SETTINGS_OPTIONS) ? RED : WHITE;
     DrawText("Back", 190, GetScreenHeight() - 100, optionFontSize, backColor);
 
@@ -131,107 +132,121 @@ void DrawSettings(GameScreen* currentScreen)
 
         // Check if mouse is hovering over options
         for (int i = 0; i < SETTINGS_OPTIONS; i++) {
-            Rectangle optionRect = { 190, (float)(220 + i * spacing), 
-                                   (float)MeasureText(settingsLabels[i], optionFontSize), 
-                                   (float)optionFontSize };
+            Rectangle optionRect = { 190, static_cast<float>(startY + i * spacing), 
+                                    static_cast<float>(MeasureText(settingsLabels[i], optionFontSize)), 
+                                    static_cast<float>(optionFontSize) };
             
             if (CheckCollisionPointRec(mousePoint, optionRect)) {
                 hoveredOptionSettings = i;
                 
-                // Handle clicking options
                 if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    // Toggle or adjust option
                     switch (i) {
-                        case 0: musicEnabled = !musicEnabled; break;
-                        case 1: soundEnabled = !soundEnabled; break;
-                        case 4: 
+                        case 0: // Music toggle
+                            musicEnabled = !musicEnabled;
+                            // TODO: Apply music setting
+                            break;
+                        case 1: // Sound toggle
+                            soundEnabled = !soundEnabled;
+                            // TODO: Apply sound setting
+                            break;
+                        case 4: // Fullscreen toggle
                             fullScreen = !fullScreen;
-                            if (fullScreen) SetWindowState(FLAG_FULLSCREEN_MODE);
-                            else ClearWindowState(FLAG_FULLSCREEN_MODE);
+                            if (fullScreen)
+                                ToggleFullscreen();
+                            else
+                                ToggleFullscreen();
                             break;
                     }
                 }
             }
-            
-            // Check volume sliders
-            if (i == 2 || i == 3) { // Music/Sound volume
-                Rectangle sliderRect = { GetScreenWidth() - 400, (float)(220 + i * spacing + optionFontSize/2 - 5), 300, 10 };
+            if (i == 2 || i == 3) { // Volume sliders
+                Rectangle sliderRect = { GetScreenWidth() - 400, startY + i * spacing + optionFontSize/2 - 5, 300, 10 };
                 
                 if (CheckCollisionPointRec(mousePoint, 
                                           Rectangle{sliderRect.x - 10, sliderRect.y - 10, sliderRect.width + 20, sliderRect.height + 20})) {
                     hoveredOptionSettings = i;
                     
                     if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-                        // Calculate volume based on mouse position
-                        float value = (mousePoint.x - sliderRect.x) / sliderRect.width;
-                        value = Clamp(value, 0.0f, 1.0f);
+                        // Calculate new volume based on mouse position
+                        float relativeX = (mousePoint.x - sliderRect.x) / sliderRect.width;
+                        int newVolume = (int)(Clamp(relativeX, 0.0f, 1.0f) * 100.0f);
                         
-                        if (i == 2) musicVolume = (int)(value * 100);
-                        else soundVolume = (int)(value * 100);
+                        if (i == 2) // Music volume
+                            musicVolume = newVolume;
+                        else        // Sound volume
+                            soundVolume = newVolume;
                     }
                 }
             }
         }
 
         // Check if back button is hovered/clicked
-        Rectangle backButtonRect = { 190, GetScreenHeight() - 100, 
-                                   (float)MeasureText("Back", optionFontSize), 
-                                   (float)optionFontSize };
-        
+        Rectangle backButtonRect = { 190, GetScreenHeight() - 100, (float)MeasureText("Back", optionFontSize), optionFontSize };
         if (CheckCollisionPointRec(mousePoint, backButtonRect)) {
             hoveredOptionSettings = SETTINGS_OPTIONS;
             
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *currentScreen = MENU;
-                // Save settings here
+                // TODO: Save settings
             }
         }
     } else {
         // Keyboard controls
-        hoveredOptionSettings = -1;
-        
-        // Initialize selection if none
         if (selectedOptionSettings < 0) {
             selectedOptionSettings = 0;
         }
-        
-        // Navigate between options
         if (IsKeyPressed(KEY_DOWN)) {
             selectedOptionSettings = (selectedOptionSettings + 1) % (SETTINGS_OPTIONS + 1);
         }
         if (IsKeyPressed(KEY_UP)) {
-            selectedOptionSettings = (selectedOptionSettings - 1 + SETTINGS_OPTIONS + 1) % (SETTINGS_OPTIONS + 1);
+            selectedOptionSettings = (selectedOptionSettings + SETTINGS_OPTIONS) % (SETTINGS_OPTIONS + 1);
         }
-        
-        // Adjust settings with left/right keys
         if (selectedOptionSettings < SETTINGS_OPTIONS) {
             if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) {
                 switch (selectedOptionSettings) {
-                    case 0: musicEnabled = !musicEnabled; break;
-                    case 1: soundEnabled = !soundEnabled; break;
-                    case 2: 
-                        musicVolume += IsKeyPressed(KEY_RIGHT) ? 10 : -10;
-                        musicVolume = Clamp(musicVolume, 0, 100);
+                    case 0: // Music toggle
+                        musicEnabled = !musicEnabled;
+                        // TODO: Apply music setting
                         break;
-                    case 3:
-                        soundVolume += IsKeyPressed(KEY_RIGHT) ? 10 : -10;
-                        soundVolume = Clamp(soundVolume, 0, 100);
+                    case 1: // Sound toggle
+                        soundEnabled = !soundEnabled;
+                        // TODO: Apply sound setting
                         break;
-                    case 4: 
+                    case 2: // Music volume
+                        if (IsKeyPressed(KEY_LEFT))
+                            musicVolume = (int)Clamp(musicVolume - 10, 0, 100);
+                        else
+                            musicVolume = (int)Clamp(musicVolume + 10, 0, 100);
+                        break;
+                    case 3: // Sound volume
+                        if (IsKeyPressed(KEY_LEFT))
+                            soundVolume = (int)Clamp(soundVolume - 10, 0, 100);
+                        else
+                            soundVolume = (int)Clamp(soundVolume + 10, 0, 100);
+                        break;
+                    case 4: // Fullscreen toggle
                         fullScreen = !fullScreen;
-                        if (fullScreen) SetWindowState(FLAG_FULLSCREEN_MODE);
-                        else ClearWindowState(FLAG_FULLSCREEN_MODE);
+                        if (fullScreen)
+                            ToggleFullscreen();
+                        else
+                            ToggleFullscreen();
                         break;
                 }
             }
         }
-        
-        // Go back to menu
         if (IsKeyPressed(KEY_ENTER) && selectedOptionSettings == SETTINGS_OPTIONS) {
             *currentScreen = MENU;
-            // Save settings here
+            // TODO: Save settings
         }
     }
 }
 
-// Save/load functions for settings could go here
+// Function to save settings to a file
+void SaveSettings() {
+    // Implementation would go here
+}
+
+// Function to load settings from a file
+void LoadSettings() {
+    // Implementation would go here
+}

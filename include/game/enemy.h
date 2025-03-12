@@ -2,22 +2,9 @@
 #define ENEMY_H
 
 #include "raylib.h"
+#include "game/game_defs.h"  // Incluir para usar EnemyType desde aquí
 #include <vector>
 #include <string>
-
-// Enemy types from original game
-enum EnemyType {
-    ENEMY_ORC,
-    ENEMY_GHOST,
-    ENEMY_OGRE,
-    ENEMY_MUMMY,
-    ENEMY_DEVIL,
-    ENEMY_MUSHROOM,
-    ENEMY_SPIKEY,
-    ENEMY_BOSS_COWBOY,
-    ENEMY_BOSS_FECTOR,
-    ENEMY_TYPE_COUNT
-};
 
 // Base enemy class
 class Enemy {

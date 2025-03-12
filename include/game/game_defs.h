@@ -2,19 +2,82 @@
 #define GAME_DEFS_H
 
 #include "raylib.h"
-#include "raymath.h"
-#include "game/powerup.h"
-#include <cmath>
 
-// Common PowerupType mapping constants for compatibility
-#define COIN_1 PowerupType::POWERUP_COIN_1
-#define COIN_5 PowerupType::POWERUP_COIN_5
-#define POWERUP_SPEED PowerupType::POWERUP_BOOT
-#define POWERUP_RAPIDFIRE PowerupType::POWERUP_COFFEE
-#define POWERUP_SPREAD PowerupType::POWERUP_HAT
-#define POWERUP_SHOTGUN PowerupType::POWERUP_GLOVE
+// Display/Scaling constants
+#define PIXEL_ZOOM 3.0f
+#define BASE_TILE_SIZE 16
+#define TILE_SIZE (int)(BASE_TILE_SIZE * PIXEL_ZOOM)  // 48 pixels
 
-// Remove the custom Vector2 helper to avoid conflicts - use raylib's Vector2{ x, y } syntax
-// or use raymath.h functions
+// Game states
+enum GameState {
+    START_MENU,
+    PLAYING,
+    DIED,
+    BETWEEN_WAVES,
+    SHOPPING,
+    GAME_OVER,
+    END_CUTSCENE
+};
+
+// Powerup types
+enum PowerupType {
+    COIN_1 = 0,
+    COIN_5,
+    POWERUP_SPREAD,  // HAT
+    POWERUP_RAPIDFIRE,  // COFFEE
+    POWERUP_NUKE,
+    POWERUP_ZOMBIE,
+    POWERUP_SPEED,  // BOOT
+    POWERUP_SHOTGUN,  // GLOVE
+    POWERUP_LIFE,
+    POWERUP_AMMO,    // Añade este si lo necesitas
+    POWERUP_COUNT    // Mantén este como último
+};
+
+// Shop items
+enum ShopItemType {
+    SHOP_ITEM_LIFE = 0,
+    SHOP_ITEM_BOOT,
+    SHOP_ITEM_COFFEE,
+    SHOP_ITEM_HAT,
+    SHOP_ITEM_GLOVE
+};
+
+// Enemy types
+enum EnemyType {
+    ENEMY_ORC = 0,
+    ENEMY_GHOST,
+    ENEMY_OGRE,
+    ENEMY_MUMMY,
+    ENEMY_DEVIL,
+    ENEMY_MUSHROOM,
+    ENEMY_SPIKEY,
+    ENEMY_BOSS_COWBOY,
+    ENEMY_BOSS_FECTOR
+};
+
+// Enemy spawn types (for level data)
+enum EnemySpawnType {
+    ENEMY_SPAWN_ORC = 0,
+    ENEMY_SPAWN_GHOST,
+    ENEMY_SPAWN_OGRE,
+    ENEMY_SPAWN_MUMMY,
+    ENEMY_SPAWN_DEVIL,
+    ENEMY_SPAWN_MUSHROOM,
+    ENEMY_SPAWN_SPIKEY,
+    ENEMY_SPAWN_BOSS_COWBOY,
+    ENEMY_SPAWN_BOSS_FECTOR
+};
+
+// Tile types
+enum TileType {
+    TILE_FLOOR = 0,
+    TILE_WALL,
+    TILE_WATER,
+    TILE_CACTUS,
+    TILE_LAVA
+};
+
+// Cerca del final del archivo:
 
 #endif // GAME_DEFS_H

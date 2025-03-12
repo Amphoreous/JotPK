@@ -9,26 +9,7 @@
 #include "game/bullet.h"
 #include "game/powerup.h"
 #include "game/level.h"
-
-// Game states
-enum GameState {
-    START_MENU,
-    PLAYING,
-    DIED,
-    BETWEEN_WAVES,
-    SHOPPING,
-    GAME_OVER,
-    END_CUTSCENE
-};
-
-// Powerup types for shop - renamed to avoid conflicts with PowerupType
-enum ShopItemType {
-    SHOP_ITEM_LIFE,
-    SHOP_ITEM_BOOT,
-    SHOP_ITEM_COFFEE,
-    SHOP_ITEM_HAT,
-    SHOP_ITEM_GLOVE
-};
+#include "game/game_defs.h" // Incluir para usar GameState desde aquí
 
 class GameStateManager {
 public:
@@ -48,6 +29,8 @@ public:
     int GetCoins() const { return coins; }
     int GetScore() const { return score; }
     
+    void HandleScreenSizeChange();
+
 private:
     // Debug helpers
     void DrawDebugInfo();

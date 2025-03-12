@@ -75,18 +75,22 @@ void Bullet::draw(Texture2D /*texture*/) {
     if (!active) return;
     
     AssetsManager& assets = AssetsManager::getInstance();
+    float zoom = AssetsManager::GetZoom();
     
     // Get sprite based on bullet type
-    // Fix: getBulletSprite should only take one parameter (bulletType)
     int bulletType = playerBullet ? 0 : 1;
     Rectangle src = assets.getBulletSprite(bulletType);
+    
+    // Calculate size based on zoom factor
+    float size = BASE_TILE_SIZE * zoom;
+    float halfSize = size / 2.0f;
     
     // Draw the bullet
     DrawTexturePro(
         assets.spriteSheet,
         src,
-        Rectangle{position.x - 8, position.y - 8, 16, 16},
-        Vector2{8, 8},
+        Rectangle{position.x - halfSize, position.y - halfSize, size, size},
+        Vector2{halfSize, halfSize},
         0.0f,
         WHITE
     );

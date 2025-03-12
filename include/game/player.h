@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include "raylib.h"
+#include "vector2_helpers.h"
 #include <vector>
 
 // Player movement directions (8-way)
@@ -92,6 +93,11 @@ private:
     // Input handling
     void HandleKeyboardInput(float deltaTime);
     void HandleGamepadInput(float deltaTime);
+
+    // Add helper methods
+    Vector2 NormalizeMovement(Vector2 movement);
+    void UpdatePosition(Vector2 normalizedDir, float deltaTime);
+    void UpdateDirection(Vector2 movement);
 };
 
 #endif // PLAYER_H

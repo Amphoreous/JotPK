@@ -18,6 +18,9 @@ Sound soundArray[MAX_SOUNDS] = { 0 };
 int currentSound;
 GameStateManager* gameManager = nullptr;
 
+// Variable global para almacenar el callback de cambio de tamaño
+void (*windowResizeCallback)() = NULL;
+
 // Function to load all game resources
 void LoadGameResources();
 
@@ -26,6 +29,19 @@ void UnloadGameResources();
 
 // Add this near the top with other function declarations
 // void DebugDrawAssets();
+
+// Función para establecer el callback
+void SetWindowResizeCallback(void (*callback)()) {
+    windowResizeCallback = callback;
+}
+
+// Callback para cuando la ventana cambia de tamaño
+void WindowResizeCallback() {
+    // Notificar al game state manager del cambio de tamaño
+    if (gameManager != nullptr) {
+        gameManager->HandleScreenSizeChange();
+    }
+}
 
 int main() {
     // Initialize window
@@ -77,6 +93,9 @@ int main() {
 
     InitHTP();
 
+    // Configura el callback
+    SetWindowResizeCallback(WindowResizeCallback);
+
     // Main game loop
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
@@ -96,6 +115,20 @@ int main() {
                 delete gameManager;
                 gameManager = new GameStateManager();
                 gameManager->Initialize();
+            }
+        }
+
+        static int prevScreenWidth = GetScreenWidth();
+        static int prevScreenHeight = GetScreenHeight();
+
+        // Check if screen size changed
+        if (prevScreenWidth != GetScreenWidth() || prevScreenHeight != GetScreenHeight()) {
+            prevScreenWidth = GetScreenWidth();
+            prevScreenHeight = GetScreenHeight();
+            
+            // Call the callback if it's set
+            if (windowResizeCallback != NULL) {
+                windowResizeCallback();
             }
         }
 

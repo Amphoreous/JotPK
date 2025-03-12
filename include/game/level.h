@@ -4,26 +4,10 @@
 #include <vector>
 #include <queue>
 #include "game/assets_manager.h"
+#include "game/game_defs.h" // Incluir para usar las enumeraciones definidas allí
 
-// Tile types
-enum TileType {
-    TILE_FLOOR,
-    TILE_WALL,
-    TILE_CACTUS,
-    TILE_WATER,
-    TILE_LAVA
-};
-
-// Enemy types for spawning - reference the one in enemy.h
-enum LevelEnemyType {
-    ENEMY_SPAWN_BASIC = 0,
-    ENEMY_SPAWN_ORC,
-    ENEMY_SPAWN_GHOST,
-    ENEMY_SPAWN_MUMMY,
-    ENEMY_SPAWN_DEVIL,
-    ENEMY_SPAWN_BOSS_COWBOY,
-    ENEMY_SPAWN_BOSS_FECTOR
-};
+// Usar EnemySpawnType de game_defs.h en lugar de redefinir
+using LevelEnemyType = EnemySpawnType;
 
 // Structure for spawn queue
 struct SpawnQueueItem {
@@ -44,7 +28,7 @@ public:
     
     bool loadMap(int levelNum);
     void update(float deltaTime);
-    void draw(Texture2D backgroundTexture, int worldNumber, float dancingCactusTimer);
+    void draw(Texture2D backgroundTexture, int worldNumber);
     
     // Check if a position is passable (for collision detection)
     bool isPassable(float x, float y) const;
@@ -67,6 +51,14 @@ public:
     int getWidth() const { return mapWidth; }
     int getHeight() const { return mapHeight; }
     const std::vector<Vector2>& getEnemySpawnPoints() const { return enemySpawnPoints; }
+    
+    void setOffset(float x, float y) {
+        offsetX = x;
+        offsetY = y;
+    }
+    
+    // Añadir este método:
+    Rectangle GetTileSourceRect(TileType tile, int worldNumber);
     
 private:
     // Level generation methods
@@ -91,6 +83,7 @@ private:
     // Animation timers
     float waterAnimationTimer;
     float lavaAnimationTimer;
+    float dancingCactusTimer; // Añade esta línea
     
     // Spawn points
     std::vector<Vector2> enemySpawnPoints;

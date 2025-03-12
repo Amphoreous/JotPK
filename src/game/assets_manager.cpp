@@ -2,62 +2,29 @@
 #include <iostream>
 #include <cstring>
 
-void AssetsManager::initialize() {
-    std::cout << "Working directory: " << GetWorkingDirectory() << std::endl;
-    std::cout << "Attempting to load assets.png..." << std::endl;
-    
-    // Try multiple locations
-    const char* paths[] = {
-        "assets.png",
-        "resources/assets.png",
-        "../resources/assets.png",
-        "../../resources/assets.png",
-        "../assets.png"
-    };
-    
-    bool assetLoaded = false;
-    for (const auto& path : paths) {
-        std::cout << "Trying path: " << path << std::endl;
-        spriteSheet = LoadTexture(path);
-        if (spriteSheet.id != 0) {
-            std::cout << "Successfully loaded assets from: " << path << std::endl;
-            assetLoaded = true;
-            break;
-        }
-    }
-    
-    if (!assetLoaded) {
-        std::cerr << "Failed to load assets.png! Creating a placeholder texture." << std::endl;
-        // Create a simple colored placeholder so the game doesn't crash
-        Image img = GenImageChecked(256, 256, 32, 32, RED, BLUE);
-        spriteSheet = LoadTextureFromImage(img);
-        UnloadImage(img);
-    }
-    
-    std::cout << "Asset texture details: ID=" << spriteSheet.id
-              << ", Size=" << spriteSheet.width << "x" << spriteSheet.height
-              << ", Format=" << spriteSheet.format << std::endl;
 
-    if (!loaded) {
-        // Additional resources (commented out until you have them)
-        /*
-        backgroundTexture = LoadTexture("resources/background.png");
-        
-        // Load sounds
-        soundShoot = LoadSound("resources/audio/shoot.wav");
-        soundHit = LoadSound("resources/audio/hit.wav");
-        soundExplosion = LoadSound("resources/audio/explosion.wav");
-        soundPowerup = LoadSound("resources/audio/powerup.wav");
-        soundDamage = LoadSound("resources/audio/damage.wav");
-        
-        // Load music
-        music = LoadMusicStream("resources/audio/music.mp3");
-        
-        // Load font
-        gameFont = LoadFontEx("resources/font.ttf", 32, NULL, 0);
-        */
-        
-        loaded = true;
+#define PLAYER_ANIMATION_SPEED 0.2f
+
+// Add these enum values if they're not included from another header
+enum PlayerDirection {
+    IDLE = 0,
+    UP,
+    UP_RIGHT,
+    RIGHT,
+    DOWN_RIGHT,
+    DOWN,
+    DOWN_LEFT,
+    LEFT,
+    UP_LEFT
+};
+
+void AssetsManager::initialize() {
+    spriteSheet = LoadTexture("assets.png");
+    
+    // Validate texture loaded correctly
+    if (spriteSheet.id == 0) {
+        std::cerr << "Failed to load assets.png!" << std::endl;
+        return;
     }
 }
 
@@ -86,130 +53,236 @@ void AssetsManager::unload() {
 }
 
 Rectangle AssetsManager::getPlayerSprite(int direction, int frame) {
-    // Based on the original AbigailGame.cs player sprites
-    // Map the 8-direction format to the sprite positions
-    int x, y;
-    
-    // Default positions for player sprite in your tileset
-    // You might need to adjust these values based on your actual sprite sheet layout
+    // Debe usar solo 4 direcciones (0-3) igual que el original
     switch(direction) {
         case 0: // UP
-            x = 336;
-            y = 96; 
-            break;
-        case 1: // UP_RIGHT
-            x = 352;
-            y = 96;
-            break;
-        case 2: // RIGHT
-            x = 368;
-            y = 96;
-            break;
-        case 3: // DOWN_RIGHT
-            x = 384;
-            y = 96;
-            break;
-        case 4: // DOWN
-            x = 336;
-            y = 112;
-            break;
-        case 5: // DOWN_LEFT
-            x = 352;
-            y = 112;
-            break;
-        case 6: // LEFT
-            x = 368;
-            y = 112;
-            break;
-        case 7: // UP_LEFT
-            x = 384;
-            y = 112;
-            break;
-        case 8: // IDLE (default to DOWN)
+            return Rectangle{335.0f, 96.0f, 16.0f, 16.0f}; // Coordenadas correctas del juego original
+        case 1: // RIGHT
+            return Rectangle{351.0f, 96.0f, 16.0f, 16.0f};
+        case 2: // DOWN
+            return Rectangle{367.0f, 96.0f, 16.0f, 16.0f};
+        case 3: // LEFT
+            return Rectangle{383.0f, 96.0f, 16.0f, 16.0f};
         default:
-            x = 336;
-            y = 112;
-            break;
+            return Rectangle{367.0f, 112.0f, 16.0f, 16.0f}; // IDLE sprite
     }
-    
-    // For animation frames
-    if (direction != 8 && frame > 0) { // Not idle and animated
-        x += 16; // Move to next frame in spritesheet
-    }
-    
-    return Rectangle{(float)x, (float)y, 16.0f, 16.0f};
 }
 
-// Enemy sprite function based on the original Stardew Valley implementation
+// También necesitamos actualizar la función para los pies
+Rectangle AssetsManager::getPlayerFeetSprite(float animationTimer) {
+    // Calcula el frame basado en animationTimer % 400f como en el original
+    int frameOffset = ((int)(animationTimer / 100.0f) % 4) * 3;
+    
+    return Rectangle{
+        351.0f, 
+        112.0f + frameOffset,
+        10.0f,
+        3.0f
+    };
+}
+
+// Enemy sprite function based on accurate sprite sheet coordinates
 Rectangle AssetsManager::getEnemySprite(int enemyType, int direction, int frame) {
-    // Enemy sprites based on type and direction
-    int baseX = 336;
-    int baseY = 128 + (enemyType * 32);
-    
-    // Calculate position based on direction (4 directions: 0=down, 1=left, 2=right, 3=up)
-    int xOffset = (direction % 4) * 16;
-    int yOffset = (frame % 2) * 16;  // Alternate between frames for animation
-    
-    return Rectangle{(float)(baseX + xOffset), (float)(baseY + yOffset), 16.0f, 16.0f};
+    // Calculate frame offset
+    int frameOffset = frame * 16;
+
+    // Calculate direction offset
+    switch (enemyType) {
+        case 0: // ENEMY_ORC
+            return Rectangle{
+                static_cast<float>(352 + direction * 16 - 128),
+                static_cast<float>(1696 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 1: // ENEMY_GHOST
+            return Rectangle{
+                static_cast<float>(352 + direction * 16 - 128),
+                static_cast<float>(1712 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 2: // ENEMY_OGRE
+            return Rectangle{
+                static_cast<float>(384 + direction * 16 - 128),
+                static_cast<float>(1696 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 3: // ENEMY_MUMMY
+            return Rectangle{
+                static_cast<float>(384 + direction * 16 - 128),
+                static_cast<float>(1712 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 4: // ENEMY_DEVIL
+            return Rectangle{
+                static_cast<float>(416 + direction * 16 - 128),
+                static_cast<float>(1696 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 5: // ENEMY_MUSHROOM
+            return Rectangle{
+                static_cast<float>(416 + direction * 16 - 128),
+                static_cast<float>(1712 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 6: // ENEMY_SPIKEY
+            return Rectangle{
+                static_cast<float>(448 + direction * 16 - 128),
+                static_cast<float>(1696 + frameOffset - 1648),
+                16.0f,
+                16.0f
+            };
+        case 7: // ENEMY_BOSS_COWBOY
+            return Rectangle{
+                static_cast<float>(496 - 128),
+                static_cast<float>(1696 - 1648),
+                16.0f,
+                16.0f
+            };
+        case 8: // ENEMY_BOSS_FECTOR
+        default:
+            return Rectangle{
+                static_cast<float>(464 - 128),
+                static_cast<float>(1696 - 1648),
+                16.0f,
+                16.0f
+            };
+    }
 }
 
 // Bullet sprite function
 Rectangle AssetsManager::getBulletSprite(int bulletType) {
-    // Bullet sprites based on type
     switch(bulletType) {
         case 0: // Player bullet
-            return Rectangle{400.0f, 96.0f, 8.0f, 8.0f};
+            return Rectangle{
+                 518 - 128,
+                 1760 - 1648,
+                 BASE_TILE_SIZE * 0.25f, // 4.0f
+                 BASE_TILE_SIZE * 0.25f  // 4.0f
+            };
         case 1: // Enemy bullet
-            return Rectangle{408.0f, 96.0f, 8.0f, 8.0f};
-        case 2: // Special bullet
-            return Rectangle{416.0f, 96.0f, 8.0f, 8.0f};
+            return Rectangle{
+                 523 - 128,
+                 1760 - 1648,
+                 BASE_TILE_SIZE * 0.3125f, // 5.0f
+                 BASE_TILE_SIZE * 0.3125f  // 5.0f
+            };
         default:
-            return Rectangle{400.0f, 96.0f, 8.0f, 8.0f};
+            return Rectangle{
+                 518 - 128,
+                 1760 - 1648,
+                 BASE_TILE_SIZE * 0.25f, // 4.0f
+                 BASE_TILE_SIZE * 0.25f  // 4.0f
+            };
     }
 }
 
 // Powerup sprite function
 Rectangle AssetsManager::getPowerupSprite(int powerupType) {
-    // Powerup sprites based on type
     switch(powerupType) {
-        case 0: // Speed
-            return Rectangle{432.0f, 96.0f, 16.0f, 16.0f};
-        case 1: // Attack
-            return Rectangle{448.0f, 96.0f, 16.0f, 16.0f};
-        case 2: // Health
-            return Rectangle{464.0f, 96.0f, 16.0f, 16.0f};
-        case 3: // Shield
-            return Rectangle{480.0f, 96.0f, 16.0f, 16.0f};
+        case 0: // COIN_1
+            return Rectangle{
+                272 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 1: // COIN_5
+            return Rectangle{
+                288 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 2: // POWERUP_SPREAD (HAT)
+            return Rectangle{
+                304 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 3: // POWERUP_RAPIDFIRE (COFFEE)
+            return Rectangle{
+                320 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 4: // POWERUP_NUKE
+            return Rectangle{
+                336 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 5: // POWERUP_ZOMBIE
+            return Rectangle{
+                352 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 6: // POWERUP_SPEED (BOOT)
+            return Rectangle{
+                368 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 7: // POWERUP_SHOTGUN (GLOVE)
+            return Rectangle{
+                384 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
+        case 8: // POWERUP_LIFE
+            return Rectangle{
+                400 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
         default:
-            return Rectangle{432.0f, 96.0f, 16.0f, 16.0f};
+            return Rectangle{
+                272 - 128,
+                1808 - 1648,
+                16.0f,
+                16.0f
+            };
     }
 }
 
 Rectangle AssetsManager::getMenuSprite(int spriteIndex) {
-    // Menu sprites
-    return Rectangle{336.0f + (float)(spriteIndex * 16), 80.0f, 16.0f, 16.0f};
+    switch(spriteIndex) {
+        case 0: // Title
+            return Rectangle{128 - 128, 1744 - 1648, 96, 56}; // (0, 96)
+        case 1: // Back button
+            return Rectangle{294 - 128, 1782 - 1648, 22, 22}; // (166, 134)
+        case 2: // Controls
+            return Rectangle{352 - 128, 1648 - 1648, 80, 48}; // (224, 0)
+        default:
+            return Rectangle{128 - 128, 1744 - 1648, 96, 56}; // (0, 96)
+    }
 }
 
 // New method for UI elements
 Rectangle AssetsManager::getUISprite(const char* element) {
-    // UI elements like hearts, coins, etc.
-    
     if (strcmp(element, "heart") == 0) {
-        // Heart is at (400, 1776) in original game
-        return Rectangle{272.0f, 128.0f, 16.0f, 16.0f};
-    } 
-    else if (strcmp(element, "coin") == 0) {
-        // Coin is at (272, 1808) in original game
-        return Rectangle{144.0f, 160.0f, 16.0f, 16.0f};
+        return Rectangle{400 - 128, 1776 - 1648, 16.0f, 16.0f};
+    } else if (strcmp(element, "coin") == 0) {
+        return Rectangle{272 - 128, 1808 - 1648, 16.0f, 16.0f};
+    } else if (strcmp(element, "ammo") == 0) {
+        return Rectangle{416 - 128, 1776 - 1648, 16.0f, 16.0f};
+    } else if (strcmp(element, "lives_count") == 0) {
+        return Rectangle{400 - 128, 1776 - 1648, 16.0f, 16.0f};
+    } else {
+        // Default UI element
+        return Rectangle{400 - 128, 1776 - 1648, 16.0f, 16.0f};
     }
-    else if (strcmp(element, "ammo") == 0) {
-        // Ammo indicator
-        return Rectangle{288.0f, 128.0f, 16.0f, 16.0f};
-    }
-    else if (strcmp(element, "lives_count") == 0) {
-        return Rectangle{272.0f, 144.0f, 16.0f, 16.0f};
-    }
-    
-    // Default UI element
-    return Rectangle{0.0f, 0.0f, 16.0f, 16.0f};
 }

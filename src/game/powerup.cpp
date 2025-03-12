@@ -56,6 +56,7 @@ void Powerup::draw() {
     if (!active || !visible) return;
     
     AssetsManager& assets = AssetsManager::getInstance();
+    float zoom = AssetsManager::GetZoom();
     
     // Get sprite based on powerup type
     Rectangle src = assets.getPowerupSprite(type);
@@ -63,12 +64,16 @@ void Powerup::draw() {
     // Add a bob effect for powerups
     float yOffset = sinf(GetTime() * 4) * 2.0f;
     
+    // Calculate size based on zoom factor
+    float size = BASE_TILE_SIZE * zoom;
+    float halfSize = size / 2.0f;
+    
     // Draw the powerup
     DrawTexturePro(
         assets.spriteSheet,
         src,
-        Rectangle{position.x - 8, position.y - 8 + yOffset, 16, 16},
-        Vector2{8, 8},
+        Rectangle{position.x - halfSize, position.y - halfSize + yOffset, size, size},
+        Vector2{halfSize, halfSize},
         0.0f,
         WHITE
     );

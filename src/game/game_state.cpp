@@ -15,7 +15,7 @@
 GameStateManager::GameStateManager() {
     // Initialize default values
     currentState = START_MENU;
-    whichWave = 0;
+    whichWave = 1;  // Cambiado de 0 a 1
     world = 0;
     whichRound = 0;
     lives = 3;
@@ -61,7 +61,7 @@ void GameStateManager::Initialize() {
     
     // Setup initial game state - directly set to PLAYING for testing
     currentState = PLAYING;
-    whichWave = 0;
+    whichWave = 1;  // Change from 0 to 1
     world = 0;
     lives = 3;
     coins = 0;
@@ -460,47 +460,43 @@ void GameStateManager::SetGameState(GameState newState) {
 }
 
 void GameStateManager::ActivatePowerup(int type) {
-    float powerupDuration = 10000.0f; // 10 seconds by default
-    
     switch (type) {
-        case (int)COIN_1:
+        case COIN_1:  // En lugar de (int)COIN_1
             coins += 1;
+            score += 10;
             break;
             
-        case (int)COIN_5:
+        case COIN_5:  // En lugar de (int)COIN_5
             coins += 5;
+            score += 50;
             break;
             
         case POWERUP_LIFE:
-            lives += 1;
+            lives++;
             break;
             
         case POWERUP_SPEED:
-            player.ActivatePowerup(POWERUP_SPEED, powerupDuration);
-            activePowerupTimers[POWERUP_SPEED] = powerupDuration;
+            player.ActivatePowerup(POWERUP_SPEED, 10000.0f);
+            activePowerupTimers[POWERUP_SPEED] = 10000.0f;
             break;
             
         case POWERUP_RAPIDFIRE:
-            player.ActivatePowerup(POWERUP_RAPIDFIRE, powerupDuration);
-            activePowerupTimers[POWERUP_RAPIDFIRE] = powerupDuration;
+            player.ActivatePowerup(POWERUP_RAPIDFIRE, 10000.0f);
+            activePowerupTimers[POWERUP_RAPIDFIRE] = 10000.0f;
             break;
             
         case POWERUP_SPREAD:
-            player.ActivatePowerup(POWERUP_SPREAD, powerupDuration);
-            activePowerupTimers[POWERUP_SPREAD] = powerupDuration;
+            player.ActivatePowerup(POWERUP_SPREAD, 10000.0f);
+            activePowerupTimers[POWERUP_SPREAD] = 10000.0f;
             break;
             
         case POWERUP_SHOTGUN:
-            player.ActivatePowerup(POWERUP_SHOTGUN, powerupDuration);
-            activePowerupTimers[POWERUP_SHOTGUN] = powerupDuration;
+            player.ActivatePowerup(POWERUP_SHOTGUN, 10000.0f);
+            activePowerupTimers[POWERUP_SHOTGUN] = 10000.0f;
             break;
             
         case POWERUP_NUKE:
-            // Kill all enemies
-            for (Enemy* enemy : enemies) {
-                delete enemy;
-            }
-            enemies.clear();
+            // Implementa la lógica del powerup nuke
             break;
             
         default:
@@ -522,8 +518,8 @@ bool GameStateManager::LoadGame() {
 
 void GameStateManager::Draw() {
     // Get offset for proper positioning
-    int offsetX = level.getOffsetX();
-    int offsetY = level.getOffsetY();
+    Vector2 gameOffset = AssetsManager::GetGameOffset();
+    float zoom = AssetsManager::GetZoom();
     
     // Clear background to BLACK
     ClearBackground(BLACK);
@@ -532,7 +528,7 @@ void GameStateManager::Draw() {
     AssetsManager& assets = AssetsManager::getInstance();
     
     // Draw the current level
-    level.draw(assets.spriteSheet, world, 0.0f);
+    level.draw(assets.spriteSheet, world);
     
     // Draw powerups with offset
     for (Powerup* powerup : powerups) {
@@ -541,8 +537,8 @@ void GameStateManager::Draw() {
         Vector2 origPos = pos;
         
         // Apply offset
-        pos.x += offsetX;
-        pos.y += offsetY;
+        pos.x += gameOffset.x;
+        pos.y += gameOffset.y;
         
         // Update position temporarily for drawing
         powerup->position = pos;
@@ -559,8 +555,8 @@ void GameStateManager::Draw() {
         Vector2 origPos = pos;
         
         // Apply offset
-        pos.x += offsetX;
-        pos.y += offsetY;
+        pos.x += gameOffset.x;
+        pos.y += gameOffset.y;
         
         // Update position temporarily for drawing
         playerBullets[i].position = pos;
@@ -576,8 +572,8 @@ void GameStateManager::Draw() {
         Vector2 origPos = pos;
         
         // Apply offset
-        pos.x += offsetX;
-        pos.y += offsetY;
+        pos.x += gameOffset.x;
+        pos.y += gameOffset.y;
         
         // Update position temporarily for drawing
         enemyBullets[i].position = pos;
@@ -594,8 +590,8 @@ void GameStateManager::Draw() {
         Vector2 origPos = pos;
         
         // Apply offset
-        pos.x += offsetX;
-        pos.y += offsetY;
+        pos.x += gameOffset.x;
+        pos.y += gameOffset.y;
         
         // Update position temporarily for drawing
         enemy->position = pos;
@@ -614,8 +610,8 @@ void GameStateManager::Draw() {
         Vector2 origPos = pos;
         
         // Apply offset
-        pos.x += offsetX;
-        pos.y += offsetY;
+        pos.x += gameOffset.x;
+        pos.y += gameOffset.y;
         
         // Update position temporarily for drawing
         player.position = pos;
@@ -837,4 +833,16 @@ void GameStateManager::SpawnTestPowerup() {
     
     // Create the powerup
     powerups.push_back(new Powerup(type, position, 20000.0f)); // 20 seconds lifetime
+}
+
+void GameStateManager::HandleScreenSizeChange() {
+    // Recalculate offsets based on new screen size
+    Vector2 gameOffset = AssetsManager::GetGameOffset();
+    
+    std::cout << "Screen size changed. New offset: " << gameOffset.x << ", " << gameOffset.y << std::endl;
+    
+    // Update UI element positions if needed
+    
+    // Update level offset
+    level.setOffset(gameOffset.x, gameOffset.y);
 }
