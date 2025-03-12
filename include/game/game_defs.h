@@ -2,6 +2,7 @@
 #define GAME_DEFS_H
 
 #include "raylib.h"
+#include "raymath.h"
 #include "game/powerup.h"
 #include <cmath>
 
@@ -13,15 +14,7 @@
 #define POWERUP_SPREAD PowerupType::POWERUP_HAT
 #define POWERUP_SHOTGUN PowerupType::POWERUP_GLOVE
 
-// Remove the custom definitions of Clamp and Vector2Distance 
-// (since they're already defined in raymath.h)
-
-// Cast helper to safely convert between int and float
-inline Vector2 MakeVector2(float x, float y) {
-    Vector2 result;
-    result.x = x;
-    result.y = y;
-    return result;
-}
+// Remove the custom Vector2 helper to avoid conflicts - use raylib's Vector2{ x, y } syntax
+// or use raymath.h functions
 
 #endif // GAME_DEFS_H

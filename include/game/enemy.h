@@ -48,10 +48,12 @@ public:
     // Loot drops
     virtual int getLootDrop();
     
+    // Add this to allow temporary position changes for drawing
+    Vector2 position;  // Make it public or add a setter
+
 protected:
     // Core properties
     EnemyType type;
-    Vector2 position;
     int health;
     bool active;
     

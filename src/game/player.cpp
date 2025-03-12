@@ -1,9 +1,11 @@
 #include "game/player.h"
-#include "game/game_defs.h"  // Include the new header with definitions
+#include "game/game_defs.h"
 #include "game/raylib_wrapper.h"
 #include "game/assets_manager.h"
+#include "raymath.h"  // Add this for Clamp function
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 // Don't redefine Clamp here - use the one from game_defs.h
 
@@ -83,24 +85,71 @@ void Player::Update(float deltaTime) {
 void Player::HandleKeyboardInput(float deltaTime) {
     Vector2 moveDirection = {0, 0};
     
-    // Movement input
-    if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) {
+    // Movement input - WASD
+    if (IsKeyDown(KEY_W)) {
         moveDirection.y = -1;
     }
-    if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) {
+    if (IsKeyDown(KEY_S)) {
         moveDirection.y = 1;
     }
-    if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
+    if (IsKeyDown(KEY_A)) {
         moveDirection.x = -1;
     }
-    if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
+    if (IsKeyDown(KEY_D)) {
         moveDirection.x = 1;
     }
     
-    // If there is movement input
+    // If there is movement input, move the player
     if (moveDirection.x != 0 || moveDirection.y != 0) {
         lastMoveWasKeyboard = true;
         Move(moveDirection, deltaTime);
+    }
+    
+    // Handle shooting with arrow keys
+    bool shooting = false;
+    Vector2 shootDirection = {0, 0};
+    
+    if (IsKeyDown(KEY_UP)) {
+        shootDirection.y = -1;
+        shooting = true;
+    }
+    if (IsKeyDown(KEY_DOWN)) {
+        shootDirection.y = 1;
+        shooting = true;
+    }
+    if (IsKeyDown(KEY_LEFT)) {
+        shootDirection.x = -1;
+        shooting = true;
+    }
+    if (IsKeyDown(KEY_RIGHT)) {
+        shootDirection.x = 1;
+        shooting = true;
+    }
+    
+    // Also allow shooting with space key in the direction the player is facing
+    if (IsKeyDown(KEY_SPACE)) {
+        shooting = true;
+        shootDirection = GetShootingDirection();
+    }
+    
+    // Process shooting
+    if (shooting && CanShoot()) {
+        // Normalize the shoot direction
+        float length = sqrt(shootDirection.x * shootDirection.x + shootDirection.y * shootDirection.y);
+        if (length > 0) {
+            shootDirection.x /= length;
+            shootDirection.y /= length;
+        } else {
+            // Default to shooting upward if no direction given
+            shootDirection.y = -1;
+        }
+        
+        // Set the shoot direction for retrieval by the game manager
+        currentShootDirection = shootDirection;
+        justFired = true;
+        
+        // Reset the shoot timer
+        ResetShootTimer();
     }
 }
 
@@ -136,7 +185,7 @@ void Player::Move(Vector2 direction, float deltaTime) {
     position.x += direction.x * movementSpeed * deltaTime;
     position.y += direction.y * movementSpeed * deltaTime;
     
-    // Set player direction based on movement
+    // Set player direction based on movement (using 8-direction system)
     if (direction.x == 0 && direction.y == 0) {
         this->direction = IDLE;
     } else if (direction.x == 0 && direction.y < 0) {
@@ -157,18 +206,19 @@ void Player::Move(Vector2 direction, float deltaTime) {
         this->direction = UP_LEFT;
     }
     
-    // Keep player within screen bounds (assuming a screen size)
-    position.x = Clamp(position.x, 16, 768 - 16);
-    position.y = Clamp(position.y, 16, 768 - 16); // Add this line to clamp y position too
+    // Keep player within screen bounds - use raymath's Clamp function
+    Vector2 levelSize = {768.0f, 768.0f}; // Level size in pixels
+    position.x = Clamp(position.x, 16.0f, levelSize.x - 16.0f);
+    position.y = Clamp(position.y, 16.0f, levelSize.y - 16.0f);
 }
 
 void Player::UpdateAnimation(float deltaTime) {
-    // Increment animation timer
+    // Only animate when moving
     if (direction != IDLE) {
         animationTimer += deltaTime;
         if (animationTimer >= PLAYER_ANIMATION_SPEED) {
-            animationTimer -= PLAYER_ANIMATION_SPEED;
-            currentFrame = (currentFrame + 1) % PLAYER_FRAME_COUNT;
+            animationTimer = 0;
+            currentFrame = (currentFrame + 1) % 2; // Toggle between 0 and 1 for basic animation
         }
     } else {
         // Reset animation frame for idle state
@@ -178,18 +228,18 @@ void Player::UpdateAnimation(float deltaTime) {
 }
 
 void Player::Draw(Texture2D* /*playerTextures*/) {
-    // We ignore the passed textures array and use our sprite sheet
     AssetsManager& assets = AssetsManager::getInstance();
     
-    // Get sprite based on direction and animation frame
+    // Get the sprite rectangle for current direction and animation frame
     Rectangle src = assets.getPlayerSprite((int)direction, currentFrame);
     
-    // Draw the player
+    // Draw with the correct size and position
+    // The original game uses 16×16 sprites scaled to 48×48
     DrawTexturePro(
         assets.spriteSheet,
         src,
-        Rectangle{position.x - 8, position.y - 8, 16, 16},
-        Vector2{8, 8},
+        Rectangle{position.x - 16, position.y - 16, 32, 32},
+        Vector2{16, 16},
         0.0f,
         WHITE
     );

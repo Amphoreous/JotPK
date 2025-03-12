@@ -35,10 +35,12 @@ public:
     Vector2 getPosition() const { return position; }
     Rectangle getBounds() const;
     
+    // Add this to allow temporary position changes for drawing
+    Vector2 position;  // Make it public or add a setter
+
 private:
     // Core properties
     int type;
-    Vector2 position;
     bool active;
     
     // Visual properties

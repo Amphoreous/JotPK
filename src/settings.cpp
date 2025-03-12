@@ -1,99 +1,237 @@
 #include "raylib.h"
+#include "raymath.h"  // Add this for Clamp function
 #include "settings.h"
+#include "resource_manager.h"
 #include <cmath>  // For fabs()
 
-// Variables estáticas internas para almacenar estados
-
-static int hoveredOptionSettings = -1;            // Opción sobre la que está el cursor
-static int selectedOptionSettings = -1;           // Opción seleccionada por teclado
+// Settings state variables
+static int hoveredOptionSettings = -1;            // Option the cursor is hovering over
+static int selectedOptionSettings = -1;           // Option selected via keyboard
 static Vector2 previousMousePositionSettings = { 0, 0 };
-static bool usingMouseSettings = false;           // Flag: true = modo ratón, false = modo teclado
+static bool usingMouseSettings = false;           // Flag: true = mouse mode, false = keyboard mode
+
+// Settings values
+static bool musicEnabled = true;
+static bool soundEnabled = true;
+static int musicVolume = 80;
+static int soundVolume = 80;
+static bool fullScreen = false;
+
+// Define settings options
+#define SETTINGS_OPTIONS 5
+static const char* settingsLabels[SETTINGS_OPTIONS] = {
+    "Music",
+    "Sound Effects",
+    "Music Volume",
+    "Sound Volume",
+    "Fullscreen"
+};
 
 void DrawSettings(GameScreen* currentScreen)
 {
+    const int titleFontSize = 50;
+    const int optionFontSize = 24;
+    const int spacing = 60;
+    
     BeginDrawing();
     ClearBackground(BLACK);
 
-    // Título y contenido
+    // Title
+    int titleWidth = MeasureText("SETTINGS", titleFontSize);
+    DrawText("SETTINGS", (GetScreenWidth() - titleWidth) / 2, 100, titleFontSize, WHITE);
 
-    int titleWidth = MeasureText("SETTINGS", 50);
-    DrawText("SETTINGS", (GetScreenWidth() - titleWidth) / 2, 100, 50, WHITE);
-    DrawText("Sasdasdadassdad", 190, 300, 20, WHITE);
-
-    // "Back" Button
-
-    Color backColor = WHITE;
-
-    // Resalta en rojo si el ratón está sobre "Back" o si está seleccionado por teclado
-
-    if (hoveredOptionSettings == 0 || selectedOptionSettings == 0)
-    {
-        backColor = RED;
+    // Draw options
+    int startY = 220;
+    for (int i = 0; i < SETTINGS_OPTIONS; i++) {
+        Color optionColor = (hoveredOptionSettings == i || selectedOptionSettings == i) ? RED : WHITE;
+        DrawText(settingsLabels[i], 190, startY + i * spacing, optionFontSize, optionColor);
+        
+        // Draw option values/toggles
+        switch (i) {
+            case 0: // Music toggle
+                DrawText(musicEnabled ? "ON" : "OFF", GetScreenWidth() - 300, startY + i * spacing, 
+                    optionFontSize, optionColor);
+                break;
+                
+            case 1: // Sound effects toggle
+                DrawText(soundEnabled ? "ON" : "OFF", GetScreenWidth() - 300, startY + i * spacing, 
+                    optionFontSize, optionColor);
+                break;
+                
+            case 2: // Music volume
+                {
+                    // Volume slider
+                    Rectangle sliderBg = { GetScreenWidth() - 400, startY + i * spacing + optionFontSize/2 - 5, 300, 10 };
+                    DrawRectangleRec(sliderBg, DARKGRAY);
+                    
+                    // Active part of slider
+                    Rectangle sliderActive = { sliderBg.x, sliderBg.y, sliderBg.width * (musicVolume / 100.0f), sliderBg.height };
+                    DrawRectangleRec(sliderActive, optionColor);
+                    
+                    // Volume percentage
+                    DrawText(TextFormat("%d%%", musicVolume), GetScreenWidth() - 80, startY + i * spacing, optionFontSize, optionColor);
+                }
+                break;
+                
+            case 3: // Sound volume
+                {
+                    // Volume slider
+                    Rectangle sliderBg = { GetScreenWidth() - 400, startY + i * spacing + optionFontSize/2 - 5, 300, 10 };
+                    DrawRectangleRec(sliderBg, DARKGRAY);
+                    
+                    // Active part of slider
+                    Rectangle sliderActive = { sliderBg.x, sliderBg.y, sliderBg.width * (soundVolume / 100.0f), sliderBg.height };
+                    DrawRectangleRec(sliderActive, optionColor);
+                    
+                    // Volume percentage
+                    DrawText(TextFormat("%d%%", soundVolume), GetScreenWidth() - 80, startY + i * spacing, optionFontSize, optionColor);
+                }
+                break;
+                
+            case 4: // Fullscreen toggle
+                DrawText(fullScreen ? "ON" : "OFF", GetScreenWidth() - 300, startY + i * spacing, 
+                    optionFontSize, optionColor);
+                break;
+        }
     }
-    DrawText("Back", 190, 500, 20, backColor);
+
+    // Back button
+    Color backColor = (hoveredOptionSettings == SETTINGS_OPTIONS || selectedOptionSettings == SETTINGS_OPTIONS) ? RED : WHITE;
+    DrawText("Back", 190, GetScreenHeight() - 100, optionFontSize, backColor);
+
+    // Controls info
+    DrawText("Use â†‘/â†“ to navigate, â†/â†’ to change settings, ENTER to confirm", 
+             190, GetScreenHeight() - 50, 16, GRAY);
 
     EndDrawing();
 
-    // --- Actualización de input ---
-
+    // --- Input handling ---
     Vector2 mousePoint = GetMousePosition();
 
-    // Umbral para evitar que pequeñas fluctuaciones activen el modo ratón
-
+    // Mouse movement detection
     float threshold = 0.1f;
     bool currentMouseMoved = (std::fabs(mousePoint.x - previousMousePositionSettings.x) > threshold ||
-        std::fabs(mousePoint.y - previousMousePositionSettings.y) > threshold);
+                             std::fabs(mousePoint.y - previousMousePositionSettings.y) > threshold);
     previousMousePositionSettings = mousePoint;
 
-    // Si se presiona una tecla de navegación, se activa el modo teclado
-
-    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT))
-    {
+    // Switch control scheme based on input
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_DOWN) || 
+        IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) {
         usingMouseSettings = false;
     }
 
-    // Si se detecta movimiento significativo del ratón, se activa el modo ratón
-
-    if (currentMouseMoved)
-    {
+    if (currentMouseMoved) {
         usingMouseSettings = true;
     }
 
-    if (usingMouseSettings)
-    {
-        // --- MODO RATÓN ---
-
-        selectedOptionSettings = -1;  // Limpiar la selección por teclado
-
-        Rectangle backButtonRect = { 190, 500, static_cast<float>(MeasureText("Back", 20)), 20 };
-        if (CheckCollisionPointRec(mousePoint, backButtonRect))
-        {
-            hoveredOptionSettings = 0;
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-            {
-                *currentScreen = MENU;
-            }
-        }
-        else
-        {
-            hoveredOptionSettings = -1;
-        }
-    }
-    else
-    {
-        // --- MODO TECLADO ---
-
+    if (usingMouseSettings) {
+        // Mouse controls
+        selectedOptionSettings = -1;
         hoveredOptionSettings = -1;
 
-        // Si aún no hay opción seleccionada, se asigna la única opción (índice 0)
+        // Check if mouse is hovering over options
+        for (int i = 0; i < SETTINGS_OPTIONS; i++) {
+            Rectangle optionRect = { 190, (float)(220 + i * spacing), 
+                                   (float)MeasureText(settingsLabels[i], optionFontSize), 
+                                   (float)optionFontSize };
+            
+            if (CheckCollisionPointRec(mousePoint, optionRect)) {
+                hoveredOptionSettings = i;
+                
+                // Handle clicking options
+                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    // Toggle or adjust option
+                    switch (i) {
+                        case 0: musicEnabled = !musicEnabled; break;
+                        case 1: soundEnabled = !soundEnabled; break;
+                        case 4: 
+                            fullScreen = !fullScreen;
+                            if (fullScreen) SetWindowState(FLAG_FULLSCREEN_MODE);
+                            else ClearWindowState(FLAG_FULLSCREEN_MODE);
+                            break;
+                    }
+                }
+            }
+            
+            // Check volume sliders
+            if (i == 2 || i == 3) { // Music/Sound volume
+                Rectangle sliderRect = { GetScreenWidth() - 400, (float)(220 + i * spacing + optionFontSize/2 - 5), 300, 10 };
+                
+                if (CheckCollisionPointRec(mousePoint, 
+                                          Rectangle{sliderRect.x - 10, sliderRect.y - 10, sliderRect.width + 20, sliderRect.height + 20})) {
+                    hoveredOptionSettings = i;
+                    
+                    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+                        // Calculate volume based on mouse position
+                        float value = (mousePoint.x - sliderRect.x) / sliderRect.width;
+                        value = Clamp(value, 0.0f, 1.0f);
+                        
+                        if (i == 2) musicVolume = (int)(value * 100);
+                        else soundVolume = (int)(value * 100);
+                    }
+                }
+            }
+        }
 
-        if (selectedOptionSettings < 0)
-        {
+        // Check if back button is hovered/clicked
+        Rectangle backButtonRect = { 190, GetScreenHeight() - 100, 
+                                   (float)MeasureText("Back", optionFontSize), 
+                                   (float)optionFontSize };
+        
+        if (CheckCollisionPointRec(mousePoint, backButtonRect)) {
+            hoveredOptionSettings = SETTINGS_OPTIONS;
+            
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                *currentScreen = MENU;
+                // Save settings here
+            }
+        }
+    } else {
+        // Keyboard controls
+        hoveredOptionSettings = -1;
+        
+        // Initialize selection if none
+        if (selectedOptionSettings < 0) {
             selectedOptionSettings = 0;
         }
-        if (IsKeyPressed(KEY_ENTER) && selectedOptionSettings == 0)
-        {
+        
+        // Navigate between options
+        if (IsKeyPressed(KEY_DOWN)) {
+            selectedOptionSettings = (selectedOptionSettings + 1) % (SETTINGS_OPTIONS + 1);
+        }
+        if (IsKeyPressed(KEY_UP)) {
+            selectedOptionSettings = (selectedOptionSettings - 1 + SETTINGS_OPTIONS + 1) % (SETTINGS_OPTIONS + 1);
+        }
+        
+        // Adjust settings with left/right keys
+        if (selectedOptionSettings < SETTINGS_OPTIONS) {
+            if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) {
+                switch (selectedOptionSettings) {
+                    case 0: musicEnabled = !musicEnabled; break;
+                    case 1: soundEnabled = !soundEnabled; break;
+                    case 2: 
+                        musicVolume += IsKeyPressed(KEY_RIGHT) ? 10 : -10;
+                        musicVolume = Clamp(musicVolume, 0, 100);
+                        break;
+                    case 3:
+                        soundVolume += IsKeyPressed(KEY_RIGHT) ? 10 : -10;
+                        soundVolume = Clamp(soundVolume, 0, 100);
+                        break;
+                    case 4: 
+                        fullScreen = !fullScreen;
+                        if (fullScreen) SetWindowState(FLAG_FULLSCREEN_MODE);
+                        else ClearWindowState(FLAG_FULLSCREEN_MODE);
+                        break;
+                }
+            }
+        }
+        
+        // Go back to menu
+        if (IsKeyPressed(KEY_ENTER) && selectedOptionSettings == SETTINGS_OPTIONS) {
             *currentScreen = MENU;
+            // Save settings here
         }
     }
 }
+
+// Save/load functions for settings could go here

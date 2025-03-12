@@ -4,7 +4,6 @@
 #include "resource_dir.h"
 #include "resource_manager.h"
 #include "menu.h"
-#include "game.h"
 #include "settings.h"
 #include "htp.h"
 #include "intro.h"
@@ -25,16 +24,10 @@ void LoadGameResources();
 // Function to unload all game resources
 void UnloadGameResources();
 
-#ifdef _DEBUG
-void CreatePlaceholderAssets();
-#endif
+// Add this near the top with other function declarations
+// void DebugDrawAssets();
 
 int main() {
-#ifdef _DEBUG
-    if (!FileExists("resources/assets.png")) {
-        CreatePlaceholderAssets();
-    }
-#endif
     // Initialize window
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED);
     InitWindow(GetScreenWidth(), GetScreenHeight(), "The Journey of the Prairie King");
@@ -95,6 +88,16 @@ int main() {
 
         // Update music
         UpdateMusicStream(Overworld);
+
+        // Add a hotkey to force switch to GAME
+        if (IsKeyPressed(KEY_F5)) {
+            currentScreen = GAME;
+            if (gameManager) {
+                delete gameManager;
+                gameManager = new GameStateManager();
+                gameManager->Initialize();
+            }
+        }
 
         // Handle different game screens
         switch (currentScreen) {

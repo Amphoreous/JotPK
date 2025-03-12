@@ -40,10 +40,12 @@ public:
     
     // Collision
     Rectangle getBounds() const;
+
+    // Add this to allow temporary position changes for drawing
+    Vector2 position;  // Make it public or add a setter
     
 private:
     // Core properties
-    Vector2 position;
     Vector2 direction;  // Normalized direction vector
     BulletDirection visualDirection;  // Direction for sprite selection
     bool active;

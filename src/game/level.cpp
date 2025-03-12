@@ -1,6 +1,7 @@
 #include "game/level.h"
 #include "game/game_defs.h"
 #include "game/enemy.h"
+#include <iostream>
 #include <cmath>
 #include <algorithm>
 #include <functional>
@@ -71,75 +72,102 @@ void Level::generateLevel(int levelNum) {
 
 void Level::generateStandardLevel(int levelNum) {
     // Set player start position in center
-    playerStart = MakeVector2(mapWidth * TILE_SIZE / 2.0f, mapHeight * TILE_SIZE / 2.0f);
+    playerStart = {mapWidth * TILE_SIZE / 2.0f, mapHeight * TILE_SIZE / 2.0f};
     
-    // Create border walls
+    // Clear current map data
     for (int y = 0; y < mapHeight; y++) {
         for (int x = 0; x < mapWidth; x++) {
-            if (x == 0 || y == 0 || x == mapWidth - 1 || y == mapHeight - 1) {
-                mapData[y][x] = TILE_WALL;
+            mapData[y][x] = TILE_FLOOR;
+        }
+    }
+    
+    // Create border walls - always present in all levels
+    for (int y = 0; y < mapHeight; y++) {
+        mapData[y][0] = TILE_WALL;
+        mapData[y][mapWidth - 1] = TILE_WALL;
+    }
+    
+    for (int x = 0; x < mapWidth; x++) {
+        mapData[0][x] = TILE_WALL;
+        mapData[mapHeight - 1][x] = TILE_WALL;
+    }
+
+    // For level 1 (whichWave = 0), create a very simple layout
+    if (levelNum == 1) {
+        // Leave the middle mostly open with just a few obstacles
+        // Add some cacti/obstacles around the edges
+        for (int i = 4; i < mapWidth - 4; i += 5) {
+            mapData[3][i] = TILE_CACTUS;
+            mapData[mapHeight - 4][i] = TILE_CACTUS;
+        }
+        
+        // Add a few walls for obstacles
+        mapData[8][6] = TILE_WALL;
+        mapData[8][10] = TILE_WALL;
+        mapData[8][14] = TILE_WALL;
+        mapData[8][18] = TILE_WALL;
+        
+        mapData[16][6] = TILE_WALL;
+        mapData[16][10] = TILE_WALL;
+        mapData[16][14] = TILE_WALL;
+        mapData[16][18] = TILE_WALL;
+    } else {
+        // For later levels, generate more complex patterns based on original game
+        // This pattern repeats what the original game does for wave 2-3
+        for (int i = 3; i < mapWidth - 3; i += 4) {
+            for (int j = 5; j < mapHeight - 5; j += 8) {
+                if ((i + j) % 2 == 0) {
+                    mapData[j][i] = TILE_CACTUS;
+                }
+                else {
+                    mapData[j][i] = TILE_WALL;
+                }
             }
         }
     }
     
-    // Determine number of obstacles based on level
-    int obstacleCount = std::min(5 + levelNum, MAX_OBSTACLES);
+    // Make sure the center area around player start is clear
+    int clearRadius = 3;
+    int centerX = static_cast<int>(playerStart.x / TILE_SIZE);
+    int centerY = static_cast<int>(playerStart.y / TILE_SIZE);
     
-    // Add random obstacles
-    addObstacles(obstacleCount);
-    
-    // Add enemy spawn points (usually near the corners and edges)
-    enemySpawnPoints.push_back(MakeVector2((float)TILE_SIZE, (float)TILE_SIZE));                         // Top-left
-    enemySpawnPoints.push_back(MakeVector2(mapWidth * TILE_SIZE - (float)TILE_SIZE, (float)TILE_SIZE));  // Top-right
-    enemySpawnPoints.push_back(MakeVector2((float)TILE_SIZE, mapHeight * TILE_SIZE - (float)TILE_SIZE)); // Bottom-left
-    enemySpawnPoints.push_back(MakeVector2(mapWidth * TILE_SIZE - (float)TILE_SIZE, mapHeight * TILE_SIZE - (float)TILE_SIZE)); // Bottom-right
-    
-    // Add some mid-edge spawn points
-    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE / 2.0f, TILE_SIZE * 2.0f}); // Top-middle
-    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE / 2.0f, mapHeight * TILE_SIZE - TILE_SIZE * 2.0f}); // Bottom-middle
-    enemySpawnPoints.push_back(Vector2{TILE_SIZE * 2.0f, mapHeight * TILE_SIZE / 2.0f}); // Left-middle
-    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE - TILE_SIZE * 2.0f, mapHeight * TILE_SIZE / 2.0f}); // Right-middle
-    
-    // Add powerup spawn points (usually more central)
-    powerupSpawnPoints.push_back({mapWidth * TILE_SIZE / 4.0f, mapHeight * TILE_SIZE / 4.0f});
-    powerupSpawnPoints.push_back({mapWidth * TILE_SIZE * 3.0f / 4.0f, mapHeight * TILE_SIZE / 4.0f});
-    powerupSpawnPoints.push_back({mapWidth * TILE_SIZE / 4.0f, mapHeight * TILE_SIZE * 3.0f / 4.0f});
-    powerupSpawnPoints.push_back({mapWidth * TILE_SIZE * 3.0f / 4.0f, mapHeight * TILE_SIZE * 3.0f / 4.0f});
-    
-    // Queue initial enemies based on level number
-    int enemiesToSpawn = 5 + std::min(levelNum * 2, 20);  // More enemies as levels progress
-    
-    // Distribute enemies among spawn points with random delays
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> delayDist(0.0f, 5.0f);  // 0-5 second delay
-    
-    for (int i = 0; i < enemiesToSpawn; i++) {
-        // Select a random spawn point
-        int spawnPointIdx = i % enemySpawnPoints.size();
-        Vector2 spawnPos = enemySpawnPoints[spawnPointIdx];
-        
-        // Determine enemy type based on level
-        int enemyType = ENEMY_ORC;  // Default
-        
-        // As level progresses, introduce harder enemies
-        if (levelNum >= 8) {
-            enemyType = GetRandomValue(0, 6);  // All enemy types
-        } else if (levelNum >= 6) {
-            enemyType = GetRandomValue(0, 5);  // Up to Devil
-        } else if (levelNum >= 4) {
-            enemyType = GetRandomValue(0, 3);  // Up to Mummy
-        } else if (levelNum >= 2) {
-            enemyType = GetRandomValue(0, 1);  // Orc or Ghost
+    for (int y = centerY - clearRadius; y <= centerY + clearRadius; y++) {
+        for (int x = centerX - clearRadius; x <= centerX + clearRadius; x++) {
+            if (y >= 0 && y < mapHeight && x >= 0 && x < mapWidth) {
+                if (mapData[y][x] != TILE_FLOOR) {
+                    mapData[y][x] = TILE_FLOOR;
+                }
+            }
         }
-        
-        // Add to spawn queue with random delay
-        float delay = delayDist(gen);
-        addToSpawnQueue(enemyType, spawnPos, delay);
     }
+
+    // Setup spawn points similar to the original game
+    setupSpawnPoints();
 }
 
-// Fix conversions around lines 275-283
+void Level::setupSpawnPoints() {
+    // Clear existing spawn points
+    enemySpawnPoints.clear();
+    powerupSpawnPoints.clear();
+    
+    // Add enemy spawn points at each corner with an offset from the wall
+    enemySpawnPoints.push_back(Vector2{TILE_SIZE * 2.0f, TILE_SIZE * 2.0f}); // Top-left
+    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE - TILE_SIZE * 3.0f, TILE_SIZE * 2.0f}); // Top-right
+    enemySpawnPoints.push_back(Vector2{TILE_SIZE * 2.0f, mapHeight * TILE_SIZE - TILE_SIZE * 3.0f}); // Bottom-left
+    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE - TILE_SIZE * 3.0f, mapHeight * TILE_SIZE - TILE_SIZE * 3.0f}); // Bottom-right
+    
+    // Add middle spawn points on each edge
+    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE / 2.0f, TILE_SIZE * 2.0f}); // Top-middle
+    enemySpawnPoints.push_back(Vector2{TILE_SIZE * 2.0f, mapHeight * TILE_SIZE / 2.0f}); // Left-middle
+    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE - TILE_SIZE * 3.0f, mapHeight * TILE_SIZE / 2.0f}); // Right-middle
+    enemySpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE / 2.0f, mapHeight * TILE_SIZE - TILE_SIZE * 3.0f}); // Bottom-middle
+    
+    // Set powerup spawn locations (similar to original game positions)
+    powerupSpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE / 3.0f, mapHeight * TILE_SIZE / 3.0f});
+    powerupSpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE * 2.0f / 3.0f, mapHeight * TILE_SIZE / 3.0f});
+    powerupSpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE / 3.0f, mapHeight * TILE_SIZE * 2.0f / 3.0f});
+    powerupSpawnPoints.push_back(Vector2{mapWidth * TILE_SIZE * 2.0f / 3.0f, mapHeight * TILE_SIZE * 2.0f / 3.0f});
+}
 
 void Level::generateBossLevel(int bossType) {
     // Set player start position
@@ -164,7 +192,7 @@ void Level::generateBossLevel(int bossType) {
     bossSpawn.y = static_cast<float>(TILE_SIZE) * 3.0f;
     
     // Add boss to spawn queue
-    int bossEnemyType = (bossType == 0) ? ENEMY_BOSS_COWBOY : ENEMY_BOSS_FECTOR;
+    int bossEnemyType = (bossType == 0) ? ENEMY_SPAWN_BOSS_COWBOY : ENEMY_SPAWN_BOSS_FECTOR;
     addToSpawnQueue(bossEnemyType, bossSpawn, 2.0f);  // Spawn boss after 2 seconds
     
     // Add some minions
@@ -233,21 +261,37 @@ void Level::addObstacles(int count) {
     // Add random obstacles in valid locations
     for (int i = 0; i < count; i++) {
         int attempts = 0;
-        while (attempts < 100) { // Avoid infinite loop
-            int x = GetRandomValue(2, mapWidth - 3);
-            int y = GetRandomValue(2, mapHeight - 3);
+        int x, y;
+        float dist;
+        
+        // Try to find a valid position
+        while (attempts < 100) {
+            // Generate random position (avoid borders)
+            x = GetRandomValue(2, mapWidth - 3);
+            y = GetRandomValue(2, mapHeight - 3);
             
-            // Check if position is valid (not too close to player start)
-            float dist = sqrtf(powf(x*TILE_SIZE - playerStart.x, 2) + powf(y*TILE_SIZE - playerStart.y, 2));
+            // Calculate distance to player start
+            dist = Vector2Distance(Vector2{(float)x * TILE_SIZE, (float)y * TILE_SIZE}, playerStart);
+            
+            // If this is a floor tile and far enough from player start
             if (mapData[y][x] == TILE_FLOOR && dist > TILE_SIZE * 3) {
-                // Choose obstacle type
-                TileType obstacleType = (GetRandomValue(0, 100) < 70) ? TILE_WALL : 
-                                      (GetRandomValue(0, 100) < 50) ? TILE_CACTUS : TILE_WATER;
-                
-                mapData[y][x] = obstacleType;
                 break;
             }
+            
             attempts++;
+        }
+        
+        // If a valid position was found, place obstacle
+        if (attempts < 100) {
+            // Choose obstacle type
+            int obstacleType = GetRandomValue(0, 10);
+            if (obstacleType < 7) {
+                mapData[y][x] = TILE_WALL;
+            } else if (obstacleType < 9) {
+                mapData[y][x] = TILE_CACTUS;
+            } else {
+                mapData[y][x] = TILE_WATER;
+            }
         }
     }
 }
@@ -266,65 +310,71 @@ void Level::update(float deltaTime) {
 }
 
 void Level::draw(Texture2D backgroundTexture, int worldNumber, float dancingCactusTimer) {
-    // Draw background
-    ClearBackground(DARKBROWN);
+    // Clear background to match the original game's background
+    ClearBackground(BLACK);
     
-    if (backgroundTexture.id != 0) {
-        // Draw tiled background
-        for (int y = 0; y < mapHeight; y++) {
-            for (int x = 0; x < mapWidth; x++) {
-                // Select source rectangle based on world number and tile type
-                Rectangle source = {0, 0, TILE_SIZE, TILE_SIZE};
-                
-                // Modify source based on world theme (row in spritesheet)
-                source.y = worldNumber * TILE_SIZE;
-                
-                // For animated tiles
-                if (mapData[y][x] == TILE_WATER) {
-                    int frame = (int)(waterAnimationTimer / ANIMATION_SPEED * 4);
-                    source.x = (2 + frame) * TILE_SIZE;  // Water animation frames
-                } else if (mapData[y][x] == TILE_LAVA) {
-                    int frame = (int)(lavaAnimationTimer / (ANIMATION_SPEED * 0.5f) * 4);
-                    source.x = (6 + frame) * TILE_SIZE;  // Lava animation frames
-                } else if (mapData[y][x] == TILE_CACTUS) {
-                    // Dancing cactus effect
-                    float sway = sinf(dancingCactusTimer * 5.0f) * 3.0f;
-                    
-                    DrawTexturePro(
-                        backgroundTexture,
-                        Rectangle{TILE_SIZE, source.y, TILE_SIZE, TILE_SIZE},
-                        Rectangle{static_cast<float>(x*TILE_SIZE), static_cast<float>(y*TILE_SIZE), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE)},
-                        Vector2{TILE_SIZE/2.0f, TILE_SIZE},
-                        sway,
-                        WHITE
-                    );
-                    continue;  // Skip normal drawing
-                } else if (mapData[y][x] == TILE_WALL) {
-                    source.x = 0;  // Wall tile
-                } else {
-                    source.x = 0;  // Default floor tile
-                }
-                
-                // Draw the tile
-                DrawTextureRec(backgroundTexture, source, Vector2{static_cast<float>(x*TILE_SIZE), static_cast<float>(y*TILE_SIZE)}, WHITE);
+    // Calculate offsets to center the map on screen
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+    int mapPixelWidth = mapWidth * TILE_SIZE;
+    int mapPixelHeight = mapHeight * TILE_SIZE;
+    
+    int offsetX = (screenWidth - mapPixelWidth) / 2;
+    int offsetY = (screenHeight - mapPixelHeight) / 2;
+    
+    // Store offsets for other elements to use
+    this->offsetX = offsetX;
+    this->offsetY = offsetY;
+    
+    // Draw the tile grid
+    for (int y = 0; y < mapHeight; y++) {
+        for (int x = 0; x < mapWidth; x++) {
+            AssetsManager& assets = AssetsManager::getInstance();
+            Rectangle src;
+            Color tint = WHITE;
+            
+            // Choose sprite based on tile type
+            switch (mapData[y][x]) {
+                case TILE_WALL:
+                    // Use desert wall tile from original game
+                    src = Rectangle{224, 0, 16, 16}; // Adjust based on your spritesheet
+                    break;
+                case TILE_CACTUS:
+                    // Use cactus tile with animation
+                    src = Rectangle{240, 0, 16, 16}; // Adjust based on your spritesheet
+                    // Apply dancing animation if timer is active
+                    if (dancingCactusTimer > 400) {
+                        src.x += 16;
+                    }
+                    break;
+                case TILE_WATER:
+                    // Use water tile with animation
+                    src = Rectangle{272, 0, 16, 16}; // Adjust based on your spritesheet
+                    // Animate water
+                    src.x += (int)(waterAnimationTimer / (ANIMATION_SPEED * 0.5)) * 16;
+                    break;
+                case TILE_LAVA:
+                    // Use lava tile with animation
+                    src = Rectangle{304, 0, 16, 16}; // Adjust based on your spritesheet
+                    // Animate lava
+                    src.x += (int)(lavaAnimationTimer / (ANIMATION_SPEED * 0.5)) * 16;
+                    break;
+                default:
+                    // Floor tiles - use desert floor
+                    src = Rectangle{208, 0, 16, 16}; // Adjust based on your spritesheet
+                    break;
             }
-        }
-    } else {
-        // Fallback if texture is not loaded - draw colored rectangles
-        for (int y = 0; y < mapHeight; y++) {
-            for (int x = 0; x < mapWidth; x++) {
-                Color tileColor;
-                
-                switch (mapData[y][x]) {
-                    case TILE_WALL:   tileColor = DARKGRAY; break;
-                    case TILE_CACTUS: tileColor = GREEN; break;
-                    case TILE_WATER:  tileColor = BLUE; break;
-                    case TILE_LAVA:   tileColor = RED; break;
-                    default:         tileColor = BEIGE; break; // Floor
-                }
-                
-                DrawRectangle(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, tileColor);
-            }
+            
+            // Draw the tile with offset
+            DrawTexturePro(
+                assets.spriteSheet,
+                src,
+                Rectangle{(float)(offsetX + x * TILE_SIZE), (float)(offsetY + y * TILE_SIZE), 
+                          (float)TILE_SIZE, (float)TILE_SIZE},
+                Vector2{0, 0},
+                0.0f,
+                tint
+            );
         }
     }
 }
@@ -359,14 +409,14 @@ bool Level::getNextSpawn(int& enemyType, Vector2& position) {
     
     // Get the next spawn from the queue
     SpawnQueueItem item = spawnQueue.top();
-    spawnQueue.pop();
     
     // If the spawn time is still positive, put it back with reduced time
-    if (item.spawnTime > 0) {
-        item.spawnTime -= 0.016f;  // Assume 60fps, 16ms per frame
-        spawnQueue.push(item);
+    if (item.spawnTime > 0.01f) { // Use a small epsilon for floating point comparison
         return false;
     }
+    
+    // Pop the item since we're about to spawn it
+    spawnQueue.pop();
     
     // Ready to spawn
     enemyType = item.enemyType;

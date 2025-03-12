@@ -1,9 +1,11 @@
+#include "raylib.h"
 #include "game/game_state.h"
 #include "game/game_defs.h"  // Include the new header with definitions
 #include "game/assets_manager.h"
 #include "resource_manager.h"  // Include resource manager
 #include <algorithm>
 #include <cstdlib>
+#include <iostream>
 
 #define WAVE_DURATION 80000.0f
 #define BETWEEN_WAVE_DURATION 5000.0f
@@ -55,14 +57,29 @@ GameStateManager::~GameStateManager() {
 }
 
 void GameStateManager::Initialize() {
-    // Setup initial game state
-    currentState = START_MENU;
+    std::cout << "Initializing game state..." << std::endl;
     
-    // Initialize player
-    player.Initialize({384, 384});
+    // Setup initial game state - directly set to PLAYING for testing
+    currentState = PLAYING;
+    whichWave = 0;
+    world = 0;
+    lives = 3;
+    coins = 0;
+    score = 0;
     
-    // Initialize level
+    // Initialize level first
+    std::cout << "Loading level for wave " << whichWave << std::endl;
     level.loadMap(whichWave);
+    
+    // Set player position based on level's start position
+    Vector2 startPos = level.getPlayerStartPosition();
+    std::cout << "Player start position: " << startPos.x << ", " << startPos.y << std::endl;
+    player.Initialize(startPos);
+    
+    // Reset timers
+    waveTimer = WAVE_DURATION;
+    betweenWaveTimer = BETWEEN_WAVE_DURATION;
+    playerInvincibilityTimer = 0;
     
     // Clear any existing enemies and powerups
     for (Enemy* enemy : enemies) {
@@ -77,9 +94,24 @@ void GameStateManager::Initialize() {
     
     playerBullets.clear();
     enemyBullets.clear();
+    activePowerupTimers.clear();
+    
+    std::cout << "Game initialization complete" << std::endl;
 }
 
 void GameStateManager::Update(float deltaTime) {
+    // Add emergency reset key
+    if (IsKeyPressed(KEY_F2)) {
+        std::cout << "Emergency reset triggered" << std::endl;
+        Initialize();
+        return;
+    }
+    
+    // Test powerup spawn key
+    if (IsKeyPressed(KEY_F3) && currentState == PLAYING) {
+        SpawnTestPowerup();
+    }
+    
     // Convert milliseconds-based timing to seconds-based timing
     float dtMillis = deltaTime * 1000.0f;
     
@@ -136,29 +168,115 @@ void GameStateManager::UpdatePlaying(float dtMillis) {
         waveTimer -= dtMillis;
     }
     
+    // Convert milliseconds to seconds for updates
+    float dtSeconds = dtMillis / 1000.0f;
+    
     // Update player
-    player.Update(dtMillis);
+    player.Update(dtSeconds);
+    
+    // Handle player shooting
+    if (player.HasJustFired()) {
+        Vector2 shootDir = player.GetCurrentShootDirection();
+        Vector2 playerPos = player.GetPosition();
+        int bulletDamage = player.GetBulletDamage();
+        
+        // Get bullet count based on player powerups
+        int bulletCount = player.GetBulletCount();
+        
+        if (bulletCount == 1) {
+            // Single bullet
+            FirePlayerBullet(playerPos, shootDir, bulletDamage);
+        } 
+        else if (bulletCount == 3) {
+            // Spread shot (3-way)
+            FirePlayerBullet(playerPos, shootDir, bulletDamage); // Center
+            
+            // Calculate perpendicular directions for side bullets
+            Vector2 perpDir = {-shootDir.y, shootDir.x};
+            Vector2 dir1 = {
+                shootDir.x * 0.866f + perpDir.x * 0.5f,
+                shootDir.y * 0.866f + perpDir.y * 0.5f
+            };
+            Vector2 dir2 = {
+                shootDir.x * 0.866f - perpDir.x * 0.5f,
+                shootDir.y * 0.866f - perpDir.y * 0.5f
+            };
+            
+            FirePlayerBullet(playerPos, dir1, bulletDamage);
+            FirePlayerBullet(playerPos, dir2, bulletDamage);
+        } 
+        else if (bulletCount == 5) {
+            // Shotgun (5-way)
+            FirePlayerBullet(playerPos, shootDir, bulletDamage); // Center
+            
+            // Calculate angles for side bullets
+            Vector2 perpDir = {-shootDir.y, shootDir.x};
+            
+            // 15 degree spread
+            Vector2 dir1 = {
+                shootDir.x * 0.966f + perpDir.x * 0.259f,
+                shootDir.y * 0.966f + perpDir.y * 0.259f
+            };
+            Vector2 dir2 = {
+                shootDir.x * 0.966f - perpDir.x * 0.259f,
+                shootDir.y * 0.966f - perpDir.y * 0.259f
+            };
+            
+            // 30 degree spread
+            Vector2 dir3 = {
+                shootDir.x * 0.866f + perpDir.x * 0.5f,
+                shootDir.y * 0.866f + perpDir.y * 0.5f
+            };
+            Vector2 dir4 = {
+                shootDir.x * 0.866f - perpDir.x * 0.5f,
+                shootDir.y * 0.866f - perpDir.y * 0.5f
+            };
+            
+            FirePlayerBullet(playerPos, dir1, bulletDamage);
+            FirePlayerBullet(playerPos, dir2, bulletDamage);
+            FirePlayerBullet(playerPos, dir3, bulletDamage);
+            FirePlayerBullet(playerPos, dir4, bulletDamage);
+        }
+        
+        // Reset the fire flag
+        player.ResetJustFired();
+    }
+    
+    // Update level
+    level.update(dtSeconds);
     
     // Update bullets
     for (int i = static_cast<int>(playerBullets.size()) - 1; i >= 0; i--) {
-        playerBullets[i].update();
+        playerBullets[i].update(dtSeconds);
         if (!playerBullets[i].isActive()) {
             playerBullets.erase(playerBullets.begin() + i);
         }
     }
     
     for (int i = static_cast<int>(enemyBullets.size()) - 1; i >= 0; i--) {
-        enemyBullets[i].update();
+        enemyBullets[i].update(dtSeconds);
         if (!enemyBullets[i].isActive()) {
             enemyBullets.erase(enemyBullets.begin() + i);
         }
     }
     
     // Update enemies
-    UpdateEnemies(dtMillis);
+    Vector2 playerPos = player.GetPosition();
+    for (int i = static_cast<int>(enemies.size()) - 1; i >= 0; i--) {
+        bool shouldRemove = enemies[i]->update(playerPos, dtSeconds);
+        if (shouldRemove || !enemies[i]->isActive()) {
+            delete enemies[i];
+            enemies.erase(enemies.begin() + i);
+        }
+    }
     
-    // Spawn random enemies based on current wave settings
-    SpawnRandomEnemies(dtMillis);
+    // Check for enemy spawns from the queue
+    int enemyType;
+    Vector2 spawnPos;
+    if (level.getNextSpawn(enemyType, spawnPos)) {
+        SpawnEnemy(enemyType, spawnPos);
+        std::cout << "Spawned enemy type " << enemyType << " at " << spawnPos.x << ", " << spawnPos.y << std::endl;
+    }
     
     // Update powerups
     for (int i = powerups.size() - 1; i >= 0; i--) {
@@ -174,16 +292,9 @@ void GameStateManager::UpdatePlaying(float dtMillis) {
     
     // Check for wave completion
     if (waveTimer <= 0 && enemies.empty() && level.isSpawnQueueEmpty()) {
-        // Wave completed
-        whichWave++;
-        SetGameState(BETWEEN_WAVES);
+        // Wave complete
+        currentState = BETWEEN_WAVES;
         betweenWaveTimer = BETWEEN_WAVE_DURATION;
-        
-        // Update monster chances for the next wave
-        UpdateMonsterChancesForWave();
-        
-        // Save game progress
-        SaveGame();
     }
 }
 
@@ -349,45 +460,50 @@ void GameStateManager::SetGameState(GameState newState) {
 }
 
 void GameStateManager::ActivatePowerup(int type) {
+    float powerupDuration = 10000.0f; // 10 seconds by default
+    
     switch (type) {
         case (int)COIN_1:
-            // Add coins
             coins += 1;
             break;
             
         case (int)COIN_5:
-            // Add coins
             coins += 5;
             break;
             
         case POWERUP_LIFE:
-            lives++;
-            // Play powerup sound
+            lives += 1;
             break;
             
         case POWERUP_SPEED:
-        case POWERUP_SPREAD:
+            player.ActivatePowerup(POWERUP_SPEED, powerupDuration);
+            activePowerupTimers[POWERUP_SPEED] = powerupDuration;
+            break;
+            
         case POWERUP_RAPIDFIRE:
+            player.ActivatePowerup(POWERUP_RAPIDFIRE, powerupDuration);
+            activePowerupTimers[POWERUP_RAPIDFIRE] = powerupDuration;
+            break;
+            
+        case POWERUP_SPREAD:
+            player.ActivatePowerup(POWERUP_SPREAD, powerupDuration);
+            activePowerupTimers[POWERUP_SPREAD] = powerupDuration;
+            break;
+            
         case POWERUP_SHOTGUN:
-            // Activate timed powerup
-            activePowerupTimers[type] = 10000.0f;  // 10 seconds
-            // Play powerup sound
+            player.ActivatePowerup(POWERUP_SHOTGUN, powerupDuration);
+            activePowerupTimers[POWERUP_SHOTGUN] = powerupDuration;
             break;
             
         case POWERUP_NUKE:
-            // Kill all enemies instantly
+            // Kill all enemies
             for (Enemy* enemy : enemies) {
                 delete enemy;
             }
             enemies.clear();
-            // Play explosion sound
             break;
             
-        // Add other powerup types as needed
-            
         default:
-            // Store as held item
-            heldItemType = type;
             break;
     }
 }
@@ -404,42 +520,152 @@ bool GameStateManager::LoadGame() {
     return true;
 }
 
-
 void GameStateManager::Draw() {
+    // Get offset for proper positioning
+    int offsetX = level.getOffsetX();
+    int offsetY = level.getOffsetY();
+    
+    // Clear background to BLACK
+    ClearBackground(BLACK);
+    
     // Get asset manager instance
     AssetsManager& assets = AssetsManager::getInstance();
     
     // Draw the current level
     level.draw(assets.spriteSheet, world, 0.0f);
     
-    // Draw powerups
+    // Draw powerups with offset
     for (Powerup* powerup : powerups) {
+        Vector2 pos = powerup->getPosition();
+        // Store original position
+        Vector2 origPos = pos;
+        
+        // Apply offset
+        pos.x += offsetX;
+        pos.y += offsetY;
+        
+        // Update position temporarily for drawing
+        powerup->position = pos;
         powerup->draw();
+        
+        // Restore original position
+        powerup->position = origPos;
     }
     
-    // Draw bullets
-    for (Bullet& bullet : playerBullets) {
-        bullet.draw(assets.spriteSheet);
+    // Draw bullets with offset
+    for (size_t i = 0; i < playerBullets.size(); i++) {
+        Vector2 pos = playerBullets[i].getPosition();
+        // Store original position
+        Vector2 origPos = pos;
+        
+        // Apply offset
+        pos.x += offsetX;
+        pos.y += offsetY;
+        
+        // Update position temporarily for drawing
+        playerBullets[i].position = pos;
+        playerBullets[i].draw(assets.spriteSheet);
+        
+        // Restore original position
+        playerBullets[i].position = origPos;
     }
     
-    for (Bullet& bullet : enemyBullets) {
-        bullet.draw(assets.spriteSheet);
+    for (size_t i = 0; i < enemyBullets.size(); i++) {
+        Vector2 pos = enemyBullets[i].getPosition();
+        // Store original position
+        Vector2 origPos = pos;
+        
+        // Apply offset
+        pos.x += offsetX;
+        pos.y += offsetY;
+        
+        // Update position temporarily for drawing
+        enemyBullets[i].position = pos;
+        enemyBullets[i].draw(assets.spriteSheet);
+        
+        // Restore original position
+        enemyBullets[i].position = origPos;
     }
     
-    // Draw enemies
+    // Draw enemies with offset
     for (Enemy* enemy : enemies) {
+        Vector2 pos = enemy->GetPosition();
+        // Store original position
+        Vector2 origPos = pos;
+        
+        // Apply offset
+        pos.x += offsetX;
+        pos.y += offsetY;
+        
+        // Update position temporarily for drawing
+        enemy->position = pos;
         enemy->draw();
+        
+        // Restore original position
+        enemy->position = origPos;
     }
     
-    // Draw player (with invincibility effect if applicable)
+    // Draw player with offset and handle invincibility effect
     bool shouldDrawPlayer = (playerInvincibilityTimer <= 0.0f || 
                            static_cast<int>(playerInvincibilityTimer / 100.0f) % 2 == 0);
     if (shouldDrawPlayer) {
-        player.Draw(nullptr);  // We're not using the passed texture array anymore
+        Vector2 pos = player.GetPosition();
+        // Store original position
+        Vector2 origPos = pos;
+        
+        // Apply offset
+        pos.x += offsetX;
+        pos.y += offsetY;
+        
+        // Update position temporarily for drawing
+        player.position = pos;
+        player.Draw(nullptr);
+        
+        // Restore original position
+        player.position = origPos;
     }
     
     // Draw UI elements
     DrawUIElements();
+    
+    // Toggle debug info with F1 key
+    if (IsKeyPressed(KEY_F1)) {
+        showDebug = !showDebug;
+        std::cout << "Debug display: " << (showDebug ? "ON" : "OFF") << std::endl;
+    }
+    
+    // Draw debug info if enabled
+    if (showDebug) {
+        DrawDebugInfo();
+    }
+}
+
+void GameStateManager::DrawDebugInfo() {
+    // Display debug overlay
+    DrawRectangle(10, 10, 300, 220, Fade(BLACK, 0.7f));
+    DrawText("DEBUG INFO", 20, 20, 20, YELLOW);
+    DrawText(TextFormat("Game State: %d", currentState), 20, 45, 16, WHITE);
+    DrawText(TextFormat("Player Position: %.1f, %.1f", player.GetPosition().x, player.GetPosition().y), 20, 65, 16, WHITE);
+    DrawText(TextFormat("Direction: %d", player.GetDirection()), 20, 85, 16, WHITE);
+    DrawText(TextFormat("Wave: %d", whichWave), 20, 105, 16, WHITE);
+    DrawText(TextFormat("Enemies: %d", enemies.size()), 20, 125, 16, WHITE);
+    DrawText(TextFormat("FPS: %d", GetFPS()), 20, 145, 16, WHITE);
+    DrawText(TextFormat("Spawn Queue Empty: %s", level.isSpawnQueueEmpty() ? "Yes" : "No"), 20, 165, 16, WHITE);
+    DrawText(TextFormat("Level Size: %dx%d", level.getWidth(), level.getHeight()), 20, 185, 16, WHITE);
+    DrawText(TextFormat("Keys: F1=Debug, F2=Reset", whichWave, lives), 20, 205, 16, WHITE);
+    
+    // Draw player movement keys state
+    DrawRectangle(320, 10, 150, 145, Fade(BLACK, 0.7f));
+    DrawText("Movement:", 330, 20, 16, WHITE);
+    DrawText(IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) ? "UP: ON" : "UP: off", 330, 40, 14, IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S) ? "DOWN: ON" : "DOWN: off", 330, 60, 14, IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A) ? "LEFT: ON" : "LEFT: off", 330, 80, 14, IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D) ? "RIGHT: ON" : "RIGHT: off", 330, 100, 14, IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_SPACE) ? "SHOOT: ON" : "SHOOT: off", 330, 120, 14, IsKeyDown(KEY_SPACE) ? GREEN : GRAY);
+    
+    // Show a frame counter to detect lag or stuttering
+    // Changed GetFrameCounter() to GetFramesCounter() to match Raylib API
+    DrawText(TextFormat("Frame: %d", GetFrameTime()), 330, 140, 14, WHITE);
 }
 
 void GameStateManager::DrawUIElements() {
@@ -555,10 +781,11 @@ void GameStateManager::SpawnRandomEnemies(float deltaTime) {
         for (size_t i = 0; i < monsterChances.size(); i++) {
             if (rand < monsterChances[i].x) {
                 // Spawn this monster type
-                if (!level.getEnemySpawnPoints().empty()) {
+                const std::vector<Vector2>& spawnPoints = level.getEnemySpawnPoints();
+                if (!spawnPoints.empty()) {
                     // Get random spawn point
-                    int spawnIndex = GetRandomValue(0, static_cast<int>(level.getEnemySpawnPoints().size() - 1));
-                    SpawnEnemy(static_cast<int>(i), level.getEnemySpawnPoints()[spawnIndex]);
+                    int spawnIndex = GetRandomValue(0, static_cast<int>(spawnPoints.size() - 1));
+                    SpawnEnemy(static_cast<int>(i), spawnPoints[spawnIndex]);
                 }
                 break;
             }
@@ -567,18 +794,19 @@ void GameStateManager::SpawnRandomEnemies(float deltaTime) {
 }
 
 void GameStateManager::SetupShop() {
-    // This would setup the shop interface and items
+    // Example of how to update references:
+    // etc.
 }
 
 int GameStateManager::GetPriceForItem(int itemType) {
     // Return price based on item type
     switch (itemType) {
-        case POWERUP_LIFE: return 10;
-        case POWERUP_BOOT: return 5;
-        case POWERUP_COFFEE: return 5;
-        case POWERUP_HAT: return 7;
-        case POWERUP_GLOVE: return 10;
-        default: return 5;
+        case SHOP_ITEM_LIFE: return 10;
+        case SHOP_ITEM_BOOT: return 5;
+        case SHOP_ITEM_COFFEE: return 5;
+        case SHOP_ITEM_HAT: return 7;
+        case SHOP_ITEM_GLOVE: return 8;
+        default: return 10; // Default price
     }
 }
 
@@ -590,4 +818,23 @@ void GameStateManager::ApplyLevelSpecificSettings() {
 void GameStateManager::UpdateMonsterChancesForWave() {
     // Update monster spawn chances based on current wave
     // Higher waves = harder monsters more likely
+}
+
+void GameStateManager::SpawnTestPowerup() {
+    // Get a random position near the player
+    Vector2 playerPos = player.GetPosition();
+    Vector2 offset = {
+        static_cast<float>(GetRandomValue(-100, 100)),
+        static_cast<float>(GetRandomValue(-100, 100))
+    };
+    Vector2 position = {
+        playerPos.x + offset.x,
+        playerPos.y + offset.y
+    };
+    
+    // Get a random powerup type (1-8, skipping COIN_1 at index 0)
+    int type = GetRandomValue(1, 8);
+    
+    // Create the powerup
+    powerups.push_back(new Powerup(type, position, 20000.0f)); // 20 seconds lifetime
 }

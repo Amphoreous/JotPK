@@ -1,10 +1,9 @@
-#ifndef LEVEL_H
-#define LEVEL_H
+#pragma once
 
 #include "raylib.h"
 #include <vector>
 #include <queue>
-#include <functional> // Add this include for std::function
+#include "game/assets_manager.h"
 
 // Tile types
 enum TileType {
@@ -12,21 +11,29 @@ enum TileType {
     TILE_WALL,
     TILE_CACTUS,
     TILE_WATER,
-    TILE_LAVA,
-    TILE_COUNT
+    TILE_LAVA
 };
 
-// Structure to define a spawn queue item
+// Enemy types for spawning - reference the one in enemy.h
+enum LevelEnemyType {
+    ENEMY_SPAWN_BASIC = 0,
+    ENEMY_SPAWN_ORC,
+    ENEMY_SPAWN_GHOST,
+    ENEMY_SPAWN_MUMMY,
+    ENEMY_SPAWN_DEVIL,
+    ENEMY_SPAWN_BOSS_COWBOY,
+    ENEMY_SPAWN_BOSS_FECTOR
+};
+
+// Structure for spawn queue
 struct SpawnQueueItem {
     int enemyType;
     Vector2 position;
     float spawnTime;
-};
-
-// Comparison function for priority queue
-struct SpawnQueueCompare {
-    bool operator()(const SpawnQueueItem& a, const SpawnQueueItem& b) const {
-        return a.spawnTime > b.spawnTime;  // Lower time = higher priority
+    
+    // Comparison operator for priority queue (smaller times have higher priority)
+    bool operator>(const SpawnQueueItem& rhs) const {
+        return spawnTime > rhs.spawnTime;
     }
 };
 
@@ -35,55 +42,60 @@ public:
     Level();
     ~Level();
     
-    // Core functionality
-    bool loadMap(int levelNumber);
+    bool loadMap(int levelNum);
     void update(float deltaTime);
     void draw(Texture2D backgroundTexture, int worldNumber, float dancingCactusTimer);
     
-    // Map properties
-    int getWidth() const { return mapWidth; }
-    int getHeight() const { return mapHeight; }
+    // Check if a position is passable (for collision detection)
     bool isPassable(float x, float y) const;
     
-    // Spawn management
+    // Add an enemy to the spawn queue
     void addToSpawnQueue(int enemyType, Vector2 position, float delay);
-    bool isSpawnQueueEmpty() const { return spawnQueue.empty(); }
+    
+    // Get the next enemy to spawn (returns false if none ready)
     bool getNextSpawn(int& enemyType, Vector2& position);
     
-    // Special map features
-    Vector2 getPlayerStartPosition() const { return playerStart; }
-    std::vector<Vector2> getEnemySpawnPoints() const { return enemySpawnPoints; }
-    std::vector<Vector2> getPowerupSpawnPoints() const { return powerupSpawnPoints; }
+    // Getters
+    Vector2 getPlayerStart() const { return playerStart; }
+    int getLevelNumber() const { return levelNumber; }
     
-    // Level-specific information
-    bool isBossLevel() const { return levelNumber % 4 == 0; }
-    bool isShopLevel() const { return levelNumber % 4 == 3; }
+    // Added missing methods
+    Vector2 getPlayerStartPosition() const { return playerStart; }
+    bool isSpawnQueueEmpty() const { return spawnQueue.empty(); }
+    int getOffsetX() const { return offsetX; }
+    int getOffsetY() const { return offsetY; }
+    int getWidth() const { return mapWidth; }
+    int getHeight() const { return mapHeight; }
+    const std::vector<Vector2>& getEnemySpawnPoints() const { return enemySpawnPoints; }
     
 private:
+    // Level generation methods
+    void generateLevel(int levelNum);
+    void generateStandardLevel(int levelNum);
+    void generateBossLevel(int bossType);
+    void generateShopLevel(void);
+    void addObstacles(int count);
+    void setupSpawnPoints();
+    
     // Level data
     int levelNumber;
     int mapWidth;
     int mapHeight;
     std::vector<std::vector<TileType>> mapData;
-    
-    // Special positions
     Vector2 playerStart;
-    std::vector<Vector2> enemySpawnPoints;
-    std::vector<Vector2> powerupSpawnPoints;
     
-    // Enemy spawn queue - use the SpawnQueueCompare struct instead of std::function
-    std::priority_queue<SpawnQueueItem, std::vector<SpawnQueueItem>, SpawnQueueCompare> spawnQueue;
+    // Drawing offset values for centering the map
+    int offsetX;
+    int offsetY;
     
-    // Animation timers for special tiles
+    // Animation timers
     float waterAnimationTimer;
     float lavaAnimationTimer;
     
-    // Helper methods
-    void generateLevel(int levelNum);
-    void generateBossLevel(int bossType);
-    void generateShopLevel();
-    void generateStandardLevel(int levelNum);
-    void addObstacles(int count);
+    // Spawn points
+    std::vector<Vector2> enemySpawnPoints;
+    std::vector<Vector2> powerupSpawnPoints;
+    
+    // Enemy spawn queue (priority queue sorted by spawn time)
+    std::priority_queue<SpawnQueueItem, std::vector<SpawnQueueItem>, std::greater<SpawnQueueItem>> spawnQueue;
 };
-
-#endif // LEVEL_H

@@ -236,8 +236,22 @@ void Enemy::draw() {
     
     AssetsManager& assets = AssetsManager::getInstance();
     
-    // Get sprite based on enemy type and animation frame
-    Rectangle src = assets.getEnemySprite((int)type, currentFrame);
+    // Calculate direction index (0-3) based on movement direction
+    int dirIndex = 0; // Default to DOWN
+    float dirX = moveDirection.x;
+    float dirY = moveDirection.y;
+    
+    // Simple 4-direction determination
+    if (fabs(dirX) > fabs(dirY)) {
+        // Horizontal movement is dominant
+        dirIndex = (dirX > 0) ? 2 : 1; // RIGHT : LEFT
+    } else {
+        // Vertical movement is dominant
+        dirIndex = (dirY > 0) ? 0 : 3; // DOWN : UP
+    }
+    
+    // Fix: getEnemySprite should take 3 parameters (type, direction, frame)
+    Rectangle src = assets.getEnemySprite((int)type, dirIndex, currentFrame);
     
     // Draw the enemy
     DrawTexturePro(

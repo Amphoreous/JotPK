@@ -1,5 +1,6 @@
 #include "game/powerup.h"
 #include "game/assets_manager.h"
+#include <cmath> // For sinf
 
 // Constants
 #define POWERUP_ANIMATION_SPEED 0.1f
@@ -59,11 +60,14 @@ void Powerup::draw() {
     // Get sprite based on powerup type
     Rectangle src = assets.getPowerupSprite(type);
     
+    // Add a bob effect for powerups
+    float yOffset = sinf(GetTime() * 4) * 2.0f;
+    
     // Draw the powerup
     DrawTexturePro(
         assets.spriteSheet,
         src,
-        Rectangle{position.x - 8, position.y - 8, 16, 16},
+        Rectangle{position.x - 8, position.y - 8 + yOffset, 16, 16},
         Vector2{8, 8},
         0.0f,
         WHITE

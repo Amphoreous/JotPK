@@ -1,34 +1,51 @@
-#ifndef ASSETS_MANAGER_H
-#define ASSETS_MANAGER_H
+#pragma once
 
 #include "raylib.h"
+#include <string>
+#include <map>
 
-// Singleton class to manage all game assets
 class AssetsManager {
 public:
+    // Singleton pattern
     static AssetsManager& getInstance() {
         static AssetsManager instance;
         return instance;
     }
+
+    // Prevent copies
+    AssetsManager(AssetsManager const&) = delete;
+    void operator=(AssetsManager const&) = delete;
     
+    // Main methods
     void initialize();
     void unload();
     
-    // Main sprite sheet
-    Texture2D spriteSheet;
-    
-    // Get specific sprite regions
+    // Sprite selection helpers
+    Rectangle getEnemySprite(int enemyType, int direction, int frame);
     Rectangle getPlayerSprite(int direction, int frame);
-    Rectangle getEnemySprite(int enemyType, int frame);
-    Rectangle getBulletSprite(int direction, bool isPlayerBullet);
-    Rectangle getPowerupSprite(int type);
+    Rectangle getBulletSprite(int bulletType);
+    Rectangle getPowerupSprite(int powerupType);
+    Rectangle getMenuSprite(int spriteIndex);
     Rectangle getUISprite(const char* element);
     
+    // Assets
+    Texture2D spriteSheet;
+    Texture2D backgroundTexture;
+    
+    // Audio
+    Sound soundShoot;
+    Sound soundHit;
+    Sound soundExplosion;
+    Sound soundPowerup;
+    Sound soundDamage;
+    
+    // Music
+    Music music;
+    
+    // Font
+    Font gameFont;
+    
 private:
-    AssetsManager() = default;
-    ~AssetsManager() = default;
-    AssetsManager(const AssetsManager&) = delete;
-    AssetsManager& operator=(const AssetsManager&) = delete;
+    AssetsManager() : loaded(false) {}
+    bool loaded;
 };
-
-#endif // ASSETS_MANAGER_H

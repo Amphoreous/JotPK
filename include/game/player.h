@@ -43,6 +43,9 @@ public:
     Vector2 GetShootingDirection() const;
     bool CanShoot() const { return shootTimer <= 0; }
     void ResetShootTimer() { shootTimer = GetShootDelay(); }
+    bool HasJustFired() const { return justFired; }
+    Vector2 GetCurrentShootDirection() const { return currentShootDirection; }
+    void ResetJustFired() { justFired = false; }
     
     // Powerups
     bool HasPowerup(int type) const;
@@ -55,10 +58,12 @@ public:
     float GetShootDelay() const;
     int GetBulletCount() const;  // For spread/shotgun
     int GetBulletDamage() const;
+
+    // Add this to allow temporary position changes for drawing
+    Vector2 position;  // Make it public or add a setter
     
 private:
     // Core properties
-    Vector2 position;
     PlayerDirection direction;
     float animationTimer;
     int currentFrame;
@@ -71,6 +76,8 @@ private:
     // Shooting
     float shootTimer;
     float baseShootDelay;
+    Vector2 currentShootDirection;
+    bool justFired;
     
     // Status
     float invincibilityTimer;

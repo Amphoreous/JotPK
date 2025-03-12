@@ -60,8 +60,13 @@ void Bullet::update(float deltaTime) {
     position.x += direction.x * speed * deltaTime;
     position.y += direction.y * speed * deltaTime;
     
-    // Check if bullet is out of screen bounds
-    if (position.x < 0 || position.x > 768 || position.y < 0 || position.y > 768) {
+    // Get level offsets from the GameState
+    int levelWidth = 24 * 32;  // mapWidth * TILE_SIZE
+    int levelHeight = 24 * 32; // mapHeight * TILE_SIZE
+    
+    // Check if bullet is out of playable area
+    if (position.x < 0 || position.x > levelWidth || 
+        position.y < 0 || position.y > levelHeight) {
         active = false;
     }
 }
@@ -71,8 +76,10 @@ void Bullet::draw(Texture2D /*texture*/) {
     
     AssetsManager& assets = AssetsManager::getInstance();
     
-    // Get sprite based on bullet direction and type
-    Rectangle src = assets.getBulletSprite((int)visualDirection, playerBullet);
+    // Get sprite based on bullet type
+    // Fix: getBulletSprite should only take one parameter (bulletType)
+    int bulletType = playerBullet ? 0 : 1;
+    Rectangle src = assets.getBulletSprite(bulletType);
     
     // Draw the bullet
     DrawTexturePro(
