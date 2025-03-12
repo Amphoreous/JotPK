@@ -4,18 +4,32 @@
 #include <vector>
 #include <queue>
 #include "game/assets_manager.h"
-#include "game/game_defs.h" // Incluir para usar las enumeraciones definidas allí
+#include "game/game_defs.h"
 
-// Usar EnemySpawnType de game_defs.h en lugar de redefinir
-using LevelEnemyType = EnemySpawnType;
+// Constants matching AbigailGame.cs
+#define TILE_SIZE 48           // 48px tiles as in original
+#define MAP_WIDTH 16          // 16x16 grid 
+#define MAP_HEIGHT 16
+#define WAVE_DURATION 80000    // Match original wave timing
 
-// Structure for spawn queue
+// Tile types from AbigailGame.cs
+enum AbigailTileTypes {
+    MAP_BARRIER1 = 0,
+    MAP_BARRIER2 = 1,
+    MAP_ROCKY1 = 2,
+    MAP_DESERT = 3,
+    MAP_GRASSY = 4,
+    MAP_CACTUS = 5,
+    MAP_FENCE = 7,
+    MAP_TRENCH1 = 8,
+    MAP_TRENCH2 = 9,
+    MAP_BRIDGE = 10
+};
+
 struct SpawnQueueItem {
     int enemyType;
     Vector2 position;
     float spawnTime;
-    
-    // Comparison operator for priority queue (smaller times have higher priority)
     bool operator>(const SpawnQueueItem& rhs) const {
         return spawnTime > rhs.spawnTime;
     }
@@ -26,69 +40,48 @@ public:
     Level();
     ~Level();
     
-    bool loadMap(int levelNum);
+    bool loadMap(int waveNumber);
     void update(float deltaTime);
-    void draw(Texture2D backgroundTexture, int worldNumber);
-    
-    // Check if a position is passable (for collision detection)
-    bool isPassable(float x, float y) const;
-    
-    // Add an enemy to the spawn queue
+    void draw(Texture2D backgroundTexture, int worldTheme);
+    bool isPassable(float worldX, float worldY) const;
     void addToSpawnQueue(int enemyType, Vector2 position, float delay);
-    
-    // Get the next enemy to spawn (returns false if none ready)
     bool getNextSpawn(int& enemyType, Vector2& position);
-    
-    // Getters
-    Vector2 getPlayerStart() const { return playerStart; }
-    int getLevelNumber() const { return levelNumber; }
-    
-    // Added missing methods
+
     Vector2 getPlayerStartPosition() const { return playerStart; }
     bool isSpawnQueueEmpty() const { return spawnQueue.empty(); }
-    int getOffsetX() const { return offsetX; }
-    int getOffsetY() const { return offsetY; }
     int getWidth() const { return mapWidth; }
     int getHeight() const { return mapHeight; }
     const std::vector<Vector2>& getEnemySpawnPoints() const { return enemySpawnPoints; }
-    
-    void setOffset(float x, float y) {
-        offsetX = x;
-        offsetY = y;
-    }
-    
-    // Añadir este método:
+    void setOffset(float x, float y) { offsetX = x; offsetY = y; }
+
     Rectangle GetTileSourceRect(TileType tile, int worldNumber);
-    
+
 private:
-    // Level generation methods
-    void generateLevel(int levelNum);
-    void generateStandardLevel(int levelNum);
-    void generateBossLevel(int bossType);
-    void generateShopLevel(void);
-    void addObstacles(int count);
-    void setupSpawnPoints();
-    
-    // Level data
+    void initializeMap();
+    void generateWaveMap(int wave);
+    void createVictoryMap();
+    void createBossArena();
+    void generateShopLayout();
+    void addWaveSpecificFeatures(int wave);
+    void setupWaveSpawns(int wave);
+    void clearSpawnQueue();
+    Rectangle getTileSource(int x, int y, int worldTheme) const;
+
     int levelNumber;
     int mapWidth;
     int mapHeight;
-    std::vector<std::vector<TileType>> mapData;
+    std::vector<std::vector<int>> mapData;
     Vector2 playerStart;
-    
-    // Drawing offset values for centering the map
-    int offsetX;
-    int offsetY;
+    float offsetX;
+    float offsetY;
     
     // Animation timers
     float waterAnimationTimer;
     float lavaAnimationTimer;
-    float dancingCactusTimer; // Añade esta línea
-    
-    // Spawn points
+    float dancingCactusTimer;
+    float waveTimer;
+
     std::vector<Vector2> enemySpawnPoints;
     std::vector<Vector2> powerupSpawnPoints;
-    
-    // Enemy spawn queue (priority queue sorted by spawn time)
     std::priority_queue<SpawnQueueItem, std::vector<SpawnQueueItem>, std::greater<SpawnQueueItem>> spawnQueue;
 };

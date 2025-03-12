@@ -61,7 +61,7 @@ void GameStateManager::Initialize() {
     
     // Setup initial game state - directly set to PLAYING for testing
     currentState = PLAYING;
-    whichWave = 1;  // Change from 0 to 1
+    whichWave = 0;  // Change from 0 to 1
     world = 0;
     lives = 3;
     coins = 0;

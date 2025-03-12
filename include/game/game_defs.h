@@ -53,8 +53,12 @@ enum EnemyType {
     ENEMY_MUSHROOM,
     ENEMY_SPIKEY,
     ENEMY_BOSS_COWBOY,
-    ENEMY_BOSS_FECTOR
+    ENEMY_BOSS_FECTOR,
+    ENEMY_MINI_BOSS,   // Mini-boss type
+    ENEMY_BOSS         // Generic boss type
 };
+
+#define ENEMY_TYPES 9   // Total number of enemy types
 
 // Enemy spawn types (for level data)
 enum EnemySpawnType {

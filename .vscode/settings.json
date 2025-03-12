@@ -9,6 +9,7 @@
 		"**/*.exe": true,
 	},
 	"files.associations": {
-		"algorithm": "cpp"
+		"algorithm": "cpp",
+		"queue": "cpp"
 	}
 }
