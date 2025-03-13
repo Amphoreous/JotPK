@@ -365,3 +365,38 @@ Rectangle Level::GetTileSourceRect(TileType tile, int worldNumber) {
 
     return Rectangle{ (float)x, (float)y, 16.0f, 16.0f };
 }
+
+bool Level::isPassable(TileType tileType) const {
+    // Based on AbigailGame.cs isMapTilePassable
+    if (tileType <= MAP_BARRIER2 || 
+        (tileType >= MAP_CACTUS && tileType <= MAP_BRIDGE)) {
+        return false;
+    }
+    return true;
+}
+
+bool Level::isPassableForMonsters(TileType tileType) {
+    // Based on AbigailGame.cs isMapTilePassableForMonsters
+    if (tileType == MAP_CACTUS || 
+        (tileType >= MAP_FENCE && tileType <= MAP_TRENCH2)) {
+        return false;
+    }
+    return true;
+}
+
+bool Level::isPassable(float worldX, float worldY) const {
+    // Convert world coordinates to tile coordinates
+    int tileX = static_cast<int>(worldX / TILE_SIZE); 
+    int tileY = static_cast<int>(worldY / TILE_SIZE);
+    
+    // Check bounds
+    if (tileX < 0 || tileX >= mapWidth || tileY < 0 || tileY >= mapHeight) {
+        return false;
+    }
+    
+    // Get tile type at coordinates
+    int tileType = mapData[tileY][tileX];
+    
+    // Use existing tile passability check
+    return isPassable(static_cast<TileType>(tileType));
+}

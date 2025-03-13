@@ -19,6 +19,18 @@ enum GameState {
     END_CUTSCENE
 };
 
+enum Direction {
+    UP = 0,
+    UP_RIGHT,
+    RIGHT,
+    DOWN_RIGHT,
+    DOWN,
+    DOWN_LEFT, 
+    LEFT,
+    UP_LEFT,
+    IDLE
+};
+
 // Powerup types
 enum PowerupType {
     COIN_1 = 0,

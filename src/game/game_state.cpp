@@ -171,8 +171,8 @@ void GameStateManager::UpdatePlaying(float dtMillis) {
     // Convert milliseconds to seconds for updates
     float dtSeconds = dtMillis / 1000.0f;
     
-    // Update player
-    player.Update(dtSeconds);
+    // Update player - pass the level pointer as required
+    player.Update(dtSeconds, &level);
     
     // Handle player shooting
     if (player.HasJustFired()) {
@@ -461,42 +461,30 @@ void GameStateManager::SetGameState(GameState newState) {
 
 void GameStateManager::ActivatePowerup(int type) {
     switch (type) {
-        case COIN_1:  // En lugar de (int)COIN_1
+        case PowerupType::COIN_1:
             coins += 1;
             score += 10;
             break;
             
-        case COIN_5:  // En lugar de (int)COIN_5
+        case PowerupType::COIN_5:
             coins += 5;
             score += 50;
             break;
             
-        case POWERUP_LIFE:
+        case PowerupType::POWERUP_LIFE:
             lives++;
             break;
             
-        case POWERUP_SPEED:
-            player.ActivatePowerup(POWERUP_SPEED, 10000.0f);
-            activePowerupTimers[POWERUP_SPEED] = 10000.0f;
+        case PowerupType::POWERUP_SPEED:
+        case PowerupType::POWERUP_RAPIDFIRE:
+        case PowerupType::POWERUP_SPREAD:
+        case PowerupType::POWERUP_SHOTGUN:
+            player.ActivatePowerup(type);
+            activePowerupTimers[type] = 10000.0f;
             break;
             
-        case POWERUP_RAPIDFIRE:
-            player.ActivatePowerup(POWERUP_RAPIDFIRE, 10000.0f);
-            activePowerupTimers[POWERUP_RAPIDFIRE] = 10000.0f;
-            break;
-            
-        case POWERUP_SPREAD:
-            player.ActivatePowerup(POWERUP_SPREAD, 10000.0f);
-            activePowerupTimers[POWERUP_SPREAD] = 10000.0f;
-            break;
-            
-        case POWERUP_SHOTGUN:
-            player.ActivatePowerup(POWERUP_SHOTGUN, 10000.0f);
-            activePowerupTimers[POWERUP_SHOTGUN] = 10000.0f;
-            break;
-            
-        case POWERUP_NUKE:
-            // Implementa la lógica del powerup nuke
+        case PowerupType::POWERUP_NUKE:
+            // Implement nuke logic
             break;
             
         default:
@@ -606,19 +594,17 @@ void GameStateManager::Draw() {
                            static_cast<int>(playerInvincibilityTimer / 100.0f) % 2 == 0);
     if (shouldDrawPlayer) {
         Vector2 pos = player.GetPosition();
-        // Store original position
+        Vector2 offsetPos = {pos.x + gameOffset.x, pos.y + gameOffset.y};
+        
+        // Save original position
         Vector2 origPos = pos;
         
-        // Apply offset
-        pos.x += gameOffset.x;
-        pos.y += gameOffset.y;
-        
-        // Update position temporarily for drawing
-        player.position = pos;
+        // Update position for drawing
+        player.SetPosition(offsetPos);
         player.Draw(nullptr);
         
         // Restore original position
-        player.position = origPos;
+        player.SetPosition(origPos);
     }
     
     // Draw UI elements

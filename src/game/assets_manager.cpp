@@ -1,22 +1,9 @@
 #include "game/assets_manager.h"
 #include <iostream>
 #include <cstring>
-
+#include "game/game_defs.h"
 
 #define PLAYER_ANIMATION_SPEED 0.2f
-
-// Add these enum values if they're not included from another header
-enum PlayerDirection {
-    IDLE = 0,
-    UP,
-    UP_RIGHT,
-    RIGHT,
-    DOWN_RIGHT,
-    DOWN,
-    DOWN_LEFT,
-    LEFT,
-    UP_LEFT
-};
 
 void AssetsManager::initialize() {
     spriteSheet = LoadTexture("assets.png");
@@ -53,18 +40,18 @@ void AssetsManager::unload() {
 }
 
 Rectangle AssetsManager::getPlayerSprite(int direction, int frame) {
-    // Debe usar solo 4 direcciones (0-3) igual que el original
-    switch(direction) {
-        case 0: // UP
-            return Rectangle{335.0f, 96.0f, 16.0f, 16.0f}; // Coordenadas correctas del juego original
-        case 1: // RIGHT
-            return Rectangle{351.0f, 96.0f, 16.0f, 16.0f};
-        case 2: // DOWN
-            return Rectangle{367.0f, 96.0f, 16.0f, 16.0f};
-        case 3: // LEFT
-            return Rectangle{383.0f, 96.0f, 16.0f, 16.0f};
-        default:
-            return Rectangle{367.0f, 112.0f, 16.0f, 16.0f}; // IDLE sprite
+    // Convert direction to sprite coordinates
+    switch(static_cast<Direction>(direction)) {
+        case UP:
+            return Rectangle{336.0f, 96.0f, 16.0f, 16.0f};
+        case RIGHT:
+            return Rectangle{352.0f, 96.0f, 16.0f, 16.0f};
+        case DOWN:
+            return Rectangle{368.0f, 96.0f, 16.0f, 16.0f};
+        case LEFT:
+            return Rectangle{384.0f, 96.0f, 16.0f, 16.0f};
+        default: // IDLE
+            return Rectangle{368.0f, 112.0f, 16.0f, 16.0f};
     }
 }
 

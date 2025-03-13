@@ -1,259 +1,201 @@
 #include "game/player.h"
 #include "game/game_defs.h"
-#include "game/raylib_wrapper.h"
 #include "game/assets_manager.h"
+#include "game/level.h"
 #include "raylib.h"
 #include "raymath.h"
-#include <cmath>
+#include <vector>
 #include <algorithm>
-#include <iostream>
 
-#include "game/vector2_helpers.h"
-
-// Ensure position and targetPosition are declared
-Vector2 position;
-Vector2 targetPosition;
-
-// If you need to calculate distance, prefer raymath's implementation:
-float distance = Vector2Distance(position, targetPosition);
-
-// Or use our wrapper if raymath is not available:
-#if !defined(RAYMATH_H)
-float distance = Vector2Distance(position, targetPosition);
-#endif
-
-// Don't redefine Clamp here - use the one from game_defs.h
-
-// Constants for player movement and shooting
-#define PLAYER_BASE_SPEED 150.0f
-#define PLAYER_SPEED_BOOST 1.5f
-#define PLAYER_BASE_SHOOT_DELAY 200.0f
-#define PLAYER_RAPID_FIRE_FACTOR 0.5f
-#define PLAYER_ANIMATION_SPEED 0.2f
+// Constants
+#define PLAYER_BASE_SPEED 3.0f
 #define PLAYER_FRAME_COUNT 4
-#define PLAYER_FOOTSTEP_DELAY 200.0f
-#define PLAYER_MOTION_DELAY 100.0f
+#define PLAYER_ANIMATION_CYCLE 400.0f // 400ms per animation cycle
+#define PLAYER_SIZE 16
+#define PLAYER_COLLISION_OFFSET 4
+#define PLAYER_RUN_SPEED_MULTIPLIER 1.25f
+#define PLAYER_ZOMBIE_SPEED_MULTIPLIER 1.5f
+#define PLAYER_POWERUP_SPEED_MULTIPLIER 1.5f
+#define TILE_SIZE 48.0f
+#define PLAYER_COLLISION_OFFSET 4.0f
+#define COLLISION_OFFSET 4.0f
 
 Player::Player() :
     position({0, 0}),
-    direction(IDLE),
     animationTimer(0),
     currentFrame(0),
-    baseMovementSpeed(PLAYER_BASE_SPEED),
     movementSpeed(PLAYER_BASE_SPEED),
-    lastMoveWasKeyboard(true),
-    shootTimer(0),
-    baseShootDelay(PLAYER_BASE_SHOOT_DELAY),
-    invincibilityTimer(0),
-    currentShootDirection({0.0f, -1.0f}) // Inicialización estilo C++11
+    direction(Direction::IDLE),
+    runSpeedLevel(0),
+    zombieModeTimer(0),
+    activePowerups(),
+    justFired(false),
+    shootDirection({0, -1}),
+    bulletDamage(1),
+    bulletCount(1),
+    shouldDraw(true),
+    shotTimer(0),
+    shootingDelay(300.0f),
+    fireSpeedLevel(0),
+    shootingDirections()
 {
-}
-
-Player::~Player() {
-    // Clean up any resources if needed
 }
 
 void Player::Initialize(Vector2 startPosition) {
     position = startPosition;
-    direction = IDLE;
     animationTimer = 0;
     currentFrame = 0;
-    movementSpeed = baseMovementSpeed;
-    shootTimer = 0;
-    invincibilityTimer = 0;
-    activePowerups.clear();
+    movementSpeed = PLAYER_BASE_SPEED;
+    direction = IDLE;
 }
 
-void Player::Update(float deltaTime) {
-    // Update timers
-    if (shootTimer > 0) {
-        shootTimer -= deltaTime;
+void Player::Update(float deltaTime, Level* level) {
+    HandleInput(deltaTime, level);
+    UpdatePowerups(deltaTime);
+    
+    // Update shot timer
+    if (shotTimer > 0) {
+        shotTimer -= deltaTime * 1000.0f;
     }
     
-    if (invincibilityTimer > 0) {
-        invincibilityTimer -= deltaTime;
-    }
-    
-    // Update powerups
-    for (auto it = activePowerups.begin(); it != activePowerups.end();) {
-        it->second -= deltaTime;
-        if (it->second <= 0) {
-            // Deactivate powerup
-            DeactivatePowerup(it->first);
-            it = activePowerups.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    
-    // Handle input
-    HandleKeyboardInput(deltaTime);
-    
-    // Check if gamepad is available
-    if (IsGamepadAvailable(0)) {
-        HandleGamepadInput(deltaTime);
-    }
-    
-    // Update animation
-    UpdateAnimation(deltaTime);
-}
-
-void Player::HandleKeyboardInput(float deltaTime) {
-    Vector2 moveDirection = {0, 0};
-    
-    // Movement input - WASD
-    if (IsKeyDown(KEY_W)) {
-        moveDirection.y = -1;
-    }
-    if (IsKeyDown(KEY_S)) {
-        moveDirection.y = 1;
-    }
-    if (IsKeyDown(KEY_A)) {
-        moveDirection.x = -1;
-    }
-    if (IsKeyDown(KEY_D)) {
-        moveDirection.x = 1;
-    }
-    
-    // If there is movement input, move the player
-    if (moveDirection.x != 0 || moveDirection.y != 0) {
-        lastMoveWasKeyboard = true;
-        Move(moveDirection, deltaTime);
-    }
-    
-    // Handle shooting with arrow keys
-    bool shooting = false;
-    Vector2 shootDirection = {0, 0};
-    
+    // Shooting input check based on arrow keys
     if (IsKeyDown(KEY_UP)) {
-        shootDirection.y = -1;
-        shooting = true;
+        addPlayerShootingDirection(Direction::UP);
     }
     if (IsKeyDown(KEY_DOWN)) {
-        shootDirection.y = 1;
-        shooting = true;
+        addPlayerShootingDirection(Direction::DOWN);
     }
     if (IsKeyDown(KEY_LEFT)) {
-        shootDirection.x = -1;
-        shooting = true;
+        addPlayerShootingDirection(Direction::LEFT);
     }
     if (IsKeyDown(KEY_RIGHT)) {
-        shootDirection.x = 1;
-        shooting = true;
+        addPlayerShootingDirection(Direction::RIGHT);
     }
-    
-    // Also allow shooting with space key in the direction the player is facing
-    if (IsKeyDown(KEY_SPACE)) {
-        shooting = true;
-        shootDirection = GetShootingDirection();
-    }
-    
-    // Process shooting
-    if (shooting && CanShoot()) {
-        // Normalize the shoot direction
-        float length = sqrt(shootDirection.x * shootDirection.x + shootDirection.y * shootDirection.y);
-        if (length > 0) {
-            shootDirection.x /= length;
-            shootDirection.y /= length;
+
+    // Clear shooting directions when keys released
+    if (!IsKeyDown(KEY_UP)) shootingDirections.erase(Direction::UP);
+    if (!IsKeyDown(KEY_DOWN)) shootingDirections.erase(Direction::DOWN);
+    if (!IsKeyDown(KEY_LEFT)) shootingDirections.erase(Direction::LEFT);
+    if (!IsKeyDown(KEY_RIGHT)) shootingDirections.erase(Direction::RIGHT);
+
+    // Handle shooting if direction pressed and shot timer elapsed
+    if (!shootingDirections.empty() && shotTimer <= 0) {
+        // Calculate shooting delay with powerup modifiers
+        float shootDelay = shootingDelay;
+        
+        if (activePowerups.find(3) != activePowerups.end()) {
+            shootDelay /= 4;
+        }
+
+        for (int i = 0; i < fireSpeedLevel; i++) {
+            shootDelay = shootDelay * 3 / 4;
+        }
+
+        if (activePowerups.find(7) != activePowerups.end()) {
+            shootDelay = shootDelay * 3 / 2;
+        }
+
+        shootDelay = std::max(shootDelay, 20.0f);
+
+        // Handle different shooting patterns
+        if (activePowerups.find(2) != activePowerups.end()) {
+            SpawnBulletsInAllDirections();
         } else {
-            // Default to shooting upward if no direction given
-            shootDirection.y = -1;
+            SpawnBullet(*shootingDirections.begin());
         }
-        
-        // Set the shoot direction for retrieval by the game manager
-        currentShootDirection = shootDirection;
-        justFired = true;
-        
-        // Reset the shoot timer
-        ResetShootTimer();
+
+        shotTimer = shootDelay;
     }
 }
 
-void Player::HandleGamepadInput(float deltaTime) {
-    Vector2 leftStick = {
-        GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X),
-        GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y)
-    };
+void Player::HandleInput(float deltaTime, Level* level) {
+    Vector2 moveDirection = {0, 0};
     
-    // Use individual component assignment
-    currentShootDirection.x = leftStick.x;
-    currentShootDirection.y = leftStick.y;
+    // Movement input using WASD
+    if (IsKeyDown(KEY_W)) moveDirection.y = -1;
+    if (IsKeyDown(KEY_S)) moveDirection.y = 1;
+    if (IsKeyDown(KEY_A)) moveDirection.x = -1;
+    if (IsKeyDown(KEY_D)) moveDirection.x = 1;
     
-    // Apply deadzone
-    float deadZone = 0.25f;
-    if (fabsf(leftStick.x) < deadZone) leftStick.x = 0;
-    if (fabsf(leftStick.y) < deadZone) leftStick.y = 0;
-    
-    // If there is movement input on gamepad
-    if (leftStick.x != 0 || leftStick.y != 0) {
-        lastMoveWasKeyboard = false;
-        Move(leftStick, deltaTime);
-    }
-}
-
-void Player::Move(Vector2 moveDir, float deltaTime) {
-    if (moveDir.x != 0 || moveDir.y != 0) {
-        float length = sqrtf(moveDir.x * moveDir.x + moveDir.y * moveDir.y);
-        if (length > 0) {
-            // Normalize movement vector
-            float normalizedX = moveDir.x / length;
-            float normalizedY = moveDir.y / length;
-            
-            // Update position using normalized direction
-            position.x += normalizedX * movementSpeed * deltaTime;
-            position.y += normalizedY * movementSpeed * deltaTime;
-            
-            // Convert to player direction enum
-            if (moveDir.x == 0 && moveDir.y < 0) {
-                direction = UP;
-            } else if (moveDir.x > 0 && moveDir.y < 0) {
-                direction = UP_RIGHT;
-            } else if (moveDir.x > 0 && moveDir.y == 0) {
-                direction = RIGHT;
-            } else if (moveDir.x > 0 && moveDir.y > 0) {
-                direction = DOWN_RIGHT;
-            } else if (moveDir.x == 0 && moveDir.y > 0) {
-                direction = DOWN;
-            } else if (moveDir.x < 0 && moveDir.y > 0) {
-                direction = DOWN_LEFT;
-            } else if (moveDir.x < 0 && moveDir.y == 0) {
-                direction = LEFT;
-            } else if (moveDir.x < 0 && moveDir.y < 0) {
-                direction = UP_LEFT;
-            }
-        }
+    // Move player if there's input
+    if (moveDirection.x != 0 || moveDirection.y != 0) {
+        Move(moveDirection, deltaTime, level);
     } else {
         direction = IDLE;
-    }
-    
-    // Keep player within screen bounds - use raymath's Clamp function
-    Vector2 levelSize = {768.0f, 768.0f}; // Level size in pixels
-    position.x = Clamp(position.x, 16.0f, levelSize.x - 16.0f);
-    position.y = Clamp(position.y, 16.0f, levelSize.y - 16.0f);
-}
-
-void Player::UpdateAnimation(float deltaTime) {
-    // Only animate when moving
-    if (direction != IDLE) {
-        animationTimer += deltaTime;
-        if (animationTimer >= PLAYER_ANIMATION_SPEED) {
-            animationTimer = 0;
-            currentFrame = (currentFrame + 1) % 2; // Toggle between 0 and 1 for basic animation
-        }
-    } else {
-        // Reset animation frame for idle state
         currentFrame = 0;
         animationTimer = 0;
     }
 }
 
-void Player::Draw(Texture2D* playerTextures) {
+void Player::Move(Vector2 moveDir, float deltaTime, Level* level) {
+    // Normalize movement vector
+    float length = sqrtf(moveDir.x * moveDir.x + moveDir.y * moveDir.y);
+    if (length > 0) {
+        moveDir.x /= length;
+        moveDir.y /= length;
+        
+        // Calculate effective speed with all multipliers
+        float speed = movementSpeed;
+        
+        // Apply powerup speed bonus
+        if (activePowerups.find(6) != activePowerups.end()) {
+            speed *= PLAYER_POWERUP_SPEED_MULTIPLIER;
+        }
+        
+        // Apply zombie mode speed bonus
+        if (zombieModeTimer > 0) {
+            speed *= PLAYER_ZOMBIE_SPEED_MULTIPLIER;
+            zombieModeTimer -= deltaTime;
+        }
+        
+        // Apply run speed level bonus
+        for (int i = 0; i < runSpeedLevel; i++) {
+            speed *= PLAYER_RUN_SPEED_MULTIPLIER;
+        }
+        
+        // Calculate new position
+        Vector2 newPosition = position;
+        newPosition.x += moveDir.x * speed * deltaTime;
+        newPosition.y += moveDir.y * speed * deltaTime;
+        
+        // Check collision
+        Rectangle playerCollisionBox = {
+            newPosition.x + COLLISION_OFFSET,
+            newPosition.y + COLLISION_OFFSET,
+            PLAYER_SIZE - COLLISION_OFFSET * 2,
+            PLAYER_SIZE - COLLISION_OFFSET * 2
+        };
+        
+        if (!IsCollidingWithMap(playerCollisionBox, level)) {
+            position = newPosition;
+        }
+        
+        // Update animation timer
+        animationTimer += deltaTime * 1000.0f; // Convert to milliseconds
+        if (animationTimer >= PLAYER_ANIMATION_CYCLE) {
+            animationTimer = 0;
+        }
+        
+        // Update direction based on movement
+        UpdateDirection(moveDir);
+    }
+    
+    // Keep player within bounds
+    position.x = Clamp(position.x, 16.0f, (level->getWidth() * TILE_SIZE) - 16.0f);
+    position.y = Clamp(position.y, 16.0f, (level->getHeight() * TILE_SIZE) - 16.0f);
+}
+
+void Player::Draw(Texture2D* optionalTexture) {
+    if (!shouldDraw) return;
+    
     AssetsManager& assets = AssetsManager::getInstance();
     
-    // Solo renderizar pies si el jugador se está moviendo
-    if (direction != IDLE) {
-        // Dibujar pies primero (están detrás del cuerpo)
-        Rectangle feetSrc = assets.getPlayerFeetSprite(animationTimer);
+    // Draw feet animation only when moving
+    if (direction != Direction::IDLE) {
+        // Calculate animation frame (4 frames total)
+        int legFrame = (int)(animationTimer / (PLAYER_ANIMATION_CYCLE / 4));
+        
+        Rectangle feetSrc = assets.getPlayerFeetSprite(legFrame);
         DrawTexturePro(
             assets.spriteSheet,
             feetSrc,
@@ -264,15 +206,8 @@ void Player::Draw(Texture2D* playerTextures) {
         );
     }
     
-    // Convertir el sistema de 8 direcciones a 4 direcciones para el renderizado
-    int facingDirection;
-    if (direction == UP || direction == UP_RIGHT || direction == UP_LEFT) facingDirection = 0;
-    else if (direction == RIGHT || direction == DOWN_RIGHT) facingDirection = 1;
-    else if (direction == DOWN || direction == DOWN_LEFT) facingDirection = 2;
-    else facingDirection = 3; // LEFT
-    
-    // Dibujar el cuerpo del jugador
-    Rectangle src = assets.getPlayerSprite(facingDirection, 0);
+    // Draw player body
+    Rectangle src = assets.getPlayerSprite(direction, 0);
     DrawTexturePro(
         assets.spriteSheet,
         src,
@@ -283,122 +218,123 @@ void Player::Draw(Texture2D* playerTextures) {
     );
 }
 
-Rectangle Player::GetBounds() const {
-    // Return player collision bounds (slightly smaller than visual size)
-    return Rectangle{
-        position.x - 12,
-        position.y - 12,
-        24,
-        24
-    };
-}
-
-Vector2 Player::GetShootingDirection() const {
-    // Return normalized vector based on player direction
-    switch (direction) {
-        case UP:        return {0, -1};
-        case UP_RIGHT:  return {0.7071f, -0.7071f};  // normalized (1, -1)
-        case RIGHT:     return {1, 0};
-        case DOWN_RIGHT:return {0.7071f, 0.7071f};   // normalized (1, 1)
-        case DOWN:      return {0, 1};
-        case DOWN_LEFT: return {-0.7071f, 0.7071f};  // normalized (-1, 1)
-        case LEFT:      return {-1, 0};
-        case UP_LEFT:   return {-0.7071f, -0.7071f}; // normalized (-1, -1)
-        case IDLE:      return {0, -1};  // Default direction when idle is up
-    }
-    
-    return {0, -1};  // Default fallback
+void Player::UpdateDirection(Vector2 moveDir) {
+    // Convert movement vector to direction enum
+    if (moveDir.x == 0 && moveDir.y < 0) direction = UP;
+    else if (moveDir.x > 0 && moveDir.y < 0) direction = UP_RIGHT;
+    else if (moveDir.x > 0 && moveDir.y == 0) direction = RIGHT;
+    else if (moveDir.x > 0 && moveDir.y > 0) direction = DOWN_RIGHT;
+    else if (moveDir.x == 0 && moveDir.y > 0) direction = DOWN;
+    else if (moveDir.x < 0 && moveDir.y > 0) direction = DOWN_LEFT;
+    else if (moveDir.x < 0 && moveDir.y == 0) direction = LEFT;
+    else if (moveDir.x < 0 && moveDir.y < 0) direction = UP_LEFT;
 }
 
 bool Player::HasPowerup(int type) const {
-    for (const auto& powerup : activePowerups) {
-        if (powerup.first == type) {
-            return true;
+    // Simple powerup check
+    return false; // Implement powerup system as needed
+}
+
+// Update IsCollidingWithMap function
+bool Player::IsCollidingWithMap(Rectangle playerBox, Level* level) {
+    if (!level) return false;
+
+    // Convert player position to tile coordinates
+    int tileStartX = static_cast<int>((playerBox.x) / TILE_SIZE);
+    int tileStartY = static_cast<int>((playerBox.y) / TILE_SIZE);
+    int tileEndX = static_cast<int>((playerBox.x + playerBox.width) / TILE_SIZE);
+    int tileEndY = static_cast<int>((playerBox.y + playerBox.height) / TILE_SIZE);
+
+    // Check each tile the player might be colliding with
+    for (int y = tileStartY; y <= tileEndY; y++) {
+        for (int x = tileStartX; x <= tileEndX; x++) {
+            // Check if tile coordinates are valid
+            if (x >= 0 && x < level->getWidth() && y >= 0 && y < level->getHeight()) {
+                // Check if tile is not passable (barriers, cacti, fences)
+                if (!level->isPassable(x * TILE_SIZE, y * TILE_SIZE)) {
+                    return true;
+                }
+            }
         }
     }
+    
     return false;
 }
 
-float Player::GetPowerupTimeRemaining(int type) const {
-    for (const auto& powerup : activePowerups) {
-        if (powerup.first == type) {
-            return powerup.second;
-        }
-    }
-    return 0.0f;
+void Player::AddPowerup(int type, float duration) {
+    activePowerups[type] = duration;
 }
 
-void Player::ActivatePowerup(int type, float duration) {
-    // Check if powerup is already active
+void Player::UpdatePowerups(float deltaTime) {
+    std::vector<int> expiredPowerups;
+    
     for (auto& powerup : activePowerups) {
-        if (powerup.first == type) {
-            // Just update the duration
-            powerup.second = std::max(powerup.second, duration);
-            return;
+        powerup.second -= deltaTime;
+        if (powerup.second <= 0) {
+            expiredPowerups.push_back(powerup.first);
         }
     }
     
-    // Add new powerup
-    activePowerups.push_back({type, duration});
+    for (int type : expiredPowerups) {
+        activePowerups.erase(type);
+    }
+}
+
+void Player::SetRunSpeedLevel(int level) {
+    runSpeedLevel = level;
+}
+
+void Player::SetZombieMode(float duration) {
+    zombieModeTimer = duration;
+}
+
+Rectangle Player::GetBounds() const {
+    return Rectangle{
+        position.x + PLAYER_COLLISION_OFFSET,
+        position.y + PLAYER_COLLISION_OFFSET,
+        PLAYER_SIZE - PLAYER_COLLISION_OFFSET * 2,
+        PLAYER_SIZE - PLAYER_COLLISION_OFFSET * 2
+    };
+}
+
+void Player::ActivatePowerup(int type) {
+    // Implement powerup activation logic
+    switch(type) {
+        case 2: // POWERUP_SPREAD
+            bulletCount = 3;
+            break;
+        case 3: // POWERUP_RAPIDFIRE
+            bulletDamage *= 2;
+            break;
+        case 7: // POWERUP_SHOTGUN
+            bulletCount = 5;
+            break;
+        // Add other powerup cases
+    }
+}
+
+void Player::SpawnBullet(Direction dir) {
+    justFired = true;
     
-    // Apply powerup effect
-    switch (type) {
-        case POWERUP_SPEED:
-            movementSpeed = baseMovementSpeed * PLAYER_SPEED_BOOST;
-            break;
-        // Other powerups don't directly modify player state
+    Vector2 shootDir;
+    switch(dir) {
+        case UP: shootDir = {0, -1}; break;
+        case DOWN: shootDir = {0, 1}; break;
+        case LEFT: shootDir = {-1, 0}; break;
+        case RIGHT: shootDir = {1, 0}; break;
     }
+    shootDirection = shootDir;
 }
 
-void Player::DeactivatePowerup(int type) {
-    // Remove powerup effects
-    switch (type) {
-        case POWERUP_SPEED:
-            movementSpeed = baseMovementSpeed;
-            break;
-        // Other powerup deactivation effects
-    }
+void Player::SpawnBulletsInAllDirections() {
+    justFired = true;
+    // Main directions
+    SpawnBullet(UP);
+    SpawnBullet(RIGHT); 
+    SpawnBullet(DOWN);
+    SpawnBullet(LEFT);
 }
 
-float Player::GetMovementSpeed() const {
-    return movementSpeed;
+void Player::addPlayerShootingDirection(Direction dir) {
+    shootingDirections.insert(dir);
 }
-
-float Player::GetShootDelay() const {
-    // Apply rapid fire powerup if active
-    if (HasPowerup(POWERUP_RAPIDFIRE)) {
-        return baseShootDelay * PLAYER_RAPID_FIRE_FACTOR;
-    }
-    return baseShootDelay;
-}
-
-int Player::GetBulletCount() const {
-    // Return number of bullets to fire based on active powerups
-    if (HasPowerup(POWERUP_SHOTGUN)) {
-        return 5;  // 5-way shotgun spread
-    } else if (HasPowerup(POWERUP_SPREAD)) {
-        return 3;  // 3-way spread
-    }
-    return 1;  // Default - single bullet
-}
-
-int Player::GetBulletDamage() const {
-    // Base damage is 1, could be modified by powerups
-    return 1;
-}
-
-// Implementation of GetAnimationFrame (missing in the header)
-int Player::GetAnimationFrame() const {
-    return currentFrame;
-}
-
-// Remove or comment out the duplicate definition of MakeVector2
-/*
-Vector2 MakeVector2(float x, float y) {
-    Vector2 result = {x, y};
-    return result;
-}
-*/
-
-// Asegúrate de que las funciones que estás llamando no tengan sobrecargas ambiguas
-// Revisa las líneas 231 y 232 y asegúrate de que los parámetros sean correctos

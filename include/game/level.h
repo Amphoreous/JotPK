@@ -56,6 +56,9 @@ public:
 
     Rectangle GetTileSourceRect(TileType tile, int worldNumber);
 
+    bool isPassable(TileType tileType) const;
+    bool isPassableForMonsters(TileType tileType);
+
 private:
     void initializeMap();
     void generateWaveMap(int wave);

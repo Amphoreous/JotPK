@@ -2,102 +2,70 @@
 #define PLAYER_H
 
 #include "raylib.h"
-#include "vector2_helpers.h"
+#include "game/game_defs.h"
+#include "game/level.h"
+#include <set>
+#include <map>
 #include <vector>
 
-// Player movement directions (8-way)
-enum PlayerDirection {
-    UP,
-    UP_RIGHT,
-    RIGHT,
-    DOWN_RIGHT,
-    DOWN,
-    DOWN_LEFT,
-    LEFT,
-    UP_LEFT,
-    IDLE
-};
+class Level;
 
 class Player {
-public:
-    Player();
-    ~Player();
-    
-    // Core functionality
-    void Initialize(Vector2 startPosition);
-    void Update(float deltaTime);
-    void Draw(Texture2D* playerTextures);
-    
-    // Movement
-    void Move(Vector2 direction, float deltaTime);
-    PlayerDirection GetDirection() const { return direction; }
-    Vector2 GetPosition() const { return position; }
-    
-    // Collision
-    Rectangle GetBounds() const;
-    
-    // Status
-    bool IsInvincible() const { return invincibilityTimer > 0; }
-    void SetInvincible(float duration) { invincibilityTimer = duration; }
-    
-    // Shooting
-    Vector2 GetShootingDirection() const;
-    bool CanShoot() const { return shootTimer <= 0; }
-    void ResetShootTimer() { shootTimer = GetShootDelay(); }
-    bool HasJustFired() const { return justFired; }
-    Vector2 GetCurrentShootDirection() const { return currentShootDirection; }
-    void ResetJustFired() { justFired = false; }
-    
-    // Powerups
-    bool HasPowerup(int type) const;
-    float GetPowerupTimeRemaining(int type) const;
-    void ActivatePowerup(int type, float duration);
-    void DeactivatePowerup(int type);
-    
-    // Player stats
-    float GetMovementSpeed() const;
-    float GetShootDelay() const;
-    int GetBulletCount() const;  // For spread/shotgun
-    int GetBulletDamage() const;
-
-    // Add this to allow temporary position changes for drawing
-    Vector2 position;  // Make it public or add a setter
-    
 private:
-    // Core properties
-    PlayerDirection direction;
+    Vector2 position;
     float animationTimer;
     int currentFrame;
-    
-    // Movement
-    float baseMovementSpeed;
     float movementSpeed;
-    bool lastMoveWasKeyboard;
-    
-    // Shooting
-    float shootTimer;
-    float baseShootDelay;
-    Vector2 currentShootDirection;
+    Direction direction;
+    int runSpeedLevel;
+    float zombieModeTimer;
+    std::map<int, float> activePowerups;
     bool justFired;
-    
-    // Status
-    float invincibilityTimer;
-    
-    // Powerups
-    std::vector<std::pair<int, float>> activePowerups;  // type, time remaining
-    
-    // Animation helper methods
-    void UpdateAnimation(float deltaTime);
-    int GetAnimationFrame() const;
-    
-    // Input handling
-    void HandleKeyboardInput(float deltaTime);
-    void HandleGamepadInput(float deltaTime);
+    Vector2 shootDirection;
+    int bulletDamage;
+    int bulletCount;
+    bool shouldDraw;
+    std::set<Direction> shootingDirections;
+    float shotTimer;
+    float shootingDelay;
+    int fireSpeedLevel;
 
-    // Add helper methods
-    Vector2 NormalizeMovement(Vector2 movement);
-    void UpdatePosition(Vector2 normalizedDir, float deltaTime);
-    void UpdateDirection(Vector2 movement);
+public:
+    Player();
+    void Initialize(Vector2 startPosition);
+    void Update(float deltaTime, Level* level);
+    void Draw(Texture2D* optionalTexture = nullptr);
+    
+    // Getters
+    Vector2 GetPosition() const { return position; }
+    Direction GetDirection() const { return direction; }
+    bool HasJustFired() const { return justFired; }
+    Vector2 GetCurrentShootDirection() const { return shootDirection; }
+    int GetBulletDamage() const { return bulletDamage; }
+    int GetBulletCount() const { return bulletCount; }
+    Rectangle GetBounds() const;
+    
+    // Setters
+    void SetRunSpeedLevel(int level);
+    void SetZombieMode(float duration);
+    void ResetJustFired() { justFired = false; }
+    void SetPosition(Vector2 pos) { position = pos; }
+    void SetPosition(float x, float y) { position = {x, y}; }
+    
+    // Powerup methods
+    bool HasPowerup(int type) const;
+    void AddPowerup(int type, float duration);
+    void ActivatePowerup(int type);
+
+private:
+    void HandleInput(float deltaTime, Level* level);
+    void Move(Vector2 moveDir, float deltaTime, Level* level);
+    void UpdatePowerups(float deltaTime);
+    void UpdateDirection(Vector2 moveDir);
+    bool IsCollidingWithMap(Rectangle playerBox, Level* level);
+    void SpawnBullet(Direction dir);
+    void SpawnBulletsInAllDirections();
+    void addPlayerShootingDirection(Direction dir);
 };
 
-#endif // PLAYER_H
+#endif
