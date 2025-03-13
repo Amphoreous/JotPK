@@ -2,7 +2,8 @@
 #define ENEMY_H
 
 #include "raylib.h"
-#include "game/game_defs.h"  // Incluir para usar EnemyType desde aquí
+#include "game/game_defs.h"  // Include for EnemyType
+#include "game/level.h"      // Include for Level class
 #include <vector>
 #include <string>
 
@@ -10,7 +11,7 @@
 class Enemy {
 public:
     // Constructor/Destructor
-    Enemy(EnemyType type, Vector2 position, int health);
+    Enemy(EnemyType type, Vector2 position, int health, Level* level);
     virtual ~Enemy();
     
     // Core functionality
@@ -37,6 +38,11 @@ public:
     
     // Add this to allow temporary position changes for drawing
     Vector2 position;  // Make it public or add a setter
+
+    // Add these setter methods
+    void setSpeed(float value) { speed = value; }
+    void setAggressive(bool value) { aggressive = value; }
+    void setPlayerDetectRange(float value) { playerDetectRange = value; }
 
 protected:
     // Core properties
@@ -66,6 +72,9 @@ protected:
     int coinDropChance;      // Percentage chance to drop a coin
     int powerupDropChance;   // Percentage chance to drop a powerup
     
+    // Reference to the level
+    Level* level;            // Add this line
+    
     // Helper methods
     void updateAnimation(float deltaTime);
     Vector2 getRandomDirection();
@@ -73,6 +82,6 @@ protected:
 };
 
 // Factory function to create enemies
-Enemy* CreateEnemy(EnemyType type, Vector2 position);
+Enemy* CreateEnemy(EnemyType type, Vector2 position, Level* level);
 
 #endif // ENEMY_H

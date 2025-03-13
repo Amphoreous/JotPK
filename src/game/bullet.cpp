@@ -81,11 +81,10 @@ void Bullet::draw(Texture2D /*texture*/) {
     int bulletType = playerBullet ? 0 : 1;
     Rectangle src = assets.getBulletSprite(bulletType);
     
-    // Calculate size based on zoom factor
-    float size = BASE_TILE_SIZE * zoom;
+    // Use smaller size for bullets
+    float size = (BASE_TILE_SIZE/2) * zoom;  // Half size of tiles
     float halfSize = size / 2.0f;
     
-    // Draw the bullet
     DrawTexturePro(
         assets.spriteSheet,
         src,
@@ -97,12 +96,11 @@ void Bullet::draw(Texture2D /*texture*/) {
 }
 
 Rectangle Bullet::getBounds() const {
-    // Return bullet collision bounds
     return Rectangle{
-        position.x - 4,
-        position.y - 4,
-        8,
-        8
+        position.x - 2,  // Smaller collision box
+        position.y - 2,
+        4,              // 4x4 pixels instead of 8x8
+        4
     };
 }
 

@@ -12,7 +12,7 @@
 #define ATTACK_COOLDOWN_DEFAULT 1.5f
 
 // Enemy constructor
-Enemy::Enemy(EnemyType type, Vector2 position, int health) :
+Enemy::Enemy(EnemyType type, Vector2 position, int health, Level* level) :
     type(type),
     position(position),
     health(health),
@@ -30,7 +30,8 @@ Enemy::Enemy(EnemyType type, Vector2 position, int health) :
     damage(1),
     scoreValue(10),
     coinDropChance(10),
-    powerupDropChance(5)
+    powerupDropChance(5),
+    level(level)  // Initialize level
 {
     // Initialize with random direction
     moveDirection = getRandomDirection();
@@ -196,43 +197,40 @@ Vector2 Enemy::getRandomDirection() {
 }
 
 void Enemy::calculateMovement(Vector2 playerPos, float deltaTime) {
-    float distToPlayer = sqrtf((position.x - playerPos.x) * (position.x - playerPos.x) + 
-                              (position.y - playerPos.y) * (position.y - playerPos.y));
-    
-    // Update movement timer
-    movementTimer += deltaTime;
-    
-    // Change direction periodically
-    if (movementTimer >= DIRECTION_CHANGE_TIME) {
-        // Reset timer
-        movementTimer = 0;
+    // Original game's movement logic
+    float dx = playerPos.x - position.x;
+    float dy = playerPos.y - position.y;
+    float distance = sqrtf(dx*dx + dy*dy);
+
+    // Aggressive enemies chase player
+    if(aggressive && distance <= playerDetectRange) {
+        // Calculate direction vector
+        moveDirection = Vector2Normalize({dx, dy});
         
-        // If not aggressive or player is out of detection range, move randomly
-        if (!aggressive || distToPlayer > playerDetectRange) {
-            // Use individual component assignment instead of direct assignment
-            Vector2 randomDir = getRandomDirection();
-            moveDirection.x = randomDir.x;
-            moveDirection.y = randomDir.y;
+        // Add random movement variation
+        if(movementTimer >= DIRECTION_CHANGE_TIME) {
+            moveDirection.x += GetRandomValue(-100, 100)/100.0f;
+            moveDirection.y += GetRandomValue(-100, 100)/100.0f;
+            moveDirection = Vector2Normalize(moveDirection);
+            movementTimer = 0;
+        }
+    } else {
+        // Wander randomly
+        if(movementTimer >= DIRECTION_CHANGE_TIME) {
+            moveDirection = getRandomDirection();
+            movementTimer = 0;
         }
     }
-    
-    // Aggressive enemies chase the player when within range
-    if (aggressive) {
-        if (distToPlayer <= playerDetectRange) {
-            // Calculate direction to player
-            float dx = playerPos.x - position.x;
-            float dy = playerPos.y - position.y;
-            
-            // Normalize the vector
-            float length = sqrtf(dx * dx + dy * dy);
-            if (length > 0) {
-                moveDirection.x = dx / length;
-                moveDirection.y = dy / length;
-            }
-        }
+
+    // Apply movement
+    Vector2 newPos = position;
+    newPos.x += moveDirection.x * speed * deltaTime;
+    newPos.y += moveDirection.y * speed * deltaTime;
+
+    // Collision check with level
+    if(level->isPassable(newPos.x, newPos.y)) {
+        position = newPos;
     }
-    
-    // Rest of function...
 }
 
 void Enemy::draw() {
@@ -341,8 +339,8 @@ int Enemy::getLootDrop() {
 // Shooting enemy class
 class ShootingEnemy : public Enemy {
 public:
-    ShootingEnemy(EnemyType type, Vector2 position, int health) 
-        : Enemy(type, position, health) {
+    ShootingEnemy(EnemyType type, Vector2 position, int health, Level* level) 
+        : Enemy(type, position, health, level) {
         // Set shooting-specific properties
         attackCooldown = ATTACK_COOLDOWN_DEFAULT;
     }
@@ -373,48 +371,61 @@ public:
 };
 
 // Factory function to create enemies
-Enemy* CreateEnemy(EnemyType type, Vector2 position) {
-    // Determine initial health based on enemy type
+Enemy* CreateEnemy(EnemyType type, Vector2 position, Level* level) {
     int initialHealth;
+    float speed;
+    bool aggressive;
+    float detectRange;
     
     switch (type) {
         case ENEMY_ORC:
-        case ENEMY_GHOST:
-        case ENEMY_MUSHROOM:
-        case ENEMY_SPIKEY:
             initialHealth = 1;
+            speed = 60.0f;      // Original speed: 2 * 30
+            aggressive = false;
+            detectRange = 0;
             break;
-            
-        case ENEMY_DEVIL:
-            initialHealth = 2;
+        
+        case ENEMY_GHOST:
+            initialHealth = 1;
+            speed = 90.0f;      // Original speed: 3 * 30
+            aggressive = true;
+            detectRange = 250.0f;
             break;
             
         case ENEMY_OGRE:
             initialHealth = 3;
+            speed = 30.0f;      // Original speed: 1 * 30
+            aggressive = true;
+            detectRange = 200.0f;
             break;
             
         case ENEMY_MUMMY:
             initialHealth = 4;
-            break;
-            
-        case ENEMY_BOSS_COWBOY:
-            initialHealth = 20;
-            break;
-            
-        case ENEMY_BOSS_FECTOR:
-            initialHealth = 30;
+            speed = 45.0f;
+            aggressive = true;
+            detectRange = 150.0f;
             break;
             
         default:
             initialHealth = 1;
+            speed = 60.0f;
+            aggressive = false;
+            detectRange = 0;
             break;
     }
     
-    // Create basic or shooting enemy based on type
+    Enemy* enemy;
     if (type == ENEMY_GHOST || type == ENEMY_DEVIL || 
         type == ENEMY_BOSS_COWBOY || type == ENEMY_BOSS_FECTOR) {
-        return new ShootingEnemy(type, position, initialHealth);
+        enemy = new ShootingEnemy(type, position, initialHealth, level);
     } else {
-        return new Enemy(type, position, initialHealth);
+        enemy = new Enemy(type, position, initialHealth, level);
     }
+    
+    // Use the setters instead of direct access
+    enemy->setSpeed(speed);
+    enemy->setAggressive(aggressive);
+    enemy->setPlayerDetectRange(detectRange);
+    
+    return enemy;
 }

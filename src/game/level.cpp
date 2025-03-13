@@ -200,7 +200,7 @@ void Level::setupWaveSpawns(int wave) {
     enemySpawnPoints.clear();
     powerupSpawnPoints.clear();
 
-    // Base spawn points in corners
+    // Base spawn points in corners matching original game
     const Vector2 spawns[] = {
         {TILE_SIZE * 1.5f, TILE_SIZE * 1.5f},
         {TILE_SIZE * 14.5f, TILE_SIZE * 1.5f},
@@ -215,7 +215,7 @@ void Level::setupWaveSpawns(int wave) {
 
     // Wave-specific spawns
     if (wave == 12) { // Boss wave
-        addToSpawnQueue(ENEMY_BOSS, {TILE_SIZE * 8, TILE_SIZE * 3}, 0);
+        addToSpawnQueue(ENEMY_BOSS_COWBOY, {TILE_SIZE * 8, TILE_SIZE * 3}, 0);
     } else if (wave % 4 == 0) { // Mini-boss waves
         addToSpawnQueue(ENEMY_MINI_BOSS, {TILE_SIZE * 8, TILE_SIZE * 13}, 2000);
     }
@@ -224,7 +224,8 @@ void Level::setupWaveSpawns(int wave) {
     int baseEnemies = 5 + wave * 2;
     for (int i = 0; i < baseEnemies; i++) {
         Vector2 spawnPos = enemySpawnPoints[GetRandomValue(0, enemySpawnPoints.size()-1)];
-        addToSpawnQueue(GetRandomValue(0, ENEMY_TYPES-1), spawnPos, GetRandomValue(0, WAVE_DURATION));
+        EnemyType type = static_cast<EnemyType>(GetRandomValue(0, ENEMY_TYPES-1));
+        addToSpawnQueue(type, spawnPos, GetRandomValue(0, WAVE_DURATION));
     }
 }
 

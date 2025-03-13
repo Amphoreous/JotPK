@@ -8,7 +8,7 @@
 #include <algorithm>
 
 // Constants
-#define PLAYER_BASE_SPEED 3.0f
+#define PLAYER_BASE_SPEED 300.0f  // Changed from 3.0f to match original speed
 #define PLAYER_FRAME_COUNT 4
 #define PLAYER_ANIMATION_CYCLE 400.0f // 400ms per animation cycle
 #define PLAYER_SIZE 16
@@ -195,25 +195,7 @@ void Player::Draw(Texture2D* optionalTexture) {
     float size = BASE_TILE_SIZE * zoom;  // This matches the TILE_SIZE calculation
     float halfSize = size / 2.0f;
     
-    // Get sprite based on current direction and frame
-    Rectangle src = assets.getPlayerSprite(direction, currentFrame);
-    
-    // Draw the player with proper scaling
-    DrawTexturePro(
-        assets.spriteSheet,
-        src,
-        Rectangle{
-            position.x - halfSize,  // Center the sprite
-            position.y - halfSize,
-            size,                   // Use zoomed size
-            size
-        },
-        Vector2{halfSize, halfSize},
-        0.0f,
-        WHITE
-    );
-
-    // Draw feet animation if moving
+    // Draw feet animation if moving (draw feet first so body appears on top)
     if (direction != Direction::IDLE) {
         Rectangle feetSrc = assets.getPlayerFeetSprite(animationTimer);
         DrawTexturePro(
@@ -221,15 +203,33 @@ void Player::Draw(Texture2D* optionalTexture) {
             feetSrc,
             Rectangle{
                 position.x - halfSize,
-                position.y + halfSize - (4 * zoom),  // Adjust feet position
+                position.y + size - 60.0f,  // Place feet at bottom quarter of player
                 size,
-                size / 4.0f                          // Feet are 1/4 height of player
+                size / 4.0f               // Feet are 1/4 height of player
             },
-            Vector2{halfSize, size / 8.0f},         // Adjust anchor point for feet
+            Vector2{halfSize, 0},        // Anchor at top-middle of feet sprite
             0.0f,
             WHITE
         );
     }
+    
+    // Get sprite based on current direction and frame
+    Rectangle src = assets.getPlayerSprite(direction, currentFrame);
+    
+    // Draw the player body on top of feet
+    DrawTexturePro(
+        assets.spriteSheet,
+        src,
+        Rectangle{
+            position.x - halfSize,
+            position.y - halfSize,
+            size,
+            size
+        },
+        Vector2{halfSize, halfSize},
+        0.0f,
+        WHITE
+    );
 }
 
 void Player::UpdateDirection(Vector2 moveDir) {

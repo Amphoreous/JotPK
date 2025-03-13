@@ -46,6 +46,10 @@ private:
     int coins;
     int score;
     bool died;
+    int gameOverOption;
+    bool gameOverSelectedOption;
+    int finalScore;
+    int finalWave;
     
     // Game elements
     Player player;

@@ -12,10 +12,19 @@
 #define DEATH_DURATION 3000.0f
 #define PLAYER_INVINCIBILITY_DURATION 5000.0f
 
-GameStateManager::GameStateManager() {
+GameStateManager::GameStateManager() :
+    currentState(START_MENU),
+    whichWave(0),
+    world(0),
+    whichRound(0),
+    lives(3),
+    coins(0),
+    score(0),
+    died(false)
+{
     // Initialize default values
     currentState = START_MENU;
-    whichWave = 1;  // Cambiado de 0 a 1
+    whichWave = 0;  // Cambiado de 0 a 1
     world = 0;
     whichRound = 0;
     lives = 3;
@@ -452,6 +461,20 @@ void GameStateManager::SetGameState(GameState newState) {
             
         case GAME_OVER:
             // Game over setup
+            gameOverOption = 0;  // 0 = Retry, 1 = Quit
+            gameOverSelectedOption = false;
+            finalScore = score;
+            finalWave = whichWave;
+            
+            // Clear game elements
+            powerups.clear();
+            enemies.clear();
+            playerBullets.clear();  // Changed from bullets
+            enemyBullets.clear();
+            
+            // Stop music
+            
+            // Play game over sound
             break;
             
         default:
@@ -620,6 +643,42 @@ void GameStateManager::Draw() {
     if (showDebug) {
         DrawDebugInfo();
     }
+
+    if (currentState == GAME_OVER) {
+        Vector2 gameOffset = AssetsManager::GetGameOffset();
+        int tileSize = BASE_TILE_SIZE * AssetsManager::GetZoom();
+        
+        // Draw black background
+        DrawRectangle(
+            gameOffset.x,
+            gameOffset.y,
+            16 * tileSize,
+            16 * tileSize,
+            BLACK
+        );
+
+        // Draw "GAME OVER" text
+        const char* gameOverText = "GAME OVER";
+        Vector2 textPos = {
+            gameOffset.x + (6 * tileSize),
+            gameOffset.y + (7 * tileSize)
+        };
+        DrawText(gameOverText, textPos.x, textPos.y, 20, WHITE);
+        
+        // Draw options
+        const char* retryOption = gameOverOption == 0 ? "> RETRY" : "RETRY";
+        const char* quitOption = gameOverOption == 1 ? "> QUIT" : "QUIT";
+        
+        DrawText(retryOption, 
+            textPos.x, 
+            textPos.y + tileSize * 2,
+            16, WHITE);
+            
+        DrawText(quitOption,
+            textPos.x,
+            textPos.y + tileSize * 3,
+            16, WHITE);
+    }
 }
 
 void GameStateManager::DrawDebugInfo() {
@@ -639,11 +698,11 @@ void GameStateManager::DrawDebugInfo() {
     // Draw player movement keys state
     DrawRectangle(320, 10, 150, 145, Fade(BLACK, 0.7f));
     DrawText("Movement:", 330, 20, 16, WHITE);
-    DrawText(IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) ? "UP: ON" : "UP: off", 330, 40, 14, IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) ? GREEN : GRAY);
-    DrawText(IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S) ? "DOWN: ON" : "DOWN: off", 330, 60, 14, IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S) ? GREEN : GRAY);
-    DrawText(IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A) ? "LEFT: ON" : "LEFT: off", 330, 80, 14, IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A) ? GREEN : GRAY);
-    DrawText(IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D) ? "RIGHT: ON" : "RIGHT: off", 330, 100, 14, IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D) ? GREEN : GRAY);
-    DrawText(IsKeyDown(KEY_SPACE) ? "SHOOT: ON" : "SHOOT: off", 330, 120, 14, IsKeyDown(KEY_SPACE) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_W) ? "UP: ON" : "UP: off", 330, 40, 14, IsKeyDown(KEY_W) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_S) ? "DOWN: ON" : "DOWN: off", 330, 60, 14, IsKeyDown(KEY_S) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_A) ? "LEFT: ON" : "LEFT: off", 330, 80, 14, IsKeyDown(KEY_A) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_D) ? "RIGHT: ON" : "RIGHT: off", 330, 100, 14, IsKeyDown(KEY_D) ? GREEN : GRAY);
+    DrawText(IsKeyDown(KEY_UP) || IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_RIGHT) ? "SHOOT: ON" : "SHOOT: off", 330, 120, 14, IsKeyDown(KEY_UP) || IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_RIGHT) ? GREEN : GRAY);
     
     // Show a frame counter to detect lag or stuttering
     // Changed GetFrameCounter() to GetFramesCounter() to match Raylib API
@@ -684,7 +743,7 @@ void GameStateManager::StartNextWave() {
 }
 
 void GameStateManager::SpawnEnemy(int type, Vector2 position) {
-    Enemy* newEnemy = CreateEnemy((EnemyType)type, position);
+    Enemy* newEnemy = CreateEnemy((EnemyType)type, position, &level);
     if (newEnemy) {
         enemies.push_back(newEnemy);
     }
@@ -735,9 +794,27 @@ void GameStateManager::UpdateShopping(float deltaTime) {
 }
 
 void GameStateManager::UpdateGameOver(float deltaTime) {
-    // This would handle game over screen interactions
-    // For now, it just waits for R to be pressed for restart
-    // which is handled in main.cpp
+    if (!gameOverSelectedOption) {
+        // Cambiar opción seleccionada
+        if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_DOWN)) {
+            gameOverOption = (gameOverOption == 0) ? 1 : 0;
+            // PlaySound(GetSound("menu_move"));
+        }
+        
+        // Seleccionar opción
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+            gameOverSelectedOption = true;
+            // PlaySound(GetSound("menu_select"));
+            
+            if (gameOverOption == 0) {
+                // Reiniciar juego
+                Initialize();
+            } else {
+                // Salir al menú principal
+                currentState = START_MENU;
+            }
+        }
+    }
 }
 
 void GameStateManager::UpdateEndCutscene(float deltaTime) {
@@ -798,8 +875,22 @@ void GameStateManager::ApplyLevelSpecificSettings() {
 }
 
 void GameStateManager::UpdateMonsterChancesForWave() {
-    // Update monster spawn chances based on current wave
-    // Higher waves = harder monsters more likely
+    // Original game's monster chance progression
+    if(whichWave >= 8) {
+        monsterChances[3] = {0.012f + whichRound * 0.005f, 0.4f + whichRound * 0.075f};
+        monsterChances[4] = {0.003f, 0.1f};
+    } else if(whichWave >= 4) {
+        monsterChances[1] = {0.0018f, 0.08f};
+        monsterChances[5] = {0.01f + whichRound * 0.004f, 0.15f + whichRound * 0.04f};
+    }
+    
+    // New Game+ scaling
+    if(whichRound > 0) {
+        for(auto& chance : monsterChances) {
+            chance.x *= 1.1f;
+            chance.y *= 1.1f;
+        }
+    }
 }
 
 void GameStateManager::SpawnTestPowerup() {

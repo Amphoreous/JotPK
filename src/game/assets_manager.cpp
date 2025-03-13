@@ -7,7 +7,6 @@
 
 void AssetsManager::initialize() {
     spriteSheet = LoadTexture("assets.png");
-    
     // Validate texture loaded correctly
     if (spriteSheet.id == 0) {
         std::cerr << "Failed to load assets.png!" << std::endl;
@@ -90,7 +89,7 @@ Rectangle AssetsManager::getPlayerFeetSprite(float animationTimer) {
     
     return Rectangle{
         static_cast<float>(BASE_X),  
-        static_cast<float>(BASE_Y  + frame * FRAME_WIDTH),
+        static_cast<float>(BASE_Y + frame * FRAME_HEIGHT),
         static_cast<float>(FRAME_WIDTH),
         static_cast<float>(FRAME_HEIGHT)
     };
