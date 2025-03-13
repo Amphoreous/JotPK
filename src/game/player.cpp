@@ -189,33 +189,47 @@ void Player::Draw(Texture2D* optionalTexture) {
     if (!shouldDraw) return;
     
     AssetsManager& assets = AssetsManager::getInstance();
+    float zoom = AssetsManager::GetZoom();
     
-    // Draw feet animation only when moving
+    // Calculate size based on zoom factor (same as level tiles)
+    float size = BASE_TILE_SIZE * zoom;  // This matches the TILE_SIZE calculation
+    float halfSize = size / 2.0f;
+    
+    // Get sprite based on current direction and frame
+    Rectangle src = assets.getPlayerSprite(direction, currentFrame);
+    
+    // Draw the player with proper scaling
+    DrawTexturePro(
+        assets.spriteSheet,
+        src,
+        Rectangle{
+            position.x - halfSize,  // Center the sprite
+            position.y - halfSize,
+            size,                   // Use zoomed size
+            size
+        },
+        Vector2{halfSize, halfSize},
+        0.0f,
+        WHITE
+    );
+
+    // Draw feet animation if moving
     if (direction != Direction::IDLE) {
-        // Calculate animation frame (4 frames total)
-        int legFrame = (int)(animationTimer / (PLAYER_ANIMATION_CYCLE / 4));
-        
-        Rectangle feetSrc = assets.getPlayerFeetSprite(legFrame);
+        Rectangle feetSrc = assets.getPlayerFeetSprite(animationTimer);
         DrawTexturePro(
             assets.spriteSheet,
             feetSrc,
-            Rectangle{position.x + 4.0f, position.y + 13.0f, 10.0f, 3.0f},
-            Vector2{0.0f, 0.0f},
+            Rectangle{
+                position.x - halfSize,
+                position.y + halfSize - (4 * zoom),  // Adjust feet position
+                size,
+                size / 4.0f                          // Feet are 1/4 height of player
+            },
+            Vector2{halfSize, size / 8.0f},         // Adjust anchor point for feet
             0.0f,
             WHITE
         );
     }
-    
-    // Draw player body
-    Rectangle src = assets.getPlayerSprite(direction, 0);
-    DrawTexturePro(
-        assets.spriteSheet,
-        src,
-        Rectangle{position.x, position.y, 16.0f, 16.0f},
-        Vector2{0.0f, 0.0f},
-        0.0f,
-        WHITE
-    );
 }
 
 void Player::UpdateDirection(Vector2 moveDir) {

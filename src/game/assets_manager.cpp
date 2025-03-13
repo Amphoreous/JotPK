@@ -40,31 +40,59 @@ void AssetsManager::unload() {
 }
 
 Rectangle AssetsManager::getPlayerSprite(int direction, int frame) {
-    // Convert direction to sprite coordinates
+    // Base coordinates from AbigailGame.cs sprite sheet
+    const int SPRITE_SIZE = 16;
+    const int ROW_OFFSET = 96; // Base Y coordinate for player sprites
+    
+    int x = 336; // Base X coordinate
+    int y = ROW_OFFSET;
+    
     switch(static_cast<Direction>(direction)) {
         case UP:
-            return Rectangle{336.0f, 96.0f, 16.0f, 16.0f};
-        case RIGHT:
-            return Rectangle{352.0f, 96.0f, 16.0f, 16.0f};
+            y = ROW_OFFSET;
+            x = 336; // First frame in animation
+            break;
         case DOWN:
-            return Rectangle{368.0f, 96.0f, 16.0f, 16.0f};
+            y = ROW_OFFSET;
+            x = 336 + SPRITE_SIZE; // Second frame
+            break;
         case LEFT:
-            return Rectangle{384.0f, 96.0f, 16.0f, 16.0f};
+            y = ROW_OFFSET;
+            x = 336 + SPRITE_SIZE * 2; // Third frame
+            break;
+        case RIGHT:
+            y = ROW_OFFSET;
+            x = 336 + SPRITE_SIZE * 3; // Fourth frame
+            break;
         default: // IDLE
-            return Rectangle{368.0f, 112.0f, 16.0f, 16.0f};
+            y = 112;
+            x = 368; // Use first frame for idle
+            break;
     }
+
+    return Rectangle{
+        static_cast<float>(x),
+        static_cast<float>(y),
+        static_cast<float>(SPRITE_SIZE),
+        static_cast<float>(SPRITE_SIZE)
+    };
 }
 
 // También necesitamos actualizar la función para los pies
 Rectangle AssetsManager::getPlayerFeetSprite(float animationTimer) {
-    // Calcula el frame basado en animationTimer % 400f como en el original
-    int frameOffset = ((int)(animationTimer / 100.0f) % 4) * 3;
+    const int BASE_X = 352;
+    const int BASE_Y = 112;
+    const int FRAME_WIDTH = 16;
+    const int FRAME_HEIGHT = 3;
+    
+    // Calculate frame based on animation cycle (400ms total, 4 frames)
+    int frame = ((int)(animationTimer / 100.0f)) % 4;
     
     return Rectangle{
-        351.0f, 
-        112.0f + frameOffset,
-        10.0f,
-        3.0f
+        static_cast<float>(BASE_X),  
+        static_cast<float>(BASE_Y  + frame * FRAME_WIDTH),
+        static_cast<float>(FRAME_WIDTH),
+        static_cast<float>(FRAME_HEIGHT)
     };
 }
 
