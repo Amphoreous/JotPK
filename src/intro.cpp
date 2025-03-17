@@ -106,12 +106,18 @@ void ShowIntro(int screenWidth, int screenHeight, Sound fxStart)
     Texture2D JotPKLogo = LoadTexture("JotPK.png");
     Texture2D pressStart = LoadTexture("press_space.png");
     const char* companyName = "Amphoreous";
-    const char* teamMembers = "Zakaria Hamdaoui\nSofia Giner Vargas\nJoel Martinez Arjona";
-    const char* copyrightText = "Copyright. Amphoreous 2025. Todos los derechos reservados.";
-    int fadeDuration = 180;
+    const char* teamMembers = "MADE BY\n\nZakaria Hamdaoui\nSofia Giner Vargas\nJoel Martinez Arjona";
+    const char* copyrightText = "Copyright. Amphoreous 2025. All rights reserved.";
+    const char* descriptionProject = "Play as the Prairie King, fight against several adversaries,\nupgrade your equipment, use some powerful power-ups to collect\n a few items that will help you get to your fiancee";
+    const char* subjectDegreeUniversity = "Project I\nDesign and development of Videogames\nCITM-UPC";
+    const char* tutor = "Tutor: Alejandro Paris Gomez";
+    int fadeDuration = 130;
 
     FadeInOutLogo(icon, companyName, fadeDuration, screenWidth, screenHeight);
-    FadeInOutText(teamMembers, 30, fadeDuration, screenWidth, screenHeight);
+    FadeInOutText(teamMembers, 40, fadeDuration, screenWidth, screenHeight);
+    FadeInOutText(descriptionProject, 40, fadeDuration + 150, screenWidth, screenHeight);
+    FadeInOutText(subjectDegreeUniversity, 40, fadeDuration, screenWidth, screenHeight);
+    FadeInOutText(tutor, 40, fadeDuration, screenWidth, screenHeight);
 
     // Mostrar el logo de JotPK y el texto de "press_start"
     int logoWidth = screenWidth / 2;

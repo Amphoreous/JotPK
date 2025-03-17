@@ -42,7 +42,7 @@ void DrawHTP(GameScreen* currentScreen)
     int htpImageWidth = GetScreenWidth() / 2;
     int htpImageHeight = GetScreenHeight() / 2;
 
-    DrawTexture(htpImage, static_cast<int>(htpImageWidth / 1.54), (GetScreenHeight() - htpImageHeight) - 180, WHITE);
+    DrawTexture(htpImage, static_cast<int>(htpImageWidth / 1.43), (GetScreenHeight() - htpImageHeight) - 180, WHITE);
 
     // "Back" Button
 
