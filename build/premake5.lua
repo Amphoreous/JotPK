@@ -38,9 +38,31 @@ function check_raylib()
     os.chdir("../")
 end
 
+function check_nlohmann_json()
+    os.chdir("external")
+    if(os.isdir("json") == false) then
+        if(not os.isfile("json.hpp")) then
+            print("nlohmann/json not found, downloading single header")
+            local result_str, response_code = http.download(
+                "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp",
+                "json.hpp",
+                {
+                    progress = download_progress,
+                    headers = { "From: Premake", "Referer: Premake" }
+                }
+            )
+            -- Crear directorio y mover el archivo
+            os.mkdir("json/include/nlohmann")
+            os.rename("json.hpp", "json/include/nlohmann/json.hpp")
+        end
+    end
+    os.chdir("../")
+end
+
 function build_externals()
      print("calling externals")
      check_raylib()
+     check_nlohmann_json()
 end
 
 function platform_defines()
@@ -164,6 +186,7 @@ if (downloadRaylib) then
     
         includedirs { "../src" }
         includedirs { "../include" }
+        includedirs { "external/json/include" }
 
         links {"raylib"}
 
