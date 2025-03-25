@@ -86,8 +86,8 @@ void MenuScreen::Draw() {
               20, 2, WHITE);
 
     // Botones de web en el lado derecho
-    const Rectangle githubSource = { 320, 1648, 32, 32 };  // Nueva ubicación del logo de GitHub
-    const Rectangle webSource = { 832, 1808, 16, 16 };
+    const Rectangle githubSource = { 320, 1648, 32, 32 };
+    const Rectangle webSource = { 288, 1648, 32, 32 };
     const float buttonSize = 32; // 16 * 2.0f scale
     const float buttonSpacing = 10.0f;
     const float rightMargin = 20.0f;

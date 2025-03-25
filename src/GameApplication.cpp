@@ -8,19 +8,19 @@ GameApplication::~GameApplication() {
 }
 
 void GameApplication::Initialize() {
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+        SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
     SearchAndSetResourceDir("resources");
     
-    // Cargar y preparar el icono antes de crear la ventana
+    // Load and prepare the icon before creating the window
     Image icon = LoadImage("cursors/cursors.png");
-    ImageColorReplace(&icon, BLANK, BLANK);  // Asegurar transparencia correcta
+    ImageColorReplace(&icon, BLANK, BLANK);  // Ensure correct transparency
     
-    // Recortar y escalar el icono de la compañía
+    // Crop and scale company icon
     Rectangle iconRegion = { 432, 1808, 16, 16 };
     Image iconCrop = ImageFromImage(icon, iconRegion);
     UnloadImage(icon);
     
-    // Crear múltiples tamaños para mejor compatibilidad con Windows
+    // Create multiple sizes for better Windows compatibility
     Image icon16 = ImageCopy(iconCrop);
     Image icon32 = ImageCopy(iconCrop);
     Image icon48 = ImageCopy(iconCrop);
@@ -32,17 +32,21 @@ void GameApplication::Initialize() {
     ImageResize(&icon48, 48, 48);
     ImageResize(&icon64, 64, 64);
     ImageResize(&icon128, 128, 128);
+
+    // Get the monitor's refresh rate for proper vsync
+    int targetFPS = GetMonitorRefreshRate(GetCurrentMonitor());
+    SetTargetFPS(targetFPS);
     
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
     
-    // Establecer iconos de menor a mayor tamaño
+    // Set window icons from smallest to largest size
     SetWindowIcon(icon16);
     SetWindowIcon(icon32);
     SetWindowIcon(icon48);
     SetWindowIcon(icon64);
     SetWindowIcon(icon128);
     
-    // Limpiar recursos
+    // Clean up resources
     UnloadImage(iconCrop);
     UnloadImage(icon16);
     UnloadImage(icon32);
@@ -58,6 +62,7 @@ void GameApplication::Initialize() {
     
     m_assets.LoadAssets();
     
+    // Set point filtering for pixel art
     Texture2D cursorsTexture = m_assets.GetTexture("cursors");
     if (cursorsTexture.id > 0) {
         SetTextureFilter(cursorsTexture, TEXTURE_FILTER_POINT);
