@@ -1,6 +1,9 @@
 #pragma once
 #include "Screen.hpp"
-#include "../gameplay/PrairieKing.hpp"
+#include <memory>
+
+// Forward declare PrairieKing class
+class PrairieKing;
 
 class GameplayScreen : public Screen {
 public:
