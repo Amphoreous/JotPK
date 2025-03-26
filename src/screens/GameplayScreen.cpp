@@ -5,14 +5,9 @@ GameplayScreen::GameplayScreen(AssetManager& assets, const Vector2& pixelScale)
     : Screen(assets, pixelScale)
 {
     m_game = std::make_unique<PrairieKing>(assets);
-    
-    // Set music as in original
-    PlayMusicStream(assets.GetMusic("overworld"));
-    SetMusicVolume(assets.GetMusic("overworld"), 0.7f);
 }
 
 void GameplayScreen::Update(float deltaTime) {
-    UpdateMusicStream(m_assets.GetMusic("overworld"));
 
     // Update input states for game
     if (IsKeyDown(KEY_W))

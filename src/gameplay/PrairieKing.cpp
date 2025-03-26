@@ -305,18 +305,322 @@ int PrairieKing::CowboyMonster::GetLootDrop()
 
 bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
 {
-    // This is a stub implementation - the actual implementation will be completed
-    // after fixing the class structure issues
+    // Update animation timer
     movementAnimationTimer -= deltaTime * 1000.0f;
     if (movementAnimationTimer <= 0.0f)
     {
         movementAnimationTimer = std::max(100.0f, 500.0f - speed * 50.0f);
     }
 
+    // Handle flash color timer
     if (flashColorTimer > 0.0f)
     {
         flashColorTimer -= deltaTime * 1000.0f;
         return false;
+    }
+
+    // Skip movement if confused or in shopping mode
+    if (PrairieKing::GetGameInstance() && 
+        (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0 ||
+         PrairieKing::GetGameInstance()->m_shopping))
+    {
+        return false;
+    }
+
+    // Increment ticks since last movement
+    ticksSinceLastMovement++;
+
+    // Monster-type specific movement
+    switch (type)
+    {
+    // Basic movement for regular monsters (orc, ogre, mushroom, mummy)
+    case ORC:
+    case OGRE:
+    case MUSHROOM:
+    case MUMMY:
+    {
+        // If the monster is a spikey type with special state, handle differently
+        if (type == SPIKEY)
+        {
+            if (special || invisible)
+            {
+                break;
+            }
+
+            // Change target position if monster hasn't moved in a while
+            if (ticksSinceLastMovement > 20)
+            {
+                int tries = 0;
+                do
+                {
+                    // Pick random position on map
+                    targetPosition = {
+                        static_cast<float>(rand() % 12 + 2) * static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM),
+                        static_cast<float>(rand() % 12 + 2) * static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM)
+                    };
+                    tries++;
+                } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(Rectangle{
+                    targetPosition.x, targetPosition.y, 
+                    static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM), 
+                    static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM)}) && tries < 5);
+            }
+        }
+
+        // Determine target position
+        Vector2 target;
+        if (targetPosition.x != 0 || targetPosition.y != 0)
+        {
+            target = targetPosition;
+        }
+        else
+        {
+            target = playerPosition;
+        }
+
+        // Handle gopher behavior
+        if (PrairieKing::GetGameInstance() && PrairieKing::GetGameInstance()->m_gopherRunning)
+        {
+            Rectangle gopherBox = PrairieKing::GetGameInstance()->m_gopherBox;
+            target = {gopherBox.x, gopherBox.y};
+        }
+
+        // Randomly change direction preference
+        if (rand() % 1000 < 1)
+        {
+            oppositeMotionGuy = !oppositeMotionGuy;
+        }
+
+        // Determine movement direction based on target position
+        if ((type == SPIKEY && !oppositeMotionGuy) || 
+            fabs(target.x - position.x) > fabs(target.y - position.y))
+        {
+            // Horizontal movement preferred
+            if (target.x + static_cast<float>(speed) < position.x && 
+                (movedLastTurn || movementDirection != 3))
+            {
+                movementDirection = 3; // Left
+            }
+            else if (target.x > position.x + static_cast<float>(speed) && 
+                    (movedLastTurn || movementDirection != 1))
+            {
+                movementDirection = 1; // Right
+            }
+            else if (target.y > position.y + static_cast<float>(speed) && 
+                    (movedLastTurn || movementDirection != 2))
+            {
+                movementDirection = 2; // Down
+            }
+            else if (target.y + static_cast<float>(speed) < position.y && 
+                    (movedLastTurn || movementDirection != 0))
+            {
+                movementDirection = 0; // Up
+            }
+        }
+        else
+        {
+            // Vertical movement preferred
+            if (target.y > position.y + static_cast<float>(speed) && 
+                (movedLastTurn || movementDirection != 2))
+            {
+                movementDirection = 2; // Down
+            }
+            else if (target.y + static_cast<float>(speed) < position.y && 
+                    (movedLastTurn || movementDirection != 0))
+            {
+                movementDirection = 0; // Up
+            }
+            else if (target.x + static_cast<float>(speed) < position.x && 
+                    (movedLastTurn || movementDirection != 3))
+            {
+                movementDirection = 3; // Left
+            }
+            else if (target.x > position.x + static_cast<float>(speed) && 
+                    (movedLastTurn || movementDirection != 1))
+            {
+                movementDirection = 1; // Right
+            }
+        }
+
+        movedLastTurn = false;
+
+        // Calculate attempted movement position
+        Rectangle attemptedPosition = position;
+        switch (movementDirection)
+        {
+        case 0: // Up
+            attemptedPosition.y -= speed;
+            break;
+        case 1: // Right
+            attemptedPosition.x += speed;
+            break;
+        case 2: // Down
+            attemptedPosition.y += speed;
+            break;
+        case 3: // Left
+            attemptedPosition.x -= speed;
+            break;
+        }
+
+        // Zombie mode reverses monster movement
+        if (PrairieKing::GetGameInstance() && PrairieKing::GetGameInstance()->m_zombieModeTimer > 0)
+        {
+            // Reverse the direction
+            Rectangle originalPosition = position;
+            attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
+            attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
+        }
+
+        // Check for collisions
+        if (!PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) && 
+            !PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this))
+        {
+            ticksSinceLastMovement = 0;
+            position = attemptedPosition;
+            movedLastTurn = true;
+
+            // Check if reached target
+            if (CheckCollisionPointRec(
+                Vector2{target.x + static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) / 2, 
+                      target.y + static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) / 2}, 
+                position))
+            {
+                targetPosition = {0, 0};
+                
+                // If monster is uninterested and reached target, pick a new random target
+                if ((type == ORC || type == MUMMY) && uninterested)
+                {
+                    targetPosition = {
+                        static_cast<float>(rand() % 12 + 2) * static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM),
+                        static_cast<float>(rand() % 12 + 2) * static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM)
+                    };
+                    
+                    // Occasionally stop being uninterested
+                    if (rand() % 100 < 50)
+                    {
+                        uninterested = false;
+                        targetPosition = {0, 0}; // Clear target to focus on player
+                    }
+                }
+            }
+        }
+        break;
+    }
+
+    // Flying monsters (ghost, devil)
+    case GHOST:
+    case DEVIL:
+    {
+        // Determine target position
+        Vector2 target;
+        if (targetPosition.x != 0 || targetPosition.y != 0)
+        {
+            target = targetPosition;
+        }
+        else
+        {
+            target = playerPosition;
+        }
+
+        // Get direction vector towards target
+        Vector2 targetToFly = {
+            target.x + static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) / 2 - (position.x + position.width / 2),
+            target.y + static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) / 2 - (position.y + position.height / 2)
+        };
+
+        // Normalize direction vector
+        float length = sqrt(targetToFly.x * targetToFly.x + targetToFly.y * targetToFly.y);
+        if (length > 0)
+        {
+            targetToFly.x = targetToFly.x / length * speed;
+            targetToFly.y = targetToFly.y / length * speed;
+        }
+
+        // Adjust acceleration based on target direction
+        float accelerationMultiplier = (targetToFly.x != 0.0f && targetToFly.y != 0.0f) ? 1.5f : 1.0f;
+
+        if (targetToFly.x > acceleration.x)
+        {
+            acceleration.x += 0.1f * accelerationMultiplier;
+        }
+        if (targetToFly.x < acceleration.x)
+        {
+            acceleration.x -= 0.1f * accelerationMultiplier;
+        }
+        if (targetToFly.y > acceleration.y)
+        {
+            acceleration.y += 0.1f * accelerationMultiplier;
+        }
+        if (targetToFly.y < acceleration.y)
+        {
+            acceleration.y -= 0.1f * accelerationMultiplier;
+        }
+
+        // Check for collisions with new position
+        Rectangle attemptedPosition = {
+            position.x + ceil(acceleration.x),
+            position.y + ceil(acceleration.y),
+            position.width,
+            position.height
+        };
+
+        if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this))
+        {
+            ticksSinceLastMovement = 0;
+            position.x += static_cast<int>(ceil(acceleration.x));
+            position.y += static_cast<int>(ceil(acceleration.y));
+
+            // Check if reached target
+            if (CheckCollisionPointRec(
+                Vector2{target.x + static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) / 2, 
+                       target.y + static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) / 2}, 
+                position))
+            {
+                targetPosition = {0, 0};
+            }
+        }
+        break;
+    }
+
+    // Spike monster special case
+    case SPIKEY:
+    {
+        if (!special && !invisible)
+        {
+            int tries = 0;
+            do
+            {
+                targetPosition = {
+                    static_cast<float>(rand() % 12 + 2) * static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM),
+                    static_cast<float>(rand() % 12 + 2) * static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM)
+                };
+                tries++;
+            } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(Rectangle{
+                targetPosition.x, targetPosition.y, 
+                static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM), 
+                static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM)}) && tries < 5);
+
+            // Create animated spike sprite
+            if (PrairieKing::GetGameInstance() && !invisible)
+            {
+                // Add temporary sprite animation for spike formation
+                PrairieKing::TemporaryAnimatedSprite spike(
+                    Rectangle{352, 1728, 16, 16},
+                    60.0f, 3, 0,
+                    Vector2{position.x + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x, position.y + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y},
+                    0.0f, 3.0f, false,
+                    position.y / 10000.0f, WHITE);
+                
+                // Set up callback to change state when animation ends
+                spike.endFunction = [this](int extraInfo) {
+                    this->SpikeyEndBehavior(extraInfo);
+                };
+                
+                PrairieKing::GetGameInstance()->AddTemporarySprite(spike);
+                invisible = true;
+            }
+        }
+        break;
+    }
     }
 
     return false;
@@ -750,7 +1054,8 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_cactusDanceTimer(0),
       m_playerMotionAnimationTimer(0),
       m_playerFootstepSoundTimer(0),
-      m_spawnQueue(4) // Initialize m_spawnQueue with 4 empty vectors
+      m_spawnQueue(4), // Initialize m_spawnQueue with 4 empty vectors
+      m_overworldSong({0}) // Initialize m_overworldSong to nullptr
 {
     // Store the instance pointer for static access
     s_instance = this;
@@ -2516,20 +2821,77 @@ void PrairieKing::Update(float deltaTime)
             }
         }
 
-        // Update wave timer
-        if (m_waveTimer > 0)
+        // Handle scrolling map
+        if (m_scrollingMap)
         {
-            m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
-            if (m_waveTimer <= 0)
+            // Calculate smooth scrolling speed (matching the original game's TileSize / 8)
+            float scrollSpeed = GetTileSize() / 8.0f;
+            
+            // Decrease new map position
+            m_newMapPosition -= static_cast<int>(deltaTime * 1000.0f * 0.2f);
+            
+            // Move player down with the scrolling map
+            m_playerPosition.y += scrollSpeed * 0.25f;
+            
+            // Update player's bounding box
+            m_playerBoundingBox = {
+                m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
+                m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
+                static_cast<float>(GetTileSize()) / 2.0f,
+                static_cast<float>(GetTileSize()) / 2.0f
+            };
+            
+            // Ensure player is animated during scrolling
+            m_playerMovementDirections = {2}; // Down direction
+            m_playerMotionAnimationTimer += deltaTime * 1000.0f;
+            m_playerMotionAnimationTimer = fmodf(m_playerMotionAnimationTimer, 400.0f);
+            
+            // When scrolling completes
+            if (m_newMapPosition <= 0)
             {
-                StartNewWave();
+                m_scrollingMap = false;
+                m_newMapPosition = 0;
+                m_playerMovementDirections.clear();
+                
+                // Only after scrolling is complete, load monsters and start the wave
+                ApplyLevelSpecificStates();
             }
         }
-
-        // Update between wave timer
-        if (m_betweenWaveTimer > 0 && m_monsters.empty() && IsSpawnQueueEmpty() && !m_shopping && !m_waitingForPlayerToMoveDownAMap)
+        else
         {
-            m_betweenWaveTimer -= static_cast<int>(deltaTime * 1000.0f);
+            // Update wave timer only if not scrolling map
+            if (m_waveTimer > 0)
+            {
+                m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
+                if (m_waveTimer <= 0)
+                {
+                    StartNewWave();
+                }
+            }
+
+            // Update between wave timer
+            if (m_betweenWaveTimer > 0 && m_monsters.empty() && IsSpawnQueueEmpty() && !m_shopping && !m_waitingForPlayerToMoveDownAMap)
+            {
+                m_betweenWaveTimer -= static_cast<int>(deltaTime * 1000.0f);
+                
+                // If the between wave timer has completed and we're at wave 0 (start of game)
+                // then start the first wave
+                if (m_betweenWaveTimer <= 0 && m_whichWave == 0)
+                {
+                    StartNewWave();
+                }
+            }
+            
+            // Play overworld music if needed, but only if not between waves at the start
+            if (m_waveTimer > 0 && 
+                m_betweenWaveTimer <= 0 && 
+                m_zombieModeTimer <= 0 && 
+                !m_shootoutLevel && 
+                m_overworldSong.frameCount == 0 || !IsSoundPlaying(m_overworldSong)) 
+            {
+                m_overworldSong = GetSound("Cowboy_OVERWORLD");
+                PlaySound(m_overworldSong);
+            }
         }
     }
 
@@ -2916,6 +3278,21 @@ void PrairieKing::Draw()
             }
         }
 
+        // Draw control instructions at beginning of game
+        if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
+        {
+            Vector2 pos = {GetScreenWidth() / 2 - 120, GetScreenHeight() - 144 - 3};
+            
+            // Drawing controls instruction box
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{352, 1648, 80, 48},
+                Rectangle{pos.x, pos.y, 240, 144}, // 3x scaling
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+                    }
+
         // Draw player if not dead or invincible
         if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
         {
@@ -3208,6 +3585,20 @@ void PrairieKing::Draw()
                 16 * GetTileSize(),
                 ColorAlpha(RAYWHITE, static_cast<float>(m_screenFlash) / 1000.0f));
         }
+
+        if (m_waitingForPlayerToMoveDownAMap && (m_merchantShopOpen || m_merchantLeaving || !m_shopping) && m_shoppingTimer < 250)
+        {
+            // Draw the arrow at the bottom of the screen
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{355.0f, 1750.0f, 8.0f, 8.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
+                        m_topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
+                        24.0f, 24.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+        }
     }
 }
 
@@ -3323,37 +3714,19 @@ PrairieKing *PrairieKing::GetGameInstance()
 void PrairieKing::StartNewWave()
 {
     m_whichWave++;
-
-    // Reset wave timers
-    m_waveTimer = WAVE_DURATION;
-    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
-
-    // Clear any existing monsters
-    for (auto monster : m_monsters)
+    if (m_whichWave > 0)
     {
-        delete monster;
-    }
-    m_monsters.clear();
-
-    // Clear any leftover powerups
-    m_powerups.clear();
-
-    // Load the new map
-    GetMap(m_whichWave, m_map);
-
-    // Apply any level-specific states (like boss levels)
-    ApplyLevelSpecificStates();
-
-    // If we've completed all waves, end the game
-    if (m_whichWave > 12)
-    {
-        m_endCutscene = true;
-        m_endCutsceneTimer = 4000;
-        GetMap(-1, m_map); // Load end cutscene map
-    }
-    // Start shopping level every 4 waves
-    else if (m_whichWave % 4 == 0 && m_whichWave > 0 && !m_shootoutLevel)
-    {
-        StartShoppingLevel();
+        if (m_whichWave % 4 == 0)
+        {
+            StartShoppingLevel();
+        }
+        else
+        {
+            m_waitingForPlayerToMoveDownAMap = true;
+            // Open a path at the bottom of the map
+            m_map[8][15] = MAP_DESERT;
+            m_map[7][15] = MAP_DESERT;
+            m_map[9][15] = MAP_DESERT;
+        }
     }
 }

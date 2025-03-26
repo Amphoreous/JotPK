@@ -1,5 +1,5 @@
 #pragma once
-#include "../AssetManager.hpp"
+#include "AssetManager.hpp"
 #include "raylib.h"
 
 class Screen {

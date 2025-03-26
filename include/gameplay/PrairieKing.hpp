@@ -1,5 +1,5 @@
 #pragma once
-#include "../AssetManager.hpp"
+#include "AssetManager.hpp"
 #include "raylib.h"
 #include <vector>
 #include <unordered_map>
@@ -83,7 +83,7 @@ public:
     static constexpr int MAP_WIDTH = 16;
     static constexpr int MAP_HEIGHT = 16;
     static constexpr int PIXEL_ZOOM = 3;
-    static constexpr int BULLET_SPEED = 12; // Increased from 8 to 12
+    static constexpr int BULLET_SPEED = 8;
     static constexpr double LOOT_CHANCE = 0.05;
     static constexpr double COIN_CHANCE = 0.05;
     static constexpr int LOOT_DURATION = 7500;
@@ -402,6 +402,8 @@ private:
     bool m_playerJumped;
     bool m_endCutscene;
     bool m_spreadPistol;
+    
+    Sound m_overworldSong;
     
     // Game variables
     int m_runSpeedLevel;
