@@ -166,7 +166,7 @@ public:
     static constexpr int OPTION_QUIT = 1;
 
     // Wave constants
-    static constexpr int WAVE_DURATION = 80000;
+    static constexpr int WAVE_DURATION = 3000;
     static constexpr int BETWEEN_WAVE_DURATION = 5000;
 
     // Inner class definitions
@@ -464,7 +464,7 @@ private:
     std::vector<CowboyBullet> m_enemyBullets;
     std::vector<CowboyPowerup> m_powerups;
     std::vector<TemporaryAnimatedSprite> m_temporarySprites;
-    CowboyPowerup* m_heldItem;
+    std::unique_ptr<CowboyPowerup> m_heldItem; // Changed from raw pointer to unique_ptr
     std::unordered_map<Rectangle, int, std::hash<Rectangle>> m_storeItems;
     
     // Data structures needed for game state
