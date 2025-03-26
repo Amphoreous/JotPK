@@ -1250,19 +1250,24 @@ bool PrairieKing::GetPowerUp(CowboyPowerup c)
         break;
     default:
     {
-        if (m_heldItem == nullptr)
+        if (!m_heldItem)
         {
-            m_heldItem = new CowboyPowerup(c);
+            m_heldItem = std::make_unique<CowboyPowerup>(c);
             PlaySound(GetSound("cowboy_powerup"));
         }
         else
         {
-            CowboyPowerup *tmp = m_heldItem;
-            m_heldItem = new CowboyPowerup(c);
+            // Store current held item
+            CowboyPowerup oldItem = *m_heldItem;
+            
+            // Replace with new item
+            m_heldItem = std::make_unique<CowboyPowerup>(c);
+            
+            // Place old item where new item was picked up
             m_noPickUpBox = {c.position.x, c.position.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
-            tmp->position = c.position;
-            m_powerups.push_back(*tmp);
-            delete tmp;
+            oldItem.position = c.position;
+            m_powerups.push_back(oldItem);
+            
             PlaySound(GetSound("cowboy_powerup"));
             return true;
         }
@@ -1458,9 +1463,10 @@ void PrairieKing::UsePowerup(int which)
     case POWERUP_SPREAD:
     case POWERUP_RAPIDFIRE:
     case POWERUP_SHOTGUN:
+    case POWERUP_SPEED:
         m_shotTimer = 0;
         PlaySound(GetSound("cowboy_gunload"));
-        m_activePowerups[which] = POWERUP_DURATION + 2000;
+        m_activePowerups[which] = POWERUP_DURATION;
         break;
 
     case COIN1:
@@ -1922,8 +1928,7 @@ void PrairieKing::ProcessInputs()
     if (IsKeyPressed(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr && m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
     {
         UsePowerup(m_heldItem->which);
-        delete m_heldItem;
-        m_heldItem = nullptr;
+        m_heldItem.reset(); // Replace delete m_heldItem with reset() for unique_ptr
     }
 
     if (IsKeyPressed(GameKeys::Exit))
@@ -1944,181 +1949,97 @@ float PrairieKing::GetRandomFloat(float min, float max)
 
 void PrairieKing::SpawnBullets(const std::vector<int> &directions, Vector2 spawn)
 {
-    if (directions.size() == 1)
-    {
-        int playerShootingDirection = directions[0];
+    if (directions.empty()) {
+        return;
+    }
 
-        // Calculate bullet damage
-        int damage = m_bulletDamage;
+    int playerShootingDirection = directions[0];
+    
+    // Calculate bullet starting position
+    Vector2 bulletSpawn = {
+        spawn.x + static_cast<float>(GetTileSize()) / 2.0f,
+        spawn.y + static_cast<float>(GetTileSize()) / 2.0f
+    };
 
-        switch (playerShootingDirection)
-        {
-        case 0: // Up
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() / 2, spawn.y + GetTileSize() / 4},
-                0,
-                damage));
-            break;
-        case 1: // Right
-            // Continue the SpawnBullets method
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() / 2},
-                1,
-                damage));
-            break;
-        case 2: // Down
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() / 2, spawn.y + GetTileSize() * 3 / 4},
-                2,
-                damage));
-            break;
-        case 3: // Left
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() / 2},
-                3,
-                damage));
-            break;
-        }
+    // Determine bullet count based on powerups
+    int bulletCount = 1;
+    if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end()) {
+        bulletCount = 3;
+    }
 
-        // If shotgun is active, add spread bullets
-        if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end() || m_spreadPistol)
-        {
-            switch (playerShootingDirection)
-            {
+    if (directions.size() == 1) {
+        // Single direction
+        for (int i = 0; i < bulletCount; i++) {
+            Vector2 bulletMotion = {0, 0};
+            
+            switch (playerShootingDirection) {
             case 0: // Up
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 2, spawn.y + GetTileSize() / 4},
-                    {-1, -8},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 2, spawn.y + GetTileSize() / 4},
-                    {1, -8},
-                    damage));
+                bulletMotion = {i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f), -BULLET_SPEED};
                 break;
             case 1: // Right
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() / 2},
-                    {8, -1},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() / 2},
-                    {8, 1},
-                    damage));
+                bulletMotion = {BULLET_SPEED, i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f)};
                 break;
             case 2: // Down
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 2, spawn.y + GetTileSize() * 3 / 4},
-                    {-1, 8},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 2, spawn.y + GetTileSize() * 3 / 4},
-                    {1, 8},
-                    damage));
+                bulletMotion = {i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f), BULLET_SPEED};
                 break;
             case 3: // Left
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() / 2},
-                    {-8, -1},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() / 2},
-                    {-8, 1},
-                    damage));
+                bulletMotion = {-BULLET_SPEED, i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f)};
                 break;
             }
-        }
-    }
-    else if (directions.size() > 1)
-    {
-        // Diagonal shots
-        int damage = m_bulletDamage;
-        float diagonalSpeed = BULLET_SPEED * 0.7071f; // Normalized diagonal speed
 
-        if (std::find(directions.begin(), directions.end(), 0) != directions.end() &&
-            std::find(directions.begin(), directions.end(), 1) != directions.end())
-        {
-            // Up-Right - use normalized diagonal speed
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() / 4},
-                {diagonalSpeed, -diagonalSpeed},
-                damage));
-
-            if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end() || m_spreadPistol)
-            {
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() / 4},
-                    {8, -4},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() / 4},
-                    {4, -8},
-                    damage));
+            // Only apply spread pattern if we have shotgun or multiple bullets
+            if (bulletCount == 1 || i == 0) {
+                m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
             }
-        }
-        else if (std::find(directions.begin(), directions.end(), 0) != directions.end() &&
-                 std::find(directions.begin(), directions.end(), 3) != directions.end())
-        {
-            // Up-Left
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() / 4},
-                {-6, -6},
-                damage));
-
-            if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end() || m_spreadPistol)
-            {
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() / 4},
-                    {-8, -4},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() / 4},
-                    {-4, -8},
-                    damage));
-            }
-        }
-        else if (std::find(directions.begin(), directions.end(), 2) != directions.end() &&
-                 std::find(directions.begin(), directions.end(), 1) != directions.end())
-        {
-            // Down-Right
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() * 3 / 4},
-                {6, 6},
-                damage));
-
-            if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end() || m_spreadPistol)
-            {
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() * 3 / 4},
-                    {8, 4},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() * 3 / 4, spawn.y + GetTileSize() * 3 / 4},
-                    {4, 8},
-                    damage));
-            }
-        }
-        else if (std::find(directions.begin(), directions.end(), 2) != directions.end() &&
-                 std::find(directions.begin(), directions.end(), 3) != directions.end())
-        {
-            // Down-Left
-            m_bullets.push_back(CowboyBullet(
-                {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() * 3 / 4},
-                {-6, 6},
-                damage));
-
-            if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end() || m_spreadPistol)
-            {
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() * 3 / 4},
-                    {-8, 4},
-                    damage));
-                m_bullets.push_back(CowboyBullet(
-                    {spawn.x + GetTileSize() / 4, spawn.y + GetTileSize() * 3 / 4},
-                    {-4, 8},
-                    damage));
+            else if (bulletCount > 1) {
+                m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
             }
         }
     }
+    else {
+        // Handle spread powerup for diagonal shooting
+        bool hasSpread = m_activePowerups.find(POWERUP_SPREAD) != m_activePowerups.end();
+        
+        for (int dir : directions) {
+            Vector2 bulletMotion = {0, 0};
+            
+            switch (dir) {
+            case 0: // Up
+                bulletMotion = {0, -BULLET_SPEED};
+                break;
+            case 1: // Right
+                bulletMotion = {BULLET_SPEED, 0};
+                break;
+            case 2: // Down
+                bulletMotion = {0, BULLET_SPEED};
+                break;
+            case 3: // Left
+                bulletMotion = {-BULLET_SPEED, 0};
+                break;
+            }
+            
+            m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
+            
+            // Add diagonal bullets for spread powerup
+            if (hasSpread && bulletCount > 1) {
+                // Add diagonal variants based on direction
+                if (dir == 0 || dir == 2) { // Up or Down
+                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
+                        {bulletMotion.x - 2.0f, bulletMotion.y}, m_bulletDamage));
+                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
+                        {bulletMotion.x + 2.0f, bulletMotion.y}, m_bulletDamage));
+                } else { // Left or Right
+                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
+                        {bulletMotion.x, bulletMotion.y - 2.0f}, m_bulletDamage));
+                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
+                        {bulletMotion.x, bulletMotion.y + 2.0f}, m_bulletDamage));
+                }
+            }
+        }
+    }
+    
+    // Play gunshot sound
+    PlaySound(GetSound("Cowboy_gunshot"));
 }
 
 bool PrairieKing::IsSpawnQueueEmpty()
@@ -2183,7 +2104,8 @@ bool PrairieKing::IsCollidingWithMapForMonsters(Rectangle positionToCheck)
             }
             else
             {
-                return true; // Off the map is considered collision
+                // Off-map is considered a collision
+                return true;
             }
         }
     }
@@ -2210,7 +2132,8 @@ bool PrairieKing::IsCollidingWithMap(Rectangle positionToCheck)
             }
             else
             {
-                return true; // Off the map is considered collision
+                // Off-map is considered a collision
+                return true;
             }
         }
     }
@@ -2824,25 +2747,25 @@ void PrairieKing::Update(float deltaTime)
         // Handle scrolling map
         if (m_scrollingMap)
         {
-            // Calculate smooth scrolling speed (matching the original game's TileSize / 8)
-            float scrollSpeed = GetTileSize() / 8.0f;
+            // Decrease new map position at consistent rate (move map up)
+            m_newMapPosition -= GetTileSize() / 8;
             
-            // Decrease new map position
-            m_newMapPosition -= static_cast<int>(deltaTime * 1000.0f * 0.2f);
+            // Move player position DOWN slightly but not too much (like in original game)
+            m_playerPosition.y -= GetTileSize() / 8;
+            m_playerPosition.y += 3.0f;
             
-            // Move player down with the scrolling map
-            m_playerPosition.y += scrollSpeed * 0.25f;
+            // Update player bounding box with new position
+            m_playerBoundingBox.x = m_playerPosition.x + GetTileSize() / 4;
+            m_playerBoundingBox.y = m_playerPosition.y + GetTileSize() / 4;
+            m_playerBoundingBox.width = GetTileSize() / 2;
+            m_playerBoundingBox.height = GetTileSize() / 2;
             
-            // Update player's bounding box
-            m_playerBoundingBox = {
-                m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
-                m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
-                static_cast<float>(GetTileSize()) / 2.0f,
-                static_cast<float>(GetTileSize()) / 2.0f
-            };
+            // Keep player walking down during scrolling
+            if (m_playerMovementDirections.empty()) {
+                m_playerMovementDirections.push_back(2); // Down direction
+            }
             
-            // Ensure player is animated during scrolling
-            m_playerMovementDirections = {2}; // Down direction
+            // Update animation timer
             m_playerMotionAnimationTimer += deltaTime * 1000.0f;
             m_playerMotionAnimationTimer = fmodf(m_playerMotionAnimationTimer, 400.0f);
             
@@ -2850,10 +2773,14 @@ void PrairieKing::Update(float deltaTime)
             if (m_newMapPosition <= 0)
             {
                 m_scrollingMap = false;
-                m_newMapPosition = 0;
+                // Update current map to next map (happens automatically in Draw)
+                m_newMapPosition = 16 * GetTileSize();
+                m_shopping = false;
+                m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+                m_waitingForPlayerToMoveDownAMap = false;
                 m_playerMovementDirections.clear();
                 
-                // Only after scrolling is complete, load monsters and start the wave
+                // Apply level-specific states after scrolling completes
                 ApplyLevelSpecificStates();
             }
         }
@@ -2878,7 +2805,11 @@ void PrairieKing::Update(float deltaTime)
                 // then start the first wave
                 if (m_betweenWaveTimer <= 0 && m_whichWave == 0)
                 {
-                    StartNewWave();
+                    m_whichWave = 0; // Keep it at 0 for the first playable level
+                    m_waveTimer = WAVE_DURATION; // Reset the wave timer for level 0
+                    
+                    // Don't immediately go to the next level
+                    m_waitingForPlayerToMoveDownAMap = false;
                 }
             }
             
@@ -3232,12 +3163,11 @@ void PrairieKing::Draw()
     }
     else
     {
-        // Draw the game map
+        // Draw the current game map
         for (int x = 0; x < MAP_WIDTH; x++)
         {
             for (int y = 0; y < MAP_HEIGHT; y++)
             {
-                // Check if this is causing the white line issue
                 DrawTexturePro(
                     GetTexture("cursors"),
                     Rectangle{464.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
@@ -3254,16 +3184,20 @@ void PrairieKing::Draw()
             }
         }
 
-        // Draw scrolling map if needed
+        // Draw scrolling map if needed - now drawing both maps for proper scrolling effect
         if (m_scrollingMap)
         {
+            // Draw next map coming in from below
+            int nextMap[MAP_WIDTH][MAP_HEIGHT];
+            GetMap(m_whichWave, nextMap);
+            
             for (int x = 0; x < MAP_WIDTH; x++)
             {
                 for (int y = 0; y < MAP_HEIGHT; y++)
                 {
                     DrawTexturePro(
                         GetTexture("cursors"),
-                        Rectangle{464.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                        Rectangle{464.0f + 16.0f * nextMap[x][y] + ((nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
                                   1680.0f - m_world * 16.0f,
                                   16.0f,
                                   16.0f},
@@ -3276,6 +3210,21 @@ void PrairieKing::Draw()
                         WHITE);
                 }
             }
+            
+            // Draw black borders above and below the visible map area
+            DrawRectangle(
+                static_cast<int>(m_topLeftScreenCoordinate.x), 
+                -1, 
+                16 * GetTileSize(), 
+                static_cast<int>(m_topLeftScreenCoordinate.y), 
+                BLACK);
+                
+            DrawRectangle(
+                static_cast<int>(m_topLeftScreenCoordinate.x), 
+                static_cast<int>(m_topLeftScreenCoordinate.y + 16 * GetTileSize()), 
+                16 * GetTileSize(), 
+                static_cast<int>(m_topLeftScreenCoordinate.y + 2), 
+                BLACK);
         }
 
         // Draw control instructions at beginning of game
