@@ -12,7 +12,7 @@ on:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       # required for all workflows
       security-events: write
@@ -38,14 +38,15 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
+    - name: Install Visual Studio Build Tools
+      uses: microsoft/setup-msbuild@v1.1
+
     - name: Build project
       run: |
-        sudo apt-get update
-        sudo apt-get install -y premake4 make gcc g++ libx11-dev libxrandr-dev libxi-dev libxxf86vm-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev libncurses5-dev libssl-dev libxcursor-dev libxinerama-dev
         cd build
-        ./premake5 gmake2
+        premake5 vs2022
         cd ..
-        make config=release_x64
+        msbuild build/JotPK.sln /p:Configuration=Release /p:Platform=x64
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
