@@ -2773,15 +2773,51 @@ void PrairieKing::Update(float deltaTime)
             if (m_newMapPosition <= 0)
             {
                 m_scrollingMap = false;
-                // Update current map to next map (happens automatically in Draw)
+                // Copy next map to current map
+                memcpy(m_map, m_nextMap, sizeof(m_map));
                 m_newMapPosition = 16 * GetTileSize();
                 m_shopping = false;
                 m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
                 m_waitingForPlayerToMoveDownAMap = false;
                 m_playerMovementDirections.clear();
                 
+                // Reset animation timers
+                m_playerMotionAnimationTimer = 0.0f;
+                m_playerFootstepSoundTimer = 200.0f;
+                
+                // Clear any projectiles that went off screen
+                m_bullets.erase(
+                    std::remove_if(m_bullets.begin(), m_bullets.end(),
+                        [this](const CowboyBullet& bullet) {
+                            return bullet.position.y > 16.0f * GetTileSize();
+                        }), 
+                    m_bullets.end()
+                );
+                
                 // Apply level-specific states after scrolling completes
                 ApplyLevelSpecificStates();
+            }
+            else 
+            {
+                // During scrolling, adjust collision checks for monsters and powerups
+                for (auto& monster : m_monsters)
+                {
+                    monster->position.y -= GetTileSize() / 8;
+                }
+                
+                for (auto& powerup : m_powerups)
+                {
+                    powerup.position.y -= GetTileSize() / 8;
+                }
+                
+                // Update bullet positions during scroll
+                for (auto& bullet : m_bullets)
+                {
+                    if (bullet.position.y > 16.0f * GetTileSize())
+                    {
+                        bullet.position.y -= GetTileSize() / 8;
+                    }
+                }
             }
         }
         else
@@ -2978,7 +3014,8 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             m_merchantShopOpen = false;
             m_merchantBox.y = -GetTileSize();
             m_scrollingMap = true;
-            GetMap(m_whichWave, m_map);
+            // Generate next map once when starting scroll
+            GetMap(m_whichWave, m_nextMap);
             m_newMapPosition = 16 * GetTileSize();
             m_temporarySprites.clear();
             m_powerups.clear();
@@ -3175,7 +3212,7 @@ void PrairieKing::Draw()
                               16.0f,
                               16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                              m_topLeftScreenCoordinate.y + y * GetTileSize(),
+                              m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0),
                               static_cast<float>(GetTileSize()),
                               static_cast<float>(GetTileSize())},
                     Vector2{0, 0},
@@ -3187,17 +3224,14 @@ void PrairieKing::Draw()
         // Draw scrolling map if needed - now drawing both maps for proper scrolling effect
         if (m_scrollingMap)
         {
-            // Draw next map coming in from below
-            int nextMap[MAP_WIDTH][MAP_HEIGHT];
-            GetMap(m_whichWave, nextMap);
-            
+            // Draw next map coming in from below - using the buffered next map
             for (int x = 0; x < MAP_WIDTH; x++)
             {
                 for (int y = 0; y < MAP_HEIGHT; y++)
                 {
                     DrawTexturePro(
                         GetTexture("cursors"),
-                        Rectangle{464.0f + 16.0f * nextMap[x][y] + ((nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                        Rectangle{464.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
                                   1680.0f - m_world * 16.0f,
                                   16.0f,
                                   16.0f},

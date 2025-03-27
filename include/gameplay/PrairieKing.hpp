@@ -471,6 +471,7 @@ private:
     std::vector<std::vector<int>> m_spawnQueue;
     std::vector<Vector2> m_monsterChances;
     int m_map[MAP_WIDTH][MAP_HEIGHT];
+    int m_nextMap[MAP_WIDTH][MAP_HEIGHT]; // Add buffer for next map
     std::unordered_map<int, int> m_activePowerups;
 
     // Input handling
