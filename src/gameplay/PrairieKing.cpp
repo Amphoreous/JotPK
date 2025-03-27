@@ -1137,10 +1137,11 @@ void PrairieKing::Initialize()
     // Initialize player position
     m_playerPosition = {384.0f, 384.0f};
     m_playerBoundingBox = {
-        m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
-        m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
-        static_cast<float>(GetTileSize()) / 2.0f,
-        static_cast<float>(GetTileSize()) / 2.0f};
+        m_playerPosition.x,                          // Sin offset en X
+        m_playerPosition.y - GetTileSize() / 4.0f,   // Offset negativo en Y para incluir la gorra
+        static_cast<float>(GetTileSize()),           // Ancho completo del tile
+        static_cast<float>(GetTileSize() * 1.25f)    // Alto aumentado para incluir pies y gorra
+    };
 
     // Initialize spawn queues
     for (int i = 0; i < 4; i++)
@@ -1587,8 +1588,7 @@ void PrairieKing::EndOfGopherAnimationBehavior(int extraInfo)
         0.0f, 3.0f, false,
         static_cast<float>(m_gopherBox.y) / 10000.0f, WHITE));
 
-    m_temporarySprites.back().endFunction = [this](int extraInfo)
-    { EndOfGopherAnimationBehavior2(extraInfo); };
+    m_temporarySprites.back().endFunction = [this](int extraInfo) { EndOfGopherAnimationBehavior2(extraInfo); };
     PlaySound(GetSound("cowboy_gopher"));
 }
 
@@ -1764,8 +1764,12 @@ void PrairieKing::PlayerDie()
     else
     {
         m_playerPosition = {static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())};
-        m_playerBoundingBox.x = static_cast<int>(m_playerPosition.x) + GetTileSize() / 4;
-        m_playerBoundingBox.y = static_cast<int>(m_playerPosition.y) + GetTileSize() / 4;
+        m_playerBoundingBox = {
+            m_playerPosition.x,                          // Sin offset en X
+            m_playerPosition.y - GetTileSize() / 4.0f,   // Offset negativo en Y para incluir la gorra
+            static_cast<float>(GetTileSize()),           // Ancho completo del tile
+            static_cast<float>(GetTileSize() * 1.25f)    // Alto aumentado para incluir pies y gorra
+        };
         PlaySound(GetSound("cowboy_dead"));
     }
 
@@ -1818,88 +1822,63 @@ void PrairieKing::StartNewRound()
 
 void PrairieKing::ProcessInputs()
 {
+    // Clear previous movement and shooting directions
+    m_playerMovementDirections.clear();
+    m_playerShootingDirections.clear();
+
+    // Process movement inputs
     if (IsKeyDown(GameKeys::MoveUp))
     {
-        if (IsKeyPressed(GameKeys::MoveUp) && m_gameOver)
+        if (m_gameOver && IsKeyPressed(GameKeys::MoveUp))
         {
             m_gameOverOption = std::max(0, m_gameOverOption - 1);
-            PlaySound(PrairieKing::GetSoundStatic("Cowboy_gunshot"));
+            PlaySound(GetSoundStatic("Cowboy_gunshot"));
         }
         AddPlayerMovementDirection(0);
-    }
-    else if (std::find(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 0) != m_playerMovementDirections.end())
-    {
-        m_playerMovementDirections.erase(std::remove(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 0), m_playerMovementDirections.end());
     }
 
     if (IsKeyDown(GameKeys::MoveDown))
     {
-        if (IsKeyPressed(GameKeys::MoveDown) && m_gameOver)
+        if (m_gameOver && IsKeyPressed(GameKeys::MoveDown))
         {
             m_gameOverOption = std::min(1, m_gameOverOption + 1);
-            PlaySound(PrairieKing::GetSoundStatic("Cowboy_gunshot"));
+            PlaySound(GetSoundStatic("Cowboy_gunshot"));
         }
         AddPlayerMovementDirection(2);
-    }
-    else if (std::find(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 2) != m_playerMovementDirections.end())
-    {
-        m_playerMovementDirections.erase(std::remove(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 2), m_playerMovementDirections.end());
     }
 
     if (IsKeyDown(GameKeys::MoveLeft))
     {
         AddPlayerMovementDirection(3);
     }
-    else if (std::find(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 3) != m_playerMovementDirections.end())
-    {
-        m_playerMovementDirections.erase(std::remove(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 3), m_playerMovementDirections.end());
-    }
 
     if (IsKeyDown(GameKeys::MoveRight))
     {
         AddPlayerMovementDirection(1);
     }
-    else if (std::find(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 1) != m_playerMovementDirections.end())
-    {
-        m_playerMovementDirections.erase(std::remove(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), 1), m_playerMovementDirections.end());
-    }
 
+    // Process shooting inputs
     if (IsKeyDown(GameKeys::ShootUp))
     {
         AddPlayerShootingDirection(0);
-    }
-    else if (std::find(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 0) != m_playerShootingDirections.end())
-    {
-        m_playerShootingDirections.erase(std::remove(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 0), m_playerShootingDirections.end());
     }
 
     if (IsKeyDown(GameKeys::ShootDown))
     {
         AddPlayerShootingDirection(2);
     }
-    else if (std::find(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 2) != m_playerShootingDirections.end())
-    {
-        m_playerShootingDirections.erase(std::remove(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 2), m_playerShootingDirections.end());
-    }
 
     if (IsKeyDown(GameKeys::ShootLeft))
     {
         AddPlayerShootingDirection(3);
-    }
-    else if (std::find(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 3) != m_playerShootingDirections.end())
-    {
-        m_playerShootingDirections.erase(std::remove(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 3), m_playerShootingDirections.end());
     }
 
     if (IsKeyDown(GameKeys::ShootRight))
     {
         AddPlayerShootingDirection(1);
     }
-    else if (std::find(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 1) != m_playerShootingDirections.end())
-    {
-        m_playerShootingDirections.erase(std::remove(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), 1), m_playerShootingDirections.end());
-    }
 
+    // Process other inputs
     if (IsKeyPressed(GameKeys::SelectOption) && m_gameOver)
     {
         if (m_gameOverOption == 1)
@@ -1918,7 +1897,7 @@ void PrairieKing::ProcessInputs()
     if (IsKeyPressed(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr && m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
     {
         UsePowerup(m_heldItem->which);
-        m_heldItem.reset(); // Replace delete m_heldItem with reset() for unique_ptr
+        m_heldItem.reset();
     }
 
     if (IsKeyPressed(GameKeys::Exit))
@@ -1937,14 +1916,12 @@ float PrairieKing::GetRandomFloat(float min, float max)
     return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (max - min)));
 }
 
-void PrairieKing::SpawnBullets(const std::vector<int> &directions, Vector2 spawn)
+void PrairieKing::SpawnBullets(const std::vector<int>& directions, Vector2 spawn)
 {
     if (directions.empty()) {
         return;
     }
 
-    int playerShootingDirection = directions[0];
-    
     // Calculate bullet starting position
     Vector2 bulletSpawn = {
         spawn.x + static_cast<float>(GetTileSize()) / 2.0f,
@@ -1957,77 +1934,93 @@ void PrairieKing::SpawnBullets(const std::vector<int> &directions, Vector2 spawn
         bulletCount = 3;
     }
 
-    if (directions.size() == 1) {
-        // Single direction
-        for (int i = 0; i < bulletCount; i++) {
-            Vector2 bulletMotion = {0, 0};
-            
-            switch (playerShootingDirection) {
-            case 0: // Up
-                bulletMotion = {i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f), -BULLET_SPEED};
-                break;
-            case 1: // Right
-                bulletMotion = {BULLET_SPEED, i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f)};
-                break;
-            case 2: // Down
-                bulletMotion = {i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f), BULLET_SPEED};
-                break;
-            case 3: // Left
-                bulletMotion = {-BULLET_SPEED, i == 0 ? 0.0f : (i == 1 ? -2.0f : 2.0f)};
-                break;
-            }
-
-            // Only apply spread pattern if we have shotgun or multiple bullets
-            if (bulletCount == 1 || i == 0) {
-                m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
-            }
-            else if (bulletCount > 1) {
-                m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
-            }
-        }
-    }
-    else {
-        // Handle spread powerup for diagonal shooting
-        bool hasSpread = m_activePowerups.find(POWERUP_SPREAD) != m_activePowerups.end();
+    // Handle diagonal shots
+    if (directions.size() > 1) {
+        // Calculate diagonal motion
+        Vector2 diagonalMotion = {0, 0};
         
+        // Combine the two directions for diagonal movement
         for (int dir : directions) {
-            Vector2 bulletMotion = {0, 0};
-            
             switch (dir) {
-            case 0: // Up
-                bulletMotion = {0, -BULLET_SPEED};
-                break;
-            case 1: // Right
-                bulletMotion = {BULLET_SPEED, 0};
-                break;
-            case 2: // Down
-                bulletMotion = {0, BULLET_SPEED};
-                break;
-            case 3: // Left
-                bulletMotion = {-BULLET_SPEED, 0};
-                break;
-            }
-            
-            m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
-            
-            // Add diagonal bullets for spread powerup
-            if (hasSpread && bulletCount > 1) {
-                // Add diagonal variants based on direction
-                if (dir == 0 || dir == 2) { // Up or Down
-                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
-                        {bulletMotion.x - 2.0f, bulletMotion.y}, m_bulletDamage));
-                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
-                        {bulletMotion.x + 2.0f, bulletMotion.y}, m_bulletDamage));
-                } else { // Left or Right
-                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
-                        {bulletMotion.x, bulletMotion.y - 2.0f}, m_bulletDamage));
-                    m_bullets.push_back(CowboyBullet(bulletSpawn, 
-                        {bulletMotion.x, bulletMotion.y + 2.0f}, m_bulletDamage));
-                }
+                case 0: // Up
+                    diagonalMotion.y -= BULLET_SPEED;
+                    break;
+                case 1: // Right
+                    diagonalMotion.x += BULLET_SPEED;
+                    break;
+                case 2: // Down
+                    diagonalMotion.y += BULLET_SPEED;
+                    break;
+                case 3: // Left
+                    diagonalMotion.x -= BULLET_SPEED;
+                    break;
             }
         }
+
+        // Normalize diagonal motion to maintain consistent speed
+        float length = sqrtf(diagonalMotion.x * diagonalMotion.x + diagonalMotion.y * diagonalMotion.y);
+        if (length > 0) {
+            diagonalMotion.x = (diagonalMotion.x / length) * BULLET_SPEED;
+            diagonalMotion.y = (diagonalMotion.y / length) * BULLET_SPEED;
+        }
+
+        // Spawn diagonal bullets
+        if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end()) {
+            // Shotgun spread pattern for diagonal shots
+            float spreadAngle = 0.2f; // Spread angle in radians
+            float baseAngle = atan2f(diagonalMotion.y, diagonalMotion.x);
+            
+            for (int i = 0; i < bulletCount; i++) {
+                float angle = baseAngle;
+                if (i == 1) angle += spreadAngle;
+                if (i == 2) angle -= spreadAngle;
+                
+                Vector2 spreadMotion = {
+                    cosf(angle) * BULLET_SPEED,
+                    sinf(angle) * BULLET_SPEED
+                };
+                
+                m_bullets.push_back(CowboyBullet(bulletSpawn, spreadMotion, m_bulletDamage));
+            }
+        } else {
+            // Single diagonal bullet
+            m_bullets.push_back(CowboyBullet(bulletSpawn, diagonalMotion, m_bulletDamage));
+        }
     }
-    
+    // Handle single direction shots
+    else {
+        Vector2 bulletMotion = {0, 0};
+        switch (directions[0]) {
+            case 0: // Up
+                bulletMotion.y = -BULLET_SPEED;
+                break;
+            case 1: // Right
+                bulletMotion.x = BULLET_SPEED;
+                break;
+            case 2: // Down
+                bulletMotion.y = BULLET_SPEED;
+                break;
+            case 3: // Left
+                bulletMotion.x = -BULLET_SPEED;
+                break;
+        }
+
+        // Handle shotgun spread for single direction
+        if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end()) {
+            for (int i = 0; i < bulletCount; i++) {
+                Vector2 spreadMotion = bulletMotion;
+                if (bulletMotion.x == 0) { // Vertical shot
+                    spreadMotion.x = (i == 0) ? 0.0f : (i == 1 ? -2.0f : 2.0f);
+                } else { // Horizontal shot
+                    spreadMotion.y = (i == 0) ? 0.0f : (i == 1 ? -2.0f : 2.0f);
+                }
+                m_bullets.push_back(CowboyBullet(bulletSpawn, spreadMotion, m_bulletDamage));
+            }
+        } else {
+            m_bullets.push_back(CowboyBullet(bulletSpawn, bulletMotion, m_bulletDamage));
+        }
+    }
+
     // Play gunshot sound
     PlaySound(GetSound("Cowboy_gunshot"));
 }
@@ -2144,15 +2137,14 @@ bool PrairieKing::IsCollidingWithMap(Vector2 position)
 
 void PrairieKing::AddPlayerMovementDirection(int direction)
 {
-    if (!m_gopherTrain && std::find(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), direction) == m_playerMovementDirections.end())
+    if (!m_gopherTrain)
     {
-        if (m_playerMovementDirections.size() == 1 && direction == (m_playerMovementDirections[0] + 2) % 4)
+        // Buscar si la dirección ya existe
+        auto it = std::find(m_playerMovementDirections.begin(), m_playerMovementDirections.end(), direction);
+        
+        if (it == m_playerMovementDirections.end())
         {
-            // If trying to move in the opposite direction, replace the current direction
-            m_playerMovementDirections[0] = direction;
-        }
-        else if (m_playerMovementDirections.size() < 2)
-        {
+            // Si la dirección no existe, agregarla
             m_playerMovementDirections.push_back(direction);
         }
     }
@@ -2160,17 +2152,13 @@ void PrairieKing::AddPlayerMovementDirection(int direction)
 
 void PrairieKing::AddPlayerShootingDirection(int direction)
 {
-    if (std::find(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), direction) == m_playerShootingDirections.end())
+    // Buscar si la dirección ya existe
+    auto it = std::find(m_playerShootingDirections.begin(), m_playerShootingDirections.end(), direction);
+    
+    if (it == m_playerShootingDirections.end())
     {
-        if (m_playerShootingDirections.size() == 1 && direction == (m_playerShootingDirections[0] + 2) % 4)
-        {
-            // If trying to shoot in the opposite direction, replace the current direction
-            m_playerShootingDirections[0] = direction;
-        }
-        else if (m_playerShootingDirections.size() < 2)
-        {
-            m_playerShootingDirections.push_back(direction);
-        }
+        // Si la dirección no existe, agregarla
+        m_playerShootingDirections.push_back(direction);
     }
 }
 
@@ -2607,19 +2595,35 @@ std::vector<Vector2> PrairieKing::GetBorderPoints(const Rectangle &rect)
     return points;
 }
 
-bool PrairieKing::IsKeyPressed(GameKeys key)
-{
-    // Only return true if the key was just pressed this frame
-    if (IsKeyDown(key) && m_buttonHeldFrames[key] == 1)
-    {
-        return true;
-    }
-    return false;
-}
-
 bool PrairieKing::IsKeyDown(GameKeys key)
 {
+    // Una tecla está "down" mientras se mantenga presionada
     return m_buttonHeldState.find(key) != m_buttonHeldState.end();
+}
+
+bool PrairieKing::IsKeyPressed(GameKeys key)
+{
+    // Una tecla está "pressed" solo en el primer frame que se mantiene presionada
+    return m_buttonHeldFrames[key] == 1;
+}
+
+void PrairieKing::SetButtonState(GameKeys key, bool pressed)
+{
+    if (pressed)
+    {
+        // Si la tecla no estaba presionada antes, inicializar el contador de frames
+        if (m_buttonHeldState.find(key) == m_buttonHeldState.end())
+        {
+            m_buttonHeldState.insert(key);
+            m_buttonHeldFrames[key] = 1;
+        }
+    }
+    else
+    {
+        // Si la tecla se suelta, eliminarla del estado y resetear el contador
+        m_buttonHeldState.erase(key);
+        m_buttonHeldFrames[key] = 0;
+    }
 }
 
 bool PrairieKing::IsKeyReleased(GameKeys key)
@@ -2629,34 +2633,154 @@ bool PrairieKing::IsKeyReleased(GameKeys key)
 
 void PrairieKing::Update(float deltaTime)
 {
-    // Update input state
-    for (int i = 0; i < static_cast<int>(GameKeys::MAX); i++)
+    // Actualizar el estado de las teclas presionadas
+    for (const auto& key : m_buttonHeldState)
     {
-        GameKeys key = static_cast<GameKeys>(i);
-        if (IsKeyDown(key))
-        {
-            m_buttonHeldFrames[key]++;
-        }
-        else
-        {
-            m_buttonHeldFrames[key] = 0;
-        }
+        m_buttonHeldFrames[key]++;
     }
 
-    // Update cactus dance timer
+    // Actualizar el timer de baile de cactus
     m_cactusDanceTimer += deltaTime * 1000.0f;
     if (m_cactusDanceTimer >= CACTUS_DANCE_DELAY * 2)
     {
         m_cactusDanceTimer = 0.0f;
     }
 
-    // Process player inputs first
+    // Procesar entradas del jugador primero
     ProcessInputs();
 
     if (m_quit)
         return;
 
-    // Update timers
+    // Verificar game over
+    if (m_gameOver)
+    {
+        m_startTimer = 0;
+        return;
+    }
+
+    // Manejar menú de inicio
+    if (m_onStartMenu)
+    {
+        if (m_startTimer > 0)
+        {
+            m_startTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (m_startTimer <= 0)
+            {
+                m_shotTimer = 100;
+                m_onStartMenu = false;
+            }
+        }
+        else
+        {
+            PlaySound(GetSound("Pickup_Coin15"));
+            m_startTimer = 1500;
+        }
+        return;
+    }
+
+    // Manejar reinicio del juego
+    if (m_gameRestartTimer > 0)
+    {
+        m_gameRestartTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (m_gameRestartTimer <= 0)
+        {
+            // Reiniciar el juego
+            if (m_whichRound == 0 || !m_endCutscene)
+            {
+                Reset();
+            }
+            else
+            {
+                // Mantener progreso para New Game Plus
+                int savedCoins = m_coins;
+                int savedAmmoLevel = m_ammoLevel;
+                int savedBulletDamage = m_bulletDamage;
+                int savedFireSpeedLevel = m_fireSpeedLevel;
+                int savedRunSpeedLevel = m_runSpeedLevel;
+                int savedLives = m_lives;
+                bool savedSpreadPistol = m_spreadPistol;
+                int savedWhichRound = m_whichRound;
+                
+                Reset();
+                
+                m_coins = savedCoins;
+                m_ammoLevel = savedAmmoLevel;
+                m_bulletDamage = savedBulletDamage;
+                m_fireSpeedLevel = savedFireSpeedLevel;
+                m_runSpeedLevel = savedRunSpeedLevel;
+                m_lives = savedLives;
+                m_spreadPistol = savedSpreadPistol;
+                m_whichRound = savedWhichRound;
+            }
+        }
+        return;
+    }
+
+    // Manejar fade out
+    if (m_fadeThenQuitTimer > 0)
+    {
+        m_fadeThenQuitTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (m_fadeThenQuitTimer <= 0)
+        {
+            m_quit = true;
+            return;
+        }
+    }
+
+    // Manejar escena final
+    if (m_endCutscene)
+    {
+        m_endCutsceneTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (m_endCutsceneTimer < 0)
+        {
+            m_endCutscenePhase++;
+            if (m_endCutscenePhase > 5)
+            {
+                m_endCutscenePhase = 5;
+            }
+
+            switch (m_endCutscenePhase)
+            {
+                case 1:
+                    m_endCutsceneTimer = 15500;
+                    PlaySound(GetSound("Cowboy_singing"));
+                    GetMap(-1, m_map);
+                    break;
+
+                case 2:
+                    m_playerPosition = {0.0f, 8.0f * GetTileSize()};
+                    m_endCutsceneTimer = 12000;
+                    break;
+
+                case 3:
+                    m_endCutsceneTimer = 5000;
+                    break;
+
+                case 4:
+                    m_endCutsceneTimer = 1000;
+                    break;
+
+                case 5:
+                    if (m_gameRestartTimer <= 0)
+                    {
+                        StartNewRound();
+                    }
+                    break;
+            }
+        }
+
+        // Mover al jugador durante la escena final
+        if (m_endCutscenePhase == 2 && m_playerPosition.x < 9.0f * GetTileSize())
+        {
+            m_playerPosition.x += 1.0f;
+            m_playerMotionAnimationTimer += deltaTime * 1000.0f;
+            m_playerMotionAnimationTimer = fmodf(m_playerMotionAnimationTimer, 400.0f);
+        }
+        return;
+    }
+
+    // Manejar pausa de movimiento
     if (m_motionPause > 0)
     {
         m_motionPause -= static_cast<int>(deltaTime * 1000.0f);
@@ -2668,6 +2792,7 @@ void PrairieKing::Update(float deltaTime)
         return;
     }
 
+    // Actualizar timers de powerups
     if (m_playerInvincibleTimer > 0)
     {
         m_playerInvincibleTimer -= static_cast<int>(deltaTime * 1000.0f);
@@ -2689,7 +2814,7 @@ void PrairieKing::Update(float deltaTime)
         m_screenFlash -= static_cast<int>(deltaTime * 1000.0f);
     }
 
-    // Update powerups durations
+    // Actualizar duración de powerups activos
     for (auto it = m_activePowerups.begin(); it != m_activePowerups.end();)
     {
         it->second -= static_cast<int>(deltaTime * 1000.0f);
@@ -2703,7 +2828,7 @@ void PrairieKing::Update(float deltaTime)
         }
     }
 
-    // Update powerups
+    // Actualizar powerups en el suelo
     for (int i = m_powerups.size() - 1; i >= 0; i--)
     {
         m_powerups[i].duration -= static_cast<int>(deltaTime * 1000.0f);
@@ -2713,19 +2838,19 @@ void PrairieKing::Update(float deltaTime)
         }
     }
 
-    // Update game state
+    // Actualizar estado del juego
     if (!m_gameOver && !m_onStartMenu)
     {
-        // Update bullets
+        // Actualizar balas
         UpdateBullets(deltaTime);
 
-        // Update monsters
+        // Actualizar monstruos
         for (auto monster : m_monsters)
         {
             monster->Move(m_playerPosition, deltaTime);
         }
 
-        // Update temporary sprites
+        // Actualizar sprites temporales
         for (int i = m_temporarySprites.size() - 1; i >= 0; i--)
         {
             if (m_temporarySprites[i].Update(deltaTime))
@@ -2734,36 +2859,35 @@ void PrairieKing::Update(float deltaTime)
             }
         }
 
-        // Handle scrolling map
+        // Manejar scroll del mapa
         if (m_scrollingMap)
         {
-            // Decrease new map position at consistent rate (move map up)
+            // Actualizar posición del nuevo mapa
             m_newMapPosition -= GetTileSize() / 8;
             
-            // Move player position DOWN slightly but not too much (like in original game)
+            // Mover jugador y actualizar su bounding box
             m_playerPosition.y -= GetTileSize() / 8;
             m_playerPosition.y += 3.0f;
             
-            // Update player bounding box with new position
             m_playerBoundingBox.x = m_playerPosition.x + GetTileSize() / 4;
             m_playerBoundingBox.y = m_playerPosition.y + GetTileSize() / 4;
             m_playerBoundingBox.width = GetTileSize() / 2;
             m_playerBoundingBox.height = GetTileSize() / 2;
             
-            // Keep player walking down during scrolling
-            if (m_playerMovementDirections.empty()) {
-                m_playerMovementDirections.push_back(2); // Down direction
+            // Mantener al jugador caminando hacia abajo durante el scroll
+            if (m_playerMovementDirections.empty())
+            {
+                m_playerMovementDirections.push_back(2);
             }
             
-            // Update animation timer
+            // Actualizar animación
             m_playerMotionAnimationTimer += deltaTime * 1000.0f;
             m_playerMotionAnimationTimer = fmodf(m_playerMotionAnimationTimer, 400.0f);
             
-            // When scrolling completes
+            // Cuando termina el scroll
             if (m_newMapPosition <= 0)
             {
                 m_scrollingMap = false;
-                // Copy next map to current map
                 memcpy(m_map, m_nextMap, sizeof(m_map));
                 m_newMapPosition = 16 * GetTileSize();
                 m_shopping = false;
@@ -2771,11 +2895,11 @@ void PrairieKing::Update(float deltaTime)
                 m_waitingForPlayerToMoveDownAMap = false;
                 m_playerMovementDirections.clear();
                 
-                // Reset animation timers
+                // Reiniciar timers de animación
                 m_playerMotionAnimationTimer = 0.0f;
                 m_playerFootstepSoundTimer = 200.0f;
                 
-                // Clear any projectiles that went off screen
+                // Limpiar balas que salieron de la pantalla
                 m_bullets.erase(
                     std::remove_if(m_bullets.begin(), m_bullets.end(),
                         [this](const CowboyBullet& bullet) {
@@ -2784,12 +2908,12 @@ void PrairieKing::Update(float deltaTime)
                     m_bullets.end()
                 );
                 
-                // Apply level-specific states after scrolling completes
+                // Aplicar estados específicos del nivel
                 ApplyLevelSpecificStates();
             }
             else 
             {
-                // During scrolling, adjust collision checks for monsters and powerups
+                // Durante el scroll, ajustar posiciones
                 for (auto& monster : m_monsters)
                 {
                     monster->position.y -= GetTileSize() / 8;
@@ -2800,7 +2924,6 @@ void PrairieKing::Update(float deltaTime)
                     powerup.position.y -= GetTileSize() / 8;
                 }
                 
-                // Update bullet positions during scroll
                 for (auto& bullet : m_bullets)
                 {
                     if (bullet.position.y > 16.0f * GetTileSize())
@@ -2812,7 +2935,7 @@ void PrairieKing::Update(float deltaTime)
         }
         else
         {
-            // Update wave timer only if not scrolling map
+            // Actualizar timer de ola solo si no estamos scrolleando
             if (m_waveTimer > 0)
             {
                 m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
@@ -2822,299 +2945,27 @@ void PrairieKing::Update(float deltaTime)
                 }
             }
 
-            // Update between wave timer
+            // Actualizar timer entre olas
             if (m_betweenWaveTimer > 0 && m_monsters.empty() && IsSpawnQueueEmpty() && !m_shopping && !m_waitingForPlayerToMoveDownAMap)
             {
                 m_betweenWaveTimer -= static_cast<int>(deltaTime * 1000.0f);
                 
-                // If the between wave timer has completed and we're at wave 0 (start of game)
-                // then start the first wave
+                // Si el timer entre olas ha terminado y estamos en la ola 0 (inicio del juego)
+                // entonces empezar la primera ola
                 if (m_betweenWaveTimer <= 0 && m_whichWave == 0)
                 {
-                    m_whichWave = 0; // Keep it at 0 for the first playable level
-                    m_waveTimer = WAVE_DURATION; // Reset the wave timer for level 0
+                    m_whichWave = 0; // Mantenerlo en 0 para el primer nivel jugable
+                    m_waveTimer = WAVE_DURATION; // Reiniciar el timer de ola para el nivel 0
                     
-                    // Don't immediately go to the next level
+                    // No ir inmediatamente al siguiente nivel
                     m_waitingForPlayerToMoveDownAMap = false;
                 }
             }
-            
-            // Play overworld music if needed, but only if not between waves at the start
-            if (m_waveTimer > 0 && 
-                m_betweenWaveTimer <= 0 && 
-                m_zombieModeTimer <= 0 && 
-                !m_shootoutLevel && 
-                m_overworldSong.frameCount == 0 || !IsSoundPlaying(m_overworldSong)) 
-            {
-                m_overworldSong = GetSound("Cowboy_OVERWORLD");
-                PlaySound(m_overworldSong);
-            }
         }
     }
 
-    // Update player movement and shooting
+    // Actualizar movimiento y disparo del jugador
     UpdatePlayer(deltaTime);
-}
-
-void PrairieKing::UpdatePlayer(float deltaTime)
-{
-    if (m_deathTimer > 0.0f)
-    {
-        m_deathTimer -= deltaTime * 1000.0f;
-        return;
-    }
-
-    // Collect powerups if player is over them
-    for (int i = m_powerups.size() - 1; i >= 0; i--)
-    {
-        if (CheckCollisionRecs(
-                m_playerBoundingBox,
-                Rectangle{m_powerups[i].position.x, m_powerups[i].position.y,
-                          static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}) &&
-            !CheckCollisionRecs(m_playerBoundingBox, m_noPickUpBox))
-        {
-            if (m_heldItem != nullptr)
-            {
-                UsePowerup(m_powerups[i].which);
-                m_powerups.erase(m_powerups.begin() + i);
-            }
-            else if (GetPowerUp(m_powerups[i]))
-            {
-                m_powerups.erase(m_powerups.begin() + i);
-            }
-        }
-    }
-
-    // Clear no pickup box if player is not colliding with it
-    if (!CheckCollisionRecs(m_playerBoundingBox, m_noPickUpBox))
-    {
-        m_noPickUpBox = {0.0f, 0.0f, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
-    }
-
-    // Handle movement
-    if (!m_playerMovementDirections.empty() && !m_scrollingMap && m_deathTimer <= 0.0f)
-    {
-        // Calculate effective directions for movement
-        int effectiveDirections = m_playerMovementDirections.size();
-        if (effectiveDirections >= 2 && m_playerMovementDirections.back() == (m_playerMovementDirections[m_playerMovementDirections.size() - 2] + 2) % 4)
-        {
-            effectiveDirections = 1;
-        }
-
-        // Calculate movement speed
-        float speed = GetMovementSpeed(3.0f, effectiveDirections);
-
-        // Apply speed from powerups
-        if (m_activePowerups.find(POWERUP_SPEED) != m_activePowerups.end())
-        {
-            speed *= 1.5f;
-        }
-
-        if (m_zombieModeTimer > 0)
-        {
-            speed *= 1.5f;
-        }
-
-        // Apply run speed level boost
-        for (int i = 0; i < m_runSpeedLevel; i++)
-        {
-            speed *= 1.25f;
-        }
-
-        // Move player in each direction (handling simultaneous keypresses)
-        for (int i = std::max(0, static_cast<int>(m_playerMovementDirections.size()) - 2);
-             i < static_cast<int>(m_playerMovementDirections.size()); i++)
-        {
-            // Skip if this would cause cancellation with opposite direction
-            if (i != 0 || m_playerMovementDirections.size() < 2 ||
-                m_playerMovementDirections.back() != (m_playerMovementDirections[m_playerMovementDirections.size() - 2] + 2) % 4)
-            {
-                Vector2 newPosition = m_playerPosition;
-
-                // Apply movement based on direction
-                switch (m_playerMovementDirections[i])
-                {
-                case 0: // Up
-                    newPosition.y -= speed;
-                    break;
-                case 1: // Right
-                    newPosition.x += speed;
-                    break;
-                case 2: // Down
-                    newPosition.y += speed;
-                    break;
-                case 3: // Left
-                    newPosition.x -= speed;
-                    break;
-                }
-
-                // Update bounding box for collision check
-                Rectangle newBounds = {
-                    newPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
-                    newPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
-                    static_cast<float>(GetTileSize()) / 2.0f,
-                    static_cast<float>(GetTileSize()) / 2.0f};
-
-                // Check if new position is valid
-                if (!IsCollidingWithMap(newBounds) &&
-                    (!CheckCollisionRecs(newBounds, m_merchantBox) || CheckCollisionRecs(m_playerBoundingBox, m_merchantBox)))
-                {
-                    m_playerPosition = newPosition;
-                }
-            }
-        }
-
-        // Update bounding box with new position
-        m_playerBoundingBox = {
-            m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
-            m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
-            static_cast<float>(GetTileSize()) / 2.0f,
-            static_cast<float>(GetTileSize()) / 2.0f};
-
-        // Update animation timers with better timing
-        if (!m_playerMovementDirections.empty())
-        {
-            m_playerMotionAnimationTimer += deltaTime * 1000.0f;
-            if (m_playerMotionAnimationTimer >= 400.0f)
-            {
-                m_playerMotionAnimationTimer = 0.0f;
-            }
-
-            // Play footstep sounds with better timing
-            m_playerFootstepSoundTimer -= deltaTime * 1000.0f;
-            if (m_playerFootstepSoundTimer <= 0.0f)
-            {
-                PlaySound(GetSound("cowboy_footstep"));
-                m_playerFootstepSoundTimer = 200.0f;
-            }
-        }
-        else
-        {
-            // Reset animation timer when not moving
-            m_playerMotionAnimationTimer = 0.0f;
-        }
-
-        // Check for map transitions
-        if (m_waitingForPlayerToMoveDownAMap && m_playerBoundingBox.y + m_playerBoundingBox.height >= 16.0f * GetTileSize() - GetTileSize() / 2)
-        {
-            SaveGame();
-            m_shopping = false;
-            m_merchantArriving = false;
-            m_merchantLeaving = false;
-            m_merchantShopOpen = false;
-            m_merchantBox.y = -GetTileSize();
-            m_scrollingMap = true;
-            // Generate next map once when starting scroll
-            GetMap(m_whichWave, m_nextMap);
-            m_newMapPosition = 16 * GetTileSize();
-            m_temporarySprites.clear();
-            m_powerups.clear();
-        }
-    }
-
-    // Check for monster collisions
-    for (int i = m_monsters.size() - 1; i >= 0; i--)
-    {
-        if (CheckCollisionRecs(m_monsters[i]->position, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
-        {
-            if (m_zombieModeTimer <= 0)
-            {
-                PlayerDie();
-                break;
-            }
-            else if (m_monsters[i]->type != -2) // Not boss
-            {
-                // Kill monster in zombie mode
-                AddGuts({m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
-                delete m_monsters[i];
-                m_monsters.erase(m_monsters.begin() + i);
-                PlaySound(GetSound("Cowboy_monsterDie"));
-            }
-        }
-    }
-
-    // Handle shooting
-    if (m_shotTimer > 0)
-    {
-        m_shotTimer -= static_cast<int>(deltaTime * 1000.0f);
-    }
-
-    if (m_deathTimer <= 0.0f && !m_playerShootingDirections.empty() && m_shotTimer <= 0)
-    {
-        // Special case for spreadfire powerup
-        if (m_activePowerups.find(POWERUP_SPREAD) != m_activePowerups.end())
-        {
-            // Fire in all 8 directions
-            std::vector<int> dirs = {0}; // Up
-            SpawnBullets(dirs, m_playerPosition);
-
-            dirs = {1}; // Right
-            SpawnBullets(dirs, m_playerPosition);
-
-            dirs = {2}; // Down
-            SpawnBullets(dirs, m_playerPosition);
-
-            dirs = {3}; // Left
-            SpawnBullets(dirs, m_playerPosition);
-
-            // Diagonals
-            dirs = {0, 1}; // Up-Right
-            SpawnBullets(dirs, m_playerPosition);
-
-            dirs = {1, 2}; // Down-Right
-            SpawnBullets(dirs, m_playerPosition);
-
-            dirs = {2, 3}; // Down-Left
-            SpawnBullets(dirs, m_playerPosition);
-
-            dirs = {3, 0}; // Up-Left
-            SpawnBullets(dirs, m_playerPosition);
-        }
-        else if (m_playerShootingDirections.size() == 1 ||
-                 m_playerShootingDirections.back() == (m_playerShootingDirections[m_playerShootingDirections.size() - 2] + 2) % 4)
-        {
-            // Single direction or cancelling directions - shoot in the latest direction
-            int dirIndex = (m_playerShootingDirections.size() == 2 &&
-                            m_playerShootingDirections.back() == (m_playerShootingDirections[m_playerShootingDirections.size() - 2] + 2) % 4)
-                               ? 1
-                               : 0;
-
-            std::vector<int> dir = {m_playerShootingDirections[dirIndex]};
-            SpawnBullets(dir, m_playerPosition);
-        }
-        else
-        {
-            // Multiple directions - shoot diagonally
-            SpawnBullets(m_playerShootingDirections, m_playerPosition);
-        }
-
-        // Play gunshot sound
-        PlaySound(GetSound("cowboy_gunshot"));
-
-        // Set shooting cooldown
-        m_shotTimer = m_shootingDelay;
-
-        // Apply rapid fire powerup
-        if (m_activePowerups.find(POWERUP_RAPIDFIRE) != m_activePowerups.end())
-        {
-            m_shotTimer /= 4;
-        }
-
-        // Apply fire speed level bonus
-        for (int i = 0; i < m_fireSpeedLevel; i++)
-        {
-            m_shotTimer = m_shotTimer * 3 / 4;
-        }
-
-        // Apply shotgun penalty
-        if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end())
-        {
-            m_shotTimer = m_shotTimer * 3 / 2;
-        }
-
-        // Ensure minimum shot timer
-        m_shotTimer = std::max(m_shotTimer, 20);
-    }
 }
 
 void PrairieKing::Draw()
@@ -3276,7 +3127,7 @@ void PrairieKing::Draw()
                     GetTexture("cursors"),
                     Rectangle{384.0f, 1760.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
                     Vector2{0, 0},
                     0.0f,
@@ -3287,7 +3138,7 @@ void PrairieKing::Draw()
                     GetTexture("cursors"),
                     Rectangle{320.0f + m_itemToHold * 16.0f, 1776.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() * 2 / 3 - GetTileSize() / 4,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
                               48.0f, 48.0f},
                     Vector2{0, 0},
                     0.0f,
@@ -3300,7 +3151,7 @@ void PrairieKing::Draw()
                     GetTexture("cursors"),
                     Rectangle{352.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 1760.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
                     Vector2{0, 0},
                     0.0f,
@@ -3313,7 +3164,7 @@ void PrairieKing::Draw()
                     GetTexture("cursors"),
                     Rectangle{496.0f, 1760.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
                     Vector2{0, 0},
                     0.0f,
@@ -3322,20 +3173,34 @@ void PrairieKing::Draw()
             else
             {
                 // Get facing direction from movement or shooting
-                int facingDirection = m_playerShootingDirections.empty() ? (!m_playerMovementDirections.empty() ? m_playerMovementDirections[0] : 0) : m_playerShootingDirections.back();
+                int facingDirection = m_playerShootingDirections.empty() ? 
+                    (!m_playerMovementDirections.empty() ? m_playerMovementDirections[0] : 0) : 
+                    m_playerShootingDirections.back();
 
-                // Draw player feet - fixed the animation coordinates and timing
-                int footFrame = static_cast<int>(m_playerMotionAnimationTimer / 100.0f) % 4;
+                // Draw player feet - different animation when shooting
+                int footFrame;
+                if (!m_playerShootingDirections.empty() && m_playerMovementDirections.empty()) {
+                    // Solo usa el frame fijo cuando dispara y NO está caminando
+                    footFrame = 0;
+                } else if (!m_playerMovementDirections.empty()) {
+                    // Usa la animación de caminar si se está moviendo
+                    footFrame = static_cast<int>(m_playerMotionAnimationTimer / 100.0f) % 4;
+                } else {
+                    // Frame por defecto cuando está quieto
+                    footFrame = 0;
+                }
+
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{483.0f, 1760.0f + footFrame * 3, 10.0f, 3.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f, // Changed from 18.0f to 9.0f
+                    Rectangle{483.0f, 1760.0f + footFrame * 3.0f, 10.0f, 3.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y + 39.0f,
                               30.0f, 9.0f},
                     Vector2{0, 0},
                     0.0f,
                     WHITE);
-                // Draw player body - now using a cleaner sprite
+
+                // Draw player body
                 DrawTexturePro(
                     GetTexture("cursors"),
                     Rectangle{464.0f + facingDirection * 16.0f, 1744.0f, 16.0f, 16.0f},
@@ -3654,18 +3519,6 @@ PrairieKing::JOTPKProgress PrairieKing::GetProgress() const
     return progress;
 }
 
-void PrairieKing::SetButtonState(GameKeys key, bool pressed)
-{
-    if (pressed)
-    {
-        m_buttonHeldState.insert(key);
-    }
-    else
-    {
-        m_buttonHeldState.erase(key);
-    }
-}
-
 void PrairieKing::AddMonster(CowboyMonster* monster)
 {
     // Verificar si hay espacio para el monstruo
@@ -3811,5 +3664,273 @@ void PrairieKing::StartNewWave()
             m_map[7][15] = MAP_DESERT;
             m_map[9][15] = MAP_DESERT;
         }
+    }
+}
+
+void PrairieKing::UpdatePlayer(float deltaTime)
+{
+    // No actualizar si el jugador está muerto
+    if (m_deathTimer > 0.0f)
+    {
+        m_deathTimer -= deltaTime * 1000.0f;
+        return;
+    }
+
+    // Recolectar power-ups si el jugador está sobre ellos
+    for (int i = m_powerups.size() - 1; i >= 0; i--)
+    {
+        if (CheckCollisionRecs(
+                m_playerBoundingBox,
+                Rectangle{m_powerups[i].position.x, m_powerups[i].position.y,
+                          static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}) &&
+            !CheckCollisionRecs(m_playerBoundingBox, m_noPickUpBox))
+        {
+            if (m_heldItem != nullptr)
+            {
+                UsePowerup(m_powerups[i].which);
+                m_powerups.erase(m_powerups.begin() + i);
+            }
+            else if (GetPowerUp(m_powerups[i]))
+            {
+                m_powerups.erase(m_powerups.begin() + i);
+            }
+        }
+    }
+
+    // Limpiar la caja de no recoger si el jugador no está colisionando con ella
+    if (!CheckCollisionRecs(m_playerBoundingBox, m_noPickUpBox))
+    {
+        m_noPickUpBox = {0.0f, 0.0f, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
+    }
+
+    // Manejar movimiento
+    if (!m_playerMovementDirections.empty() && !m_scrollingMap && m_deathTimer <= 0.0f)
+    {
+        // Calcular direcciones efectivas para el movimiento
+        int effectiveDirections = m_playerMovementDirections.size();
+        if (effectiveDirections >= 2 && 
+            m_playerMovementDirections.back() == (m_playerMovementDirections[m_playerMovementDirections.size() - 2] + 2) % 4)
+        {
+            effectiveDirections = 1;
+        }
+
+        // Calcular velocidad base
+        float speed = GetMovementSpeed(PLAYER_SPEED, effectiveDirections);
+
+        // Aplicar velocidad de power-ups
+        if (m_activePowerups.find(POWERUP_SPEED) != m_activePowerups.end())
+        {
+            speed *= 1.5f;
+        }
+
+        if (m_zombieModeTimer > 0)
+        {
+            speed *= 1.5f;
+        }
+
+        // Aplicar bonus de nivel de velocidad
+        for (int i = 0; i < m_runSpeedLevel; i++)
+        {
+            speed *= 1.25f;
+        }
+
+        // Mover jugador en cada dirección (manejando pulsaciones simultáneas)
+        for (int i = std::max(0, static_cast<int>(m_playerMovementDirections.size()) - 2);
+             i < static_cast<int>(m_playerMovementDirections.size()); i++)
+        {
+            // Saltar si causaría cancelación con dirección opuesta
+            if (i != 0 || m_playerMovementDirections.size() < 2 ||
+                m_playerMovementDirections.back() != (m_playerMovementDirections[m_playerMovementDirections.size() - 2] + 2) % 4)
+            {
+                Vector2 newPosition = m_playerPosition;
+
+                // Aplicar movimiento según dirección
+                switch (m_playerMovementDirections[i])
+                {
+                case 0: // Arriba
+                    newPosition.y -= speed;
+                    break;
+                case 1: // Derecha
+                    newPosition.x += speed;
+                    break;
+                case 2: // Abajo
+                    newPosition.y += speed;
+                    break;
+                case 3: // Izquierda
+                    newPosition.x -= speed;
+                    break;
+                }
+
+                // Actualizar caja de colisión para verificación
+                Rectangle newBounds = {
+                    newPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
+                    newPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
+                    static_cast<float>(GetTileSize()) / 2.0f,
+                    static_cast<float>(GetTileSize()) / 2.0f};
+
+                // Verificar si la nueva posición es válida
+                if (!IsCollidingWithMap(newBounds) &&
+                    (!CheckCollisionRecs(newBounds, m_merchantBox) || CheckCollisionRecs(m_playerBoundingBox, m_merchantBox)))
+                {
+                    m_playerPosition = newPosition;
+                    m_playerBoundingBox = newBounds;
+                }
+            }
+        }
+
+        // Actualizar caja de colisión con nueva posición
+        m_playerBoundingBox = {
+            m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
+            m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
+            static_cast<float>(GetTileSize()) / 2.0f,
+            static_cast<float>(GetTileSize()) / 2.0f};
+
+        // Actualizar timers de animación
+        if (!m_playerMovementDirections.empty())
+        {
+            m_playerMotionAnimationTimer += deltaTime * 1000.0f;
+            if (m_playerMotionAnimationTimer >= 400.0f)
+            {
+                m_playerMotionAnimationTimer = 0.0f;
+            }
+
+            // Reproducir sonidos de pasos
+            m_playerFootstepSoundTimer -= deltaTime * 1000.0f;
+            if (m_playerFootstepSoundTimer <= 0.0f)
+            {
+                PlaySound(GetSound("cowboy_footstep"));
+                m_playerFootstepSoundTimer = 200.0f;
+            }
+        }
+        else
+        {
+            // Reiniciar timer de animación cuando no se mueve
+            m_playerMotionAnimationTimer = 0.0f;
+        }
+
+        // Verificar transiciones de mapa
+        if (m_waitingForPlayerToMoveDownAMap && 
+            m_playerBoundingBox.y + m_playerBoundingBox.height >= 16.0f * GetTileSize() - GetTileSize() / 2)
+        {
+            SaveGame();
+            m_shopping = false;
+            m_merchantArriving = false;
+            m_merchantLeaving = false;
+            m_merchantShopOpen = false;
+            m_merchantBox.y = -GetTileSize();
+            m_scrollingMap = true;
+            // Generar siguiente mapa al iniciar scroll
+            GetMap(m_whichWave, m_nextMap);
+            m_newMapPosition = 16 * GetTileSize();
+            m_temporarySprites.clear();
+            m_powerups.clear();
+        }
+    }
+
+    // Verificar colisiones con monstruos
+    for (int i = m_monsters.size() - 1; i >= 0; i--)
+    {
+        if (CheckCollisionRecs(m_monsters[i]->position, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
+        {
+            if (m_zombieModeTimer <= 0)
+            {
+                PlayerDie();
+                break;
+            }
+            else if (m_monsters[i]->type != -2) // No es jefe
+            {
+                // Matar monstruo en modo zombie
+                AddGuts({m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
+                delete m_monsters[i];
+                m_monsters.erase(m_monsters.begin() + i);
+                PlaySound(GetSound("Cowboy_monsterDie"));
+            }
+        }
+    }
+
+    // Manejar disparos
+    if (m_shotTimer > 0)
+    {
+        m_shotTimer -= static_cast<int>(deltaTime * 1000.0f);
+    }
+
+    if (m_deathTimer <= 0.0f && !m_playerShootingDirections.empty() && m_shotTimer <= 0)
+    {
+        // Caso especial para power-up de disparo extendido
+        if (m_activePowerups.find(POWERUP_SPREAD) != m_activePowerups.end())
+        {
+            // Disparar en las 8 direcciones
+            std::vector<int> dirs;
+            
+            // Direcciones cardinales
+            dirs = {0}; // Arriba
+            SpawnBullets(dirs, m_playerPosition);
+            
+            dirs = {1}; // Derecha
+            SpawnBullets(dirs, m_playerPosition);
+            
+            dirs = {2}; // Abajo
+            SpawnBullets(dirs, m_playerPosition);
+            
+            dirs = {3}; // Izquierda
+            SpawnBullets(dirs, m_playerPosition);
+            
+            // Diagonales
+            dirs = {0, 1}; // Arriba-Derecha
+            SpawnBullets(dirs, m_playerPosition);
+            
+            dirs = {1, 2}; // Abajo-Derecha
+            SpawnBullets(dirs, m_playerPosition);
+            
+            dirs = {2, 3}; // Abajo-Izquierda
+            SpawnBullets(dirs, m_playerPosition);
+            
+            dirs = {3, 0}; // Arriba-Izquierda
+            SpawnBullets(dirs, m_playerPosition);
+        }
+        else if (m_playerShootingDirections.size() == 1 ||
+                 m_playerShootingDirections.back() == (m_playerShootingDirections[m_playerShootingDirections.size() - 2] + 2) % 4)
+        {
+            // Una dirección o direcciones que se cancelan - disparar en la última dirección
+            int dirIndex = (m_playerShootingDirections.size() == 2 &&
+                            m_playerShootingDirections.back() == (m_playerShootingDirections[m_playerShootingDirections.size() - 2] + 2) % 4)
+                               ? 1
+                               : 0;
+
+            std::vector<int> dir = {m_playerShootingDirections[dirIndex]};
+            SpawnBullets(dir, m_playerPosition);
+        }
+        else
+        {
+            // Múltiples direcciones - disparar en diagonal
+            SpawnBullets(m_playerShootingDirections, m_playerPosition);
+        }
+
+        // Reproducir sonido de disparo
+        PlaySound(GetSound("cowboy_gunshot"));
+
+        // Establecer cooldown de disparo
+        m_shotTimer = m_shootingDelay;
+
+        // Aplicar power-up de disparo rápido
+        if (m_activePowerups.find(POWERUP_RAPIDFIRE) != m_activePowerups.end())
+        {
+            m_shotTimer /= 4;
+        }
+
+        // Aplicar bonus de nivel de velocidad de disparo
+        for (int i = 0; i < m_fireSpeedLevel; i++)
+        {
+            m_shotTimer = m_shotTimer * 3 / 4;
+        }
+
+        // Aplicar penalización de escopeta
+        if (m_activePowerups.find(POWERUP_SHOTGUN) != m_activePowerups.end())
+        {
+            m_shotTimer = m_shotTimer * 3 / 2;
+        }
+
+        // Asegurar timer mínimo de disparo
+        m_shotTimer = std::max(m_shotTimer, 20);
     }
 }
