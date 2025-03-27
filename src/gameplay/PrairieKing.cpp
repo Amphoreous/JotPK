@@ -1003,7 +1003,7 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_gameOver(false),
       m_quit(false),
       m_died(false),
-      m_onStartMenu(false), // Changed from true to false to skip the start menu
+      m_onStartMenu(false),
       m_shopping(false),
       m_gopherRunning(false),
       m_store(false),
@@ -1046,16 +1046,16 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_gopherTrainPosition(0),
       m_endCutsceneTimer(0),
       m_endCutscenePhase(0),
-      m_startTimer(0),
+      m_startTimer(1500), // Inicializado a 1500 para mostrar el menú de inicio
       m_deathTimer(0),
       m_waveTimer(WAVE_DURATION),
       m_betweenWaveTimer(BETWEEN_WAVE_DURATION),
       m_heldItem(nullptr),
       m_cactusDanceTimer(0),
       m_playerMotionAnimationTimer(0),
-      m_playerFootstepSoundTimer(0),
-      m_spawnQueue(4), // Initialize m_spawnQueue with 4 empty vectors
-      m_overworldSong({0}) // Initialize m_overworldSong to nullptr
+      m_playerFootstepSoundTimer(200.0f),
+      m_spawnQueue(4),
+      m_overworldSong({0})
 {
     // Store the instance pointer for static access
     s_instance = this;
@@ -1130,7 +1130,7 @@ void PrairieKing::Initialize()
     m_deathTimer = 0.0f;
     m_playerInvincibleTimer = 0;
     m_onStartMenu = false;
-    m_startTimer = 0;
+    m_startTimer = 1500;
     m_powerups.clear();
     m_world = 0;
 
@@ -1166,29 +1166,76 @@ void PrairieKing::Initialize()
 
     // Initialize map
     GetMap(m_whichWave, m_map);
+
+    // Initialize active powerups
+    m_activePowerups.clear();
+
+    // Initialize bullets
+    m_bullets.clear();
+    m_enemyBullets.clear();
+
+    // Initialize store items
+    m_storeItems.clear();
+
+    // Initialize shopping carpet
+    m_shoppingCarpetNoPickup = {0.0f, 0.0f, static_cast<float>(GetTileSize() * 16), static_cast<float>(GetTileSize() * 16)};
+
+    // Initialize gopher box and motion
+    m_gopherBox = {0.0f, 0.0f, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
+    m_gopherMotion = {0.0f, 0.0f};
 }
 
 bool PrairieKing::LoadGame()
 {
-    // In a real implementation, you'd load game data from a file
-    // This is a simplified version
+    // Por ahora, simplemente retornamos false ya que no implementaremos el guardado
+    // En una implementación real, aquí cargaríamos el estado del juego desde un archivo
     return false;
 }
 
 void PrairieKing::SaveGame()
 {
-    // In a real implementation, you'd save game data to a file
+    // Por ahora, no hacemos nada ya que no implementaremos el guardado
+    // En una implementación real, aquí guardaríamos el estado del juego en un archivo
 }
 
 void PrairieKing::Reset()
 {
+    // Reiniciar el juego a su estado inicial
     Initialize();
+    
+    // Reiniciar valores específicos
+    m_lives = 3;
+    m_coins = 0;
+    m_score = 0;
+    m_whichWave = 0;
+    m_whichRound = 0;
+    m_bulletDamage = 1;
+    m_fireSpeedLevel = 0;
+    m_ammoLevel = 0;
+    m_runSpeedLevel = 0;
+    m_spreadPistol = false;
+    
+    // Reiniciar el mapa
+    GetMap(m_whichWave, m_map);
+    
+    // Reiniciar la posición del jugador
+    m_playerPosition = {384.0f, 384.0f};
+    m_playerBoundingBox = {
+        m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
+        m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
+        static_cast<float>(GetTileSize()) / 2.0f,
+        static_cast<float>(GetTileSize()) / 2.0f};
 }
 
 void PrairieKing::ApplyNewGamePlus()
 {
+    // Aumentar la dificultad para la siguiente ronda
     m_monsterChances[0] = {0.014f + static_cast<float>(m_whichRound) * 0.005f, 0.41f + static_cast<float>(m_whichRound) * 0.05f};
     m_monsterChances[4] = {0.002f, 0.1f};
+    
+    // Mantener el progreso del jugador
+    // No reiniciamos las vidas, monedas, ni el score
+    // Solo aumentamos la dificultad de los monstruos
 }
 
 void PrairieKing::ApplyLevelSpecificStates()
@@ -1227,265 +1274,208 @@ bool PrairieKing::GetPowerUp(CowboyPowerup c)
 {
     switch (c.which)
     {
-    case POWERUP_HEART:
-        UsePowerup(POWERUP_HEART);
-        break;
-    case POWERUP_SKULL:
-        UsePowerup(POWERUP_SKULL);
-        break;
-    case POWERUP_LOG:
-        UsePowerup(POWERUP_LOG);
-        break;
-    case COIN1:
-        m_coins++;
-        PlaySound(GetSound("Pickup_Coin15"));
-        break;
-    case COIN5:
-        m_coins += 5;
-        PlaySound(GetSound("Pickup_Coin15"));
-        break;
-    case POWERUP_LIFE:
-        m_lives++;
-        PlaySound(GetSound("cowboy_powerup"));
-        break;
-    default:
-    {
-        if (!m_heldItem)
-        {
-            m_heldItem = std::make_unique<CowboyPowerup>(c);
+        case POWERUP_HEART:
+            UsePowerup(POWERUP_HEART);
+            break;
+
+        case POWERUP_SKULL:
+            UsePowerup(POWERUP_SKULL);
+            break;
+
+        case POWERUP_LOG:
+            UsePowerup(POWERUP_LOG);
+            break;
+
+        case COIN1:
+            m_coins++;
+            PlaySound(GetSound("Pickup_Coin15"));
+            break;
+
+        case COIN5:
+            m_coins += 5;
+            PlaySound(GetSound("Pickup_Coin15"));
+            break;
+
+        case POWERUP_LIFE:
+            m_lives++;
             PlaySound(GetSound("cowboy_powerup"));
-        }
-        else
-        {
-            // Store current held item
-            CowboyPowerup oldItem = *m_heldItem;
-            
-            // Replace with new item
+            break;
+
+        default:
+            if (!m_heldItem)
+            {
+                m_heldItem = std::make_unique<CowboyPowerup>(c);
+                PlaySound(GetSound("cowboy_powerup"));
+                break;
+            }
+
+            // Intercambiar power-up actual con el nuevo
+            auto tmp = std::move(m_heldItem);
             m_heldItem = std::make_unique<CowboyPowerup>(c);
-            
-            // Place old item where new item was picked up
             m_noPickUpBox = {c.position.x, c.position.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
-            oldItem.position = c.position;
-            m_powerups.push_back(oldItem);
-            
+            tmp->position = c.position;
+            m_powerups.push_back(*tmp);
             PlaySound(GetSound("cowboy_powerup"));
             return true;
-        }
-        break;
-    }
     }
     return true;
 }
 
 void PrairieKing::UsePowerup(int which)
 {
-    // First check if powerup is already active
+    // Primero verificar si el powerup ya está activo
     if (m_activePowerups.find(which) != m_activePowerups.end())
     {
         m_activePowerups[which] = POWERUP_DURATION + 2000;
         return;
     }
 
-    // Handle different powerup types
     switch (which)
     {
-    case POWERUP_HEART:
-        m_itemToHold = 13;
-        m_holdItemTimer = 4000;
-        PlaySound(GetSound("Cowboy_Secret"));
-        m_endCutscene = true;
-        m_endCutsceneTimer = 4000;
-        m_world = 0;
-        break;
+        case POWERUP_HEART:
+            m_itemToHold = 13;
+            m_holdItemTimer = 4000;
+            PlaySound(GetSound("Cowboy_Secret"));
+            m_endCutscene = true;
+            m_endCutsceneTimer = 4000;
+            m_world = 0;
+            break;
 
-    case POWERUP_SKULL:
-        m_itemToHold = 11;
-        m_holdItemTimer = 2000;
-        PlaySound(GetSound("Cowboy_Secret"));
-        m_gopherTrain = true;
-        m_gopherTrainPosition = -GetTileSize() * 2;
-        break;
+        case POWERUP_SKULL:
+            m_itemToHold = 11;
+            m_holdItemTimer = 2000;
+            PlaySound(GetSound("Cowboy_Secret"));
+            m_gopherTrain = true;
+            m_gopherTrainPosition = -GetTileSize() * 2;
+            break;
 
-    case POWERUP_LOG:
-        m_itemToHold = 12;
-        m_holdItemTimer = 2000;
-        PlaySound(GetSound("Cowboy_Secret"));
-        m_gopherTrain = true;
-        m_gopherTrainPosition = -GetTileSize() * 2;
-        break;
+        case POWERUP_LOG:
+            m_itemToHold = 12;
+            m_holdItemTimer = 2000;
+            PlaySound(GetSound("Cowboy_Secret"));
+            m_gopherTrain = true;
+            m_gopherTrainPosition = -GetTileSize() * 2;
+            break;
 
-    case POWERUP_SHERRIFF:
-    {
-        UsePowerup(POWERUP_SHOTGUN);
-        UsePowerup(POWERUP_RAPIDFIRE);
-        UsePowerup(POWERUP_SPEED);
+        case POWERUP_SHERRIFF:
+            UsePowerup(POWERUP_SHOTGUN);
+            UsePowerup(POWERUP_RAPIDFIRE);
+            UsePowerup(POWERUP_SPEED);
+            for (auto &powerup : m_activePowerups)
+            {
+                powerup.second *= 2;
+            }
+            break;
 
-        // Extend all active powerups
-        for (auto &powerup : m_activePowerups)
+        case POWERUP_ZOMBIE:
+            PlaySound(GetSound("Cowboy_undead"));
+            m_motionPause = 1800;
+            m_zombieModeTimer = 10000;
+            break;
+
+        case POWERUP_TELEPORT:
         {
-            powerup.second += 5000;
+            Vector2 teleportSpot = {0, 0};
+            int tries = 0;
+
+            while ((fabsf(teleportSpot.x - m_playerPosition.x) < 8.0f ||
+                    fabsf(teleportSpot.y - m_playerPosition.y) < 8.0f ||
+                    IsCollidingWithMap(Rectangle{teleportSpot.x, teleportSpot.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}) ||
+                    IsCollidingWithMonster(Rectangle{teleportSpot.x, teleportSpot.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}, nullptr)) &&
+                   tries < 10)
+            {
+                teleportSpot = {
+                    static_cast<float>(GetRandomFloat(GetTileSize(), 16 * GetTileSize() - GetTileSize())),
+                    static_cast<float>(GetRandomFloat(GetTileSize(), 16 * GetTileSize() - GetTileSize()))};
+                tries++;
+            }
+
+            if (tries < 10)
+            {
+                // Efectos de teletransporte
+                for (int i = 0; i < 5; i++)
+                {
+                    m_temporarySprites.push_back(TemporaryAnimatedSprite(
+                        {464, 1792, 16, 16},
+                        120.0f, 5, 0,
+                        {teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
+                         teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
+                        0.0f, 3.0f, false,
+                        1.0f, WHITE));
+                    m_temporarySprites.back().delayBeforeAnimationStart = i * 200;
+                }
+
+                m_playerPosition = teleportSpot;
+                m_monsterConfusionTimer = 4000;
+                m_playerInvincibleTimer = 4000;
+                PlaySound(GetSound("cowboy_powerup"));
+            }
+            break;
         }
-        break;
-    }
 
-    case POWERUP_ZOMBIE:
-        // Play zombie music
-        PlaySound(GetSound("Cowboy_undead"));
-        m_motionPause = 1800;
-        m_zombieModeTimer = 10000;
-        break;
-
-    case POWERUP_TELEPORT:
-    {
-        Vector2 teleportSpot = {0, 0};
-        int tries = 0;
-
-        // Find a suitable teleport spot
-        while ((fabsf(teleportSpot.x - m_playerPosition.x) < 8.0f ||
-                fabsf(teleportSpot.y - m_playerPosition.y) < 8.0f ||
-                IsCollidingWithMap(Rectangle{teleportSpot.x, teleportSpot.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}) ||
-                IsCollidingWithMonster(Rectangle{teleportSpot.x, teleportSpot.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}, nullptr)) &&
-               tries < 10)
-        {
-            teleportSpot = {
-                static_cast<float>(GetRandomFloat(GetTileSize(), 16 * GetTileSize() - GetTileSize())),
-                static_cast<float>(GetRandomFloat(GetTileSize(), 16 * GetTileSize() - GetTileSize()))};
-            tries++;
-        }
-
-        if (tries < 10)
-        {
-            // Add teleport effects
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
-                120.0f, 5, 0,
-                {m_playerPosition.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                 m_playerPosition.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
-                120.0f, 5, 0,
-                {teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                 teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-
-            // Teleport animation extras around destination
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
-                120.0f, 5, 0,
-                {teleportSpot.x - GetTileSize() / 2 + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                 teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-            m_temporarySprites.back().delayBeforeAnimationStart = 200;
-
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
-                120.0f, 5, 0,
-                {teleportSpot.x + GetTileSize() / 2 + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                 teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-            m_temporarySprites.back().delayBeforeAnimationStart = 400;
-
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
-                120.0f, 5, 0,
-                {teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                 teleportSpot.y - GetTileSize() / 2 + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-            m_temporarySprites.back().delayBeforeAnimationStart = 600;
-
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
-                120.0f, 5, 0,
-                {teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                 teleportSpot.y + GetTileSize() / 2 + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-            m_temporarySprites.back().delayBeforeAnimationStart = 800;
-
-            // Actually teleport the player
-            m_playerPosition = teleportSpot;
-            m_monsterConfusionTimer = 4000;
-            m_playerInvincibleTimer = 4000;
+        case POWERUP_LIFE:
+            m_lives++;
             PlaySound(GetSound("cowboy_powerup"));
-        }
-        break;
-    }
+            break;
 
-    case POWERUP_LIFE:
-        m_lives++;
-        PlaySound(GetSound("cowboy_powerup"));
-        break;
-
-    case POWERUP_NUKE:
-    {
-        PlaySound(GetSound("cowboy_explosion"));
-
-        if (!m_shootoutLevel)
-        {
-            // Kill all monsters
-            for (auto monster : m_monsters)
+        case POWERUP_NUKE:
+            PlaySound(GetSound("cowboy_explosion"));
+            if (!m_shootoutLevel)
             {
-                AddGuts({monster->position.x, monster->position.y}, monster->type);
-                delete monster;
+                for (auto monster : m_monsters)
+                {
+                    AddGuts({monster->position.x, monster->position.y}, monster->type);
+                    delete monster;
+                }
+                m_monsters.clear();
             }
-            m_monsters.clear();
-        }
-        else
-        {
-            // Just damage monsters in shootout level
-            for (auto monster : m_monsters)
+            else
             {
-                monster->TakeDamage(2);
+                for (auto monster : m_monsters)
+                {
+                    monster->TakeDamage(30);
+                }
             }
-        }
 
-        // Add explosion effects
-        for (int i = 0; i < 30; i++)
-        {
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {384, 1792, 16, 16},
-                60.0f, 4, 0,
-                {static_cast<float>(GetRandomFloat(GetTileSize(), 15 * GetTileSize())) + m_topLeftScreenCoordinate.x,
-                 static_cast<float>(GetRandomFloat(GetTileSize(), 15 * GetTileSize())) + m_topLeftScreenCoordinate.y},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-        }
-        break;
+            for (int i = 0; i < 30; i++)
+            {
+                m_temporarySprites.push_back(TemporaryAnimatedSprite(
+                    {464, 1792, 16, 16},
+                    80.0f, 5, 0,
+                    {static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.x,
+                     static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.y},
+                    0.0f, 3.0f, false,
+                    1.0f, WHITE));
+                m_temporarySprites.back().delayBeforeAnimationStart = static_cast<int>(GetRandomFloat(0, 800));
+            }
+            break;
+
+        case POWERUP_SPREAD:
+        case POWERUP_RAPIDFIRE:
+        case POWERUP_SHOTGUN:
+        case POWERUP_SPEED:
+            m_shotTimer = 0;
+            PlaySound(GetSound("cowboy_gunload"));
+            m_activePowerups[which] = POWERUP_DURATION;
+            break;
+
+        case COIN1:
+            m_coins++;
+            PlaySound(GetSound("Pickup_Coin15"));
+            break;
+
+        case COIN5:
+            m_coins += 5;
+            PlaySound(GetSound("Pickup_Coin15"));
+            break;
+
+        default:
+            m_activePowerups[which] = POWERUP_DURATION;
+            PlaySound(GetSound("cowboy_powerup"));
+            break;
     }
 
-    case POWERUP_SPREAD:
-    case POWERUP_RAPIDFIRE:
-    case POWERUP_SHOTGUN:
-    case POWERUP_SPEED:
-        m_shotTimer = 0;
-        PlaySound(GetSound("cowboy_gunload"));
-        m_activePowerups[which] = POWERUP_DURATION;
-        break;
-
-    case COIN1:
-        m_coins++;
-        PlaySound(GetSound("Pickup_Coin15"));
-        break;
-
-    case COIN5:
-        m_coins += 5;
-        PlaySound(GetSound("Pickup_Coin15"));
-        break;
-
-    default:
-        m_activePowerups[which] = POWERUP_DURATION;
-        PlaySound(GetSound("cowboy_powerup"));
-        break;
-    }
-
-    // Reduce powerup duration in new game plus
+    // Reducir duración en New Game Plus
     if (m_whichRound > 0 && m_activePowerups.find(which) != m_activePowerups.end())
     {
         m_activePowerups[which] /= 2;
@@ -3468,7 +3458,7 @@ void PrairieKing::Draw()
                 GetTexture("cursors"),
                 Rectangle{512.0f, 1760.0f, 5.0f, 5.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + GetTileSize() * 16 + 3,
-                          static_cast<float>(i * 3 * 6),
+                          m_topLeftScreenCoordinate.y + static_cast<float>(i * 3 * 6),
                           15.0f, 15.0f},
                 Vector2{0, 0},
                 0.0f,
@@ -3676,11 +3666,28 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
     }
 }
 
-void PrairieKing::AddMonster(CowboyMonster *monster)
+void PrairieKing::AddMonster(CowboyMonster* monster)
 {
-    if (monster != nullptr)
+    // Verificar si hay espacio para el monstruo
+    if (!IsCollidingWithMonster(monster->position, nullptr) && 
+        !IsCollidingWithMapForMonsters(monster->position))
     {
+        // Aumentar la salud en New Game Plus
+        if (m_whichRound > 0)
+        {
+            monster->health += m_whichRound * 2;
+        }
+
+        // Agregar el monstruo a la lista
         m_monsters.push_back(monster);
+
+        // Reproducir sonido de spawn
+        PlaySound(GetSound("cowboy_monsterhit"));
+    }
+    else
+    {
+        // Si no hay espacio, eliminar el monstruo
+        delete monster;
     }
 }
 
@@ -3696,17 +3703,110 @@ PrairieKing *PrairieKing::GetGameInstance()
 
 void PrairieKing::StartNewWave()
 {
-    m_whichWave++;
+    // Limpiar monstruos y power-ups existentes
+    for (auto monster : m_monsters)
+    {
+        delete monster;
+    }
+    m_monsters.clear();
+    m_powerups.clear();
+
+    // Reiniciar temporizadores
+    m_waveTimer = WAVE_DURATION;
+    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+
+    // Actualizar probabilidades de monstruos según la onda
+    switch (m_whichWave)
+    {
+        case 1:
+        case 2:
+        case 3:
+            m_monsterChances[0] = {m_monsterChances[0].x + 0.001f, m_monsterChances[0].y + 0.02f}; // Orcs
+            if (m_whichWave > 1)
+            {
+                m_monsterChances[2] = {m_monsterChances[2].x + 0.001f, m_monsterChances[2].y + 0.01f}; // Ogres
+            }
+            m_monsterChances[6] = {m_monsterChances[6].x + 0.001f, m_monsterChances[6].y + 0.01f}; // Spikeys
+            if (m_whichRound > 0)
+            {
+                m_monsterChances[4] = {0.002f, 0.1f}; // Devils en New Game Plus
+            }
+            break;
+
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            if (m_monsterChances[5].x == 0 && m_monsterChances[5].y == 0)
+            {
+                m_monsterChances[5] = {0.01f, 0.15f}; // Mushrooms
+                if (m_whichRound > 0)
+                {
+                    m_monsterChances[5] = {0.01f + static_cast<float>(m_whichRound) * 0.004f, 
+                                         0.15f + static_cast<float>(m_whichRound) * 0.04f};
+                }
+            }
+            m_monsterChances[0] = {0, 0}; // Desactivar Orcs
+            m_monsterChances[6] = {0, 0}; // Desactivar Spikeys
+            m_monsterChances[2] = {m_monsterChances[2].x + 0.002f, m_monsterChances[2].y + 0.02f}; // Más Ogres
+            m_monsterChances[5] = {m_monsterChances[5].x + 0.001f, m_monsterChances[5].y + 0.02f}; // Más Mushrooms
+            m_monsterChances[1] = {m_monsterChances[1].x + 0.0018f, m_monsterChances[1].y + 0.08f}; // Más Ghosts
+            if (m_whichRound > 0)
+            {
+                m_monsterChances[4] = {0.001f, 0.1f}; // Devils en New Game Plus
+            }
+            break;
+
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+            m_monsterChances[5] = {0, 0}; // Desactivar Mushrooms
+            m_monsterChances[1] = {0, 0}; // Desactivar Ghosts
+            m_monsterChances[2] = {0, 0}; // Desactivar Ogres
+            if (m_monsterChances[3].x == 0 && m_monsterChances[3].y == 0)
+            {
+                m_monsterChances[3] = {0.012f, 0.4f}; // Mummies
+                if (m_whichRound > 0)
+                {
+                    m_monsterChances[3] = {0.012f + static_cast<float>(m_whichRound) * 0.005f,
+                                         0.4f + static_cast<float>(m_whichRound) * 0.075f};
+                }
+            }
+            if (m_monsterChances[4].x == 0 && m_monsterChances[4].y == 0)
+            {
+                m_monsterChances[4] = {0.003f, 0.1f}; // Devils
+            }
+            m_monsterChances[3] = {m_monsterChances[3].x + 0.002f, m_monsterChances[3].y + 0.05f}; // Más Mummies
+            m_monsterChances[4] = {m_monsterChances[4].x + 0.0015f, m_monsterChances[4].y + 0.04f}; // Más Devils
+            if (m_whichWave == 11)
+            {
+                m_monsterChances[4] = {m_monsterChances[4].x + 0.01f, m_monsterChances[4].y + 0.04f}; // Aún más Devils
+                m_monsterChances[3] = {m_monsterChances[3].x - 0.01f, m_monsterChances[3].y + 0.04f}; // Menos Mummies
+            }
+            break;
+    }
+
+    // Aumentar dificultad en New Game Plus
+    if (m_whichRound > 0)
+    {
+        for (auto& chance : m_monsterChances)
+        {
+            chance.x *= 1.1f;
+            chance.y *= 1.1f;
+        }
+    }
+
+    // Alternar entre tienda y nuevo mapa
     if (m_whichWave > 0)
     {
-        if (m_whichWave % 4 == 0)
+        if (m_whichWave % 2 == 0)
         {
             StartShoppingLevel();
         }
         else
         {
             m_waitingForPlayerToMoveDownAMap = true;
-            // Open a path at the bottom of the map
             m_map[8][15] = MAP_DESERT;
             m_map[7][15] = MAP_DESERT;
             m_map[9][15] = MAP_DESERT;
