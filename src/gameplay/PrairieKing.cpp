@@ -3467,8 +3467,8 @@ void PrairieKing::Draw()
             DrawTexturePro(
                 GetTexture("cursors"),
                 Rectangle{512.0f, 1760.0f, 5.0f, 5.0f},
-                Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
-                          m_topLeftScreenCoordinate.y + GetTileSize() * 3 + i * 3 * 6,
+                Rectangle{m_topLeftScreenCoordinate.x + GetTileSize() * 16 + 3,
+                          static_cast<float>(i * 3 * 6),
                           15.0f, 15.0f},
                 Vector2{0, 0},
                 0.0f,
