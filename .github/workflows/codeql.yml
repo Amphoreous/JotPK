@@ -43,7 +43,7 @@ jobs:
 
     - name: Build project
       run: |
-        build-VisualStudio2022.bat
+        ./build-VisualStudio2022.bat
         msbuild JotPK.sln /p:Configuration=Release /p:Platform=x64
 
     - name: Perform CodeQL Analysis
