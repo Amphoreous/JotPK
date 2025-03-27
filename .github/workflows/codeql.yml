@@ -43,10 +43,8 @@ jobs:
 
     - name: Build project
       run: |
-        cd build
-        premake5 vs2022
-        cd ..
-        msbuild build/JotPK.sln /p:Configuration=Release /p:Platform=x64
+        build-VisualStudio2022.bat
+        msbuild JotPK.sln /p:Configuration=Release /p:Platform=x64
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
