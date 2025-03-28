@@ -2944,20 +2944,18 @@ void PrairieKing::Update(float deltaTime)
                 if (!m_shootoutLevel)
                 {
                     Music music = m_assets.GetMusic("overworld");
-                    UpdateMusicStream(music); // Actualizar el stream de música
+                    if (!IsMusicStreamPlaying(music))
+                    {
+                        PlayMusicStream(music);
+                        SetMusicVolume(music, 0.7f);
+                    }
+                    UpdateMusicStream(music);
                 }
                 
                 if (m_waveTimer <= 0)
                 {
                     if (m_monsters.empty() && IsSpawnQueueEmpty())
                     {
-                        // Detener la música actual antes de cambiar de ola
-                        if (m_scrollingMap)
-                        {
-                            Music music = m_assets.GetMusic("overworld");
-                            StopMusicStream(music);
-                        }
-
                         // Si no hay monstruos y la cola de spawn está vacía, avanzar a la siguiente ola
                         m_hasGopherAppeared = false;
                         m_waveTimer = WAVE_DURATION;
@@ -2991,16 +2989,49 @@ void PrairieKing::Update(float deltaTime)
                 // Si el timer entre olas ha terminado
                 if (m_betweenWaveTimer <= 0)
                 {
-                    // Iniciar la siguiente ola y su música
+                    // Iniciar la siguiente ola
                     m_waveTimer = WAVE_DURATION;
                     m_waitingForPlayerToMoveDownAMap = false;
+                }
+            }
 
-                    if (!m_shootoutLevel)
-                    {
-                        Music music = m_assets.GetMusic("overworld");
-                        PlayMusicStream(music);
-                        SetMusicVolume(music, 0.7f);
-                    }
+            // Manejar el gopherTrain y el cambio de mundo
+            if (m_gopherTrain)
+            {
+                m_gopherTrainPosition += 3;
+                if (m_gopherTrainPosition % 30 == 0)
+                {
+                    PlaySound(GetSound("Cowboy_Footstep"));
+                }
+
+                if (m_playerJumped)
+                {
+                    m_playerPosition.y += 3.0f;
+                }
+
+                if (fabsf(m_playerPosition.y - static_cast<float>(m_gopherTrainPosition - GetTileSize())) <= 16.0f)
+                {
+                    m_playerJumped = true;
+                    m_playerPosition.y = static_cast<float>(m_gopherTrainPosition - GetTileSize());
+                }
+
+                if (m_gopherTrainPosition > 16 * GetTileSize() + GetTileSize())
+                {
+                    // Detener la música cuando realmente cambiamos de mundo
+                    Music music = m_assets.GetMusic("overworld");
+                    StopMusicStream(music);
+
+                    m_gopherTrain = false;
+                    m_playerJumped = false;
+                    m_whichWave++;
+                    GetMap(m_whichWave, m_map);
+                    m_playerPosition = {static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
+                    m_world = (m_world != 0) ? 1 : 2;
+                    m_waveTimer = WAVE_DURATION;
+                    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+                    m_waitingForPlayerToMoveDownAMap = false;
+                    m_shootoutLevel = false;
+                    SaveGame();
                 }
             }
         }
