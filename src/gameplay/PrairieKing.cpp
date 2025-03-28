@@ -2944,18 +2944,20 @@ void PrairieKing::Update(float deltaTime)
                 if (!m_shootoutLevel)
                 {
                     Music music = m_assets.GetMusic("overworld");
-                    if (!IsMusicStreamPlaying(music))
-                    {
-                        PlayMusicStream(music);
-                        SetMusicVolume(music, 0.7f);
-                    }
-                    UpdateMusicStream(music);
+                    UpdateMusicStream(music); // Actualizar el stream de música
                 }
                 
                 if (m_waveTimer <= 0)
                 {
                     if (m_monsters.empty() && IsSpawnQueueEmpty())
                     {
+                        // Detener la música actual antes de cambiar de ola
+                        if (m_scrollingMap)
+                        {
+                            Music music = m_assets.GetMusic("overworld");
+                            StopMusicStream(music);
+                        }
+
                         // Si no hay monstruos y la cola de spawn está vacía, avanzar a la siguiente ola
                         m_hasGopherAppeared = false;
                         m_waveTimer = WAVE_DURATION;
@@ -2989,9 +2991,16 @@ void PrairieKing::Update(float deltaTime)
                 // Si el timer entre olas ha terminado
                 if (m_betweenWaveTimer <= 0)
                 {
-                    // Iniciar la siguiente ola
+                    // Iniciar la siguiente ola y su música
                     m_waveTimer = WAVE_DURATION;
                     m_waitingForPlayerToMoveDownAMap = false;
+
+                    if (!m_shootoutLevel)
+                    {
+                        Music music = m_assets.GetMusic("overworld");
+                        PlayMusicStream(music);
+                        SetMusicVolume(music, 0.7f);
+                    }
                 }
             }
         }
