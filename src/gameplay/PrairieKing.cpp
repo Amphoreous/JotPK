@@ -2895,9 +2895,10 @@ void PrairieKing::Update(float deltaTime)
                 m_waitingForPlayerToMoveDownAMap = false;
                 m_playerMovementDirections.clear();
                 
-                // Reiniciar timers de animación
+                // Reiniciar timers de animación y de ola
                 m_playerMotionAnimationTimer = 0.0f;
                 m_playerFootstepSoundTimer = 200.0f;
+                m_waveTimer = WAVE_DURATION;
                 
                 // Limpiar balas que salieron de la pantalla
                 m_bullets.erase(
@@ -2951,16 +2952,20 @@ void PrairieKing::Update(float deltaTime)
             // Actualizar timer de ola solo si no estamos scrolleando
             if (m_waveTimer > 0 && m_betweenWaveTimer <= 0 && !m_shootoutLevel)
             {
-                // Reproducir música del overworld si no está sonando y no estamos en nivel de tiroteo
-                Music music = m_assets.GetMusic("overworld");
-                if (!IsMusicStreamPlaying(music))
+                // Solo actualizar el timer si no estamos en una transición de mapa
+                if (!m_waitingForPlayerToMoveDownAMap && !m_scrollingMap)
                 {
-                    PlayMusicStream(music);
-                    SetMusicVolume(music, 0.7f);
+                    // Reproducir música del overworld si no está sonando y no estamos en nivel de tiroteo
+                    Music music = m_assets.GetMusic("overworld");
+                    if (!IsMusicStreamPlaying(music))
+                    {
+                        PlayMusicStream(music);
+                        SetMusicVolume(music, 0.7f);
+                    }
+                    UpdateMusicStream(music);
+                    
+                    m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
                 }
-                UpdateMusicStream(music);
-                
-                m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
                 
                 // Si el timer de la ola ha terminado
                 if (m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty())
@@ -2975,6 +2980,7 @@ void PrairieKing::Update(float deltaTime)
                         {
                             StartShoppingLevel();
                             // Solo detener la música si vamos a la tienda
+                            Music music = m_assets.GetMusic("overworld");
                             StopMusicStream(music);
                         }
                         else
@@ -3000,13 +3006,10 @@ void PrairieKing::Update(float deltaTime)
                 
                 if (m_betweenWaveTimer <= 0)
                 {
-                    // Iniciar la siguiente ola
-                    m_waveTimer = WAVE_DURATION;
-                    
-                    // Solo cambiar el estado de waitingForPlayerToMoveDownAMap si no estamos en una transición
-                    if (!m_scrollingMap)
+                    // Reiniciar el timer de la ola solo si no estamos en una transición
+                    if (!m_scrollingMap && !m_waitingForPlayerToMoveDownAMap)
                     {
-                        m_waitingForPlayerToMoveDownAMap = false;
+                        m_waveTimer = WAVE_DURATION;
                     }
                 }
             }
