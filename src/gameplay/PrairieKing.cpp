@@ -2895,9 +2895,10 @@ void PrairieKing::Update(float deltaTime)
                 m_waitingForPlayerToMoveDownAMap = false;
                 m_playerMovementDirections.clear();
                 
-                // Reiniciar timers de animación
+                // Reiniciar timers de animación y de ola
                 m_playerMotionAnimationTimer = 0.0f;
                 m_playerFootstepSoundTimer = 200.0f;
+                m_waveTimer = WAVE_DURATION;
                 
                 // Limpiar balas que salieron de la pantalla
                 m_bullets.erase(
@@ -2910,6 +2911,15 @@ void PrairieKing::Update(float deltaTime)
                 
                 // Aplicar estados específicos del nivel
                 ApplyLevelSpecificStates();
+                
+                // Mantener la música sonando - NO detenerla aquí
+                Music music = m_assets.GetMusic("overworld");
+                if (!IsMusicStreamPlaying(music))
+                {
+                    PlayMusicStream(music);
+                    SetMusicVolume(music, 0.7f);
+                }
+                UpdateMusicStream(music);
             }
             else 
             {
@@ -2931,55 +2941,61 @@ void PrairieKing::Update(float deltaTime)
                         bullet.position.y -= GetTileSize() / 8;
                     }
                 }
+                
+                // Mantener la música sonando durante el scroll
+                Music music = m_assets.GetMusic("overworld");
+                UpdateMusicStream(music);
             }
         }
         else
         {
             // Actualizar timer de ola solo si no estamos scrolleando
-            if (m_waveTimer > 0 && m_betweenWaveTimer <= 0)  // Solo decrementar si betweenWaveTimer ha terminado
+            if (m_waveTimer > 0 && m_betweenWaveTimer <= 0 && !m_shootoutLevel)
             {
-                m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
-                
-                // Reproducir música del overworld si no está sonando y no estamos en nivel de tiroteo
-                if (!m_shootoutLevel)
+                // Solo actualizar el timer si no estamos en una transición de mapa
+                if (!m_waitingForPlayerToMoveDownAMap && !m_scrollingMap)
                 {
+                    // Reproducir música del overworld si no está sonando y no estamos en nivel de tiroteo
                     Music music = m_assets.GetMusic("overworld");
-                    UpdateMusicStream(music); // Actualizar el stream de música
+                    if (!IsMusicStreamPlaying(music))
+                    {
+                        PlayMusicStream(music);
+                        SetMusicVolume(music, 0.7f);
+                    }
+                    UpdateMusicStream(music);
+                    
+                    m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
                 }
                 
-                if (m_waveTimer <= 0)
+                // Si el timer de la ola ha terminado
+                if (m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty())
                 {
-                    if (m_monsters.empty() && IsSpawnQueueEmpty())
+                    m_hasGopherAppeared = false;
+                    m_whichWave++;
+                    
+                    // Determinar si vamos a tienda o siguiente nivel
+                    if (m_whichWave > 0)
                     {
-                        // Detener la música actual antes de cambiar de ola
-                        if (m_scrollingMap)
+                        if (m_whichWave % 2 == 0)
                         {
+                            StartShoppingLevel();
+                            // Solo detener la música si vamos a la tienda
                             Music music = m_assets.GetMusic("overworld");
                             StopMusicStream(music);
                         }
-
-                        // Si no hay monstruos y la cola de spawn está vacía, avanzar a la siguiente ola
-                        m_hasGopherAppeared = false;
-                        m_waveTimer = WAVE_DURATION;
-                        m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
-                        m_whichWave++;
-
-                        // Determinar si vamos a tienda o siguiente nivel
-                        if (m_whichWave > 0)
+                        else
                         {
-                            if (m_whichWave % 2 == 0)
-                            {
-                                StartShoppingLevel();
-                            }
-                            else
-                            {
-                                m_waitingForPlayerToMoveDownAMap = true;
-                                m_map[8][15] = MAP_DESERT;
-                                m_map[7][15] = MAP_DESERT;
-                                m_map[9][15] = MAP_DESERT;
-                            }
+                            m_waitingForPlayerToMoveDownAMap = true;
+                            m_map[8][15] = MAP_DESERT;
+                            m_map[7][15] = MAP_DESERT;
+                            m_map[9][15] = MAP_DESERT;
+                            // No detener la música durante la transición de mapa
                         }
                     }
+                    
+                    // Reiniciar timers
+                    m_waveTimer = WAVE_DURATION;
+                    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
                 }
             }
 
@@ -2988,19 +3004,85 @@ void PrairieKing::Update(float deltaTime)
             {
                 m_betweenWaveTimer -= static_cast<int>(deltaTime * 1000.0f);
                 
-                // Si el timer entre olas ha terminado
                 if (m_betweenWaveTimer <= 0)
                 {
-                    // Iniciar la siguiente ola y su música
-                    m_waveTimer = WAVE_DURATION;
-                    m_waitingForPlayerToMoveDownAMap = false;
-
-                    if (!m_shootoutLevel)
+                    // Reiniciar el timer de la ola solo si no estamos en una transición
+                    if (!m_scrollingMap && !m_waitingForPlayerToMoveDownAMap)
                     {
-                        Music music = m_assets.GetMusic("overworld");
-                        PlayMusicStream(music);
-                        SetMusicVolume(music, 0.7f);
+                        m_waveTimer = WAVE_DURATION;
                     }
+                }
+            }
+
+            if (m_waveTimer > 0)
+            {
+                m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
+                
+                // Si el timer de la ola ha terminado
+                if (m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty())
+                {
+                    m_hasGopherAppeared = false;
+                    m_whichWave++;
+                    
+                    // Determinar si vamos a tienda o siguiente nivel
+                    if (m_whichWave > 0)
+                    {
+                        if (m_whichWave % 2 == 0)
+                        {
+                            StartShoppingLevel();
+                        }
+                        else
+                        {
+                            m_waitingForPlayerToMoveDownAMap = true;
+                            m_map[8][15] = MAP_DESERT;
+                            m_map[7][15] = MAP_DESERT;
+                            m_map[9][15] = MAP_DESERT;
+                        }
+                    }
+                    
+                    // Reiniciar timers
+                    m_waveTimer = WAVE_DURATION;
+                    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+                }
+            }
+
+            // Manejar el gopherTrain y el cambio de mundo
+            if (m_gopherTrain)
+            {
+                m_gopherTrainPosition += 3;
+                if (m_gopherTrainPosition % 30 == 0)
+                {
+                    PlaySound(GetSound("Cowboy_Footstep"));
+                }
+
+                if (m_playerJumped)
+                {
+                    m_playerPosition.y += 3.0f;
+                }
+
+                if (fabsf(m_playerPosition.y - static_cast<float>(m_gopherTrainPosition - GetTileSize())) <= 16.0f)
+                {
+                    m_playerJumped = true;
+                    m_playerPosition.y = static_cast<float>(m_gopherTrainPosition - GetTileSize());
+                }
+
+                if (m_gopherTrainPosition > 16 * GetTileSize() + GetTileSize())
+                {
+                    // Detener la música cuando realmente cambiamos de mundo
+                    Music music = m_assets.GetMusic("overworld");
+                    StopMusicStream(music);
+
+                    m_gopherTrain = false;
+                    m_playerJumped = false;
+                    m_whichWave++;
+                    GetMap(m_whichWave, m_map);
+                    m_playerPosition = {static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
+                    m_world = (m_world != 0) ? 1 : 2;
+                    m_waveTimer = WAVE_DURATION;
+                    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+                    m_waitingForPlayerToMoveDownAMap = false;
+                    m_shootoutLevel = false;
+                    SaveGame();
                 }
             }
         }
