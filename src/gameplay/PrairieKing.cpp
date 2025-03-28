@@ -2936,12 +2936,48 @@ void PrairieKing::Update(float deltaTime)
         else
         {
             // Actualizar timer de ola solo si no estamos scrolleando
-            if (m_waveTimer > 0)
+            if (m_waveTimer > 0 && m_betweenWaveTimer <= 0)  // Solo decrementar si betweenWaveTimer ha terminado
             {
                 m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
+                
+                // Reproducir música del overworld si no está sonando y no estamos en nivel de tiroteo
+                if (!m_shootoutLevel)
+                {
+                    Music music = m_assets.GetMusic("overworld");
+                    if (!IsMusicStreamPlaying(music))
+                    {
+                        PlayMusicStream(music);
+                        SetMusicVolume(music, 0.7f);
+                    }
+                    UpdateMusicStream(music);
+                }
+                
                 if (m_waveTimer <= 0)
                 {
-                    StartNewWave();
+                    if (m_monsters.empty() && IsSpawnQueueEmpty())
+                    {
+                        // Si no hay monstruos y la cola de spawn está vacía, avanzar a la siguiente ola
+                        m_hasGopherAppeared = false;
+                        m_waveTimer = WAVE_DURATION;
+                        m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+                        m_whichWave++;
+
+                        // Determinar si vamos a tienda o siguiente nivel
+                        if (m_whichWave > 0)
+                        {
+                            if (m_whichWave % 2 == 0)
+                            {
+                                StartShoppingLevel();
+                            }
+                            else
+                            {
+                                m_waitingForPlayerToMoveDownAMap = true;
+                                m_map[8][15] = MAP_DESERT;
+                                m_map[7][15] = MAP_DESERT;
+                                m_map[9][15] = MAP_DESERT;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -2950,14 +2986,11 @@ void PrairieKing::Update(float deltaTime)
             {
                 m_betweenWaveTimer -= static_cast<int>(deltaTime * 1000.0f);
                 
-                // Si el timer entre olas ha terminado y estamos en la ola 0 (inicio del juego)
-                // entonces empezar la primera ola
-                if (m_betweenWaveTimer <= 0 && m_whichWave == 0)
+                // Si el timer entre olas ha terminado
+                if (m_betweenWaveTimer <= 0)
                 {
-                    m_whichWave = 0; // Mantenerlo en 0 para el primer nivel jugable
-                    m_waveTimer = WAVE_DURATION; // Reiniciar el timer de ola para el nivel 0
-                    
-                    // No ir inmediatamente al siguiente nivel
+                    // Iniciar la siguiente ola
+                    m_waveTimer = WAVE_DURATION;
                     m_waitingForPlayerToMoveDownAMap = false;
                 }
             }
