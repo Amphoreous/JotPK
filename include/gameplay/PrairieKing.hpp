@@ -1,6 +1,5 @@
 #pragma once
 #include "AssetManager.hpp"
-#include "gameplay/Monster.hpp"
 #include "raylib.h"
 #include <vector>
 #include <unordered_map>
@@ -12,6 +11,11 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+
+// Forward declarations
+class CowboyMonster;
+class Dracula;
+class Outlaw;
 
 // Equality operators for raylib types
 inline bool operator==(const Rectangle& lhs, const Rectangle& rhs) {

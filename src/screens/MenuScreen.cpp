@@ -46,7 +46,7 @@ void MenuScreen::Draw() {
     float screenWidth = GetScreenWidth();
 
     // Game logo ajustado para coincidir con IntroScreen
-    const Rectangle logoSource = { 128, 1744, 96, 56 };
+    const Rectangle logoSource = { 0, 96, 96, 56 };
     const float logoScale = 400.0f / 56.0f;  // Mismo scale que IntroScreen
     const Rectangle logoDest = {
         centerX - (96 * logoScale)/2,
@@ -86,8 +86,8 @@ void MenuScreen::Draw() {
               20, 2, WHITE);
 
     // Botones de web en el lado derecho
-    const Rectangle githubSource = { 320, 1648, 32, 32 };
-    const Rectangle webSource = { 288, 1648, 32, 32 };
+    const Rectangle githubSource = { 192, 0, 32, 32 };
+    const Rectangle webSource = { 160, 0, 32, 32 };
     const float buttonSize = 32; // 16 * 2.0f scale
     const float buttonSpacing = 10.0f;
     const float rightMargin = 20.0f;

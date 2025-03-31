@@ -1,7 +1,11 @@
 #pragma once
 #include "raylib.h"
+#include "AssetManager.hpp"
 #include "gameplay/PrairieKing.hpp"
 #include <vector>
+
+// Forward declarations
+class PrairieKing;
 
 class CowboyMonster : public PrairieKing {
 public:
@@ -43,8 +47,8 @@ public:
     Vector2 acceleration;
     Vector2 targetPosition;
 
-    CowboyMonster(int which, int health, int speed, Vector2 position);
-    CowboyMonster(int which, Vector2 position);
+    CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position);
+    CowboyMonster(AssetManager& assets, int which, Vector2 position);
     virtual ~CowboyMonster() = default;
 
     virtual void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate);
@@ -69,7 +73,7 @@ public:
     int fullHealth;
     Vector2 homePosition;
 
-    Dracula();
+    Dracula(AssetManager& assets);
     void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
     int GetLootDrop() override;
     bool TakeDamage(int damage) override;
@@ -96,7 +100,7 @@ public:
     int fullHealth;
     Vector2 homePosition;
 
-    Outlaw(Vector2 position, int health);
+    Outlaw(AssetManager& assets, Vector2 position, int health);
     void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
     bool Move(Vector2 playerPosition, float deltaTime) override;
     int GetLootDrop() override;

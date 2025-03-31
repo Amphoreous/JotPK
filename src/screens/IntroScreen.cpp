@@ -16,7 +16,7 @@ void IntroScreen::Update(float deltaTime) {
     if (m_phase == IntroPhase::WaitForInput) {
         // Cache logo rectangles on first frame
         if (m_gameLogo.width == 0) {
-            m_gameLogo = { 128, 1744, 96, 56 };
+            m_gameLogo = { 0, 96, 96, 56 };
             float logoScale = 500.0f / 56.0f;
             m_gameLogoDest = {
                 GetScreenWidth()/2.0f - (96 * logoScale)/2,
@@ -25,7 +25,7 @@ void IntroScreen::Update(float deltaTime) {
                 56 * logoScale
             };
             
-            m_pressStart = { 152, 1803, 49, 7 };
+            m_pressStart = { 24, 155, 49, 7 };
             float pressStartScale = 250.0f / 49.0f;
             m_pressStartDest = {
                 GetScreenWidth()/2.0f - (49 * pressStartScale)/2,
@@ -95,7 +95,7 @@ void IntroScreen::Draw() {
         float screenHeight = GetScreenHeight();
 
         // Game logo un poco más pequeño
-        Rectangle logoSource = { 128, 1744, 96, 56 };
+        Rectangle logoSource = { 0, 96, 96, 56 };
         float logoScale = 400.0f / 56.0f;  // Reducido de 500 a 400
         Rectangle logoDest = {
             centerX - (96 * logoScale)/2,
@@ -108,7 +108,7 @@ void IntroScreen::Draw() {
                       Vector2{0, 0}, 0.0f, WHITE);
 
         if (m_showPressStart) {
-            Rectangle pressStartSource = { 152, 1803, 49, 7 };
+            Rectangle pressStartSource = { 24, 155, 49, 7 };
             float pressStartScale = 300.0f / 49.0f;  // Aumentado de 250 a 300
             Rectangle pressStartDest = {
                 centerX - (49 * pressStartScale)/2,
@@ -136,7 +136,7 @@ void IntroScreen::Draw() {
             }
             
             // Logo primero
-            Rectangle logoSource = { 432, 1808, 16, 16 };
+            Rectangle logoSource = { 304, 160, 16, 16 };
             float logoScale = 512.0f / 16.0f;
             Rectangle logoDest = {
                 centerX - (16 * logoScale)/2,
@@ -264,7 +264,7 @@ void IntroScreen::DoBlinkAnimation() {
     float centerY = GetScreenHeight() / 2.0f;
     float screenHeight = GetScreenHeight();
 
-    Rectangle logoSource = { 128, 1744, 96, 56 };
+    Rectangle logoSource = { 0, 96, 96, 56 };
     float logoScale = 400.0f / 56.0f;
     Rectangle logoDest = {
         centerX - (96 * logoScale)/2,
@@ -273,7 +273,7 @@ void IntroScreen::DoBlinkAnimation() {
         56 * logoScale
     };
 
-    Rectangle pressStartSource = { 152, 1803, 49, 7 };
+    Rectangle pressStartSource = { 24, 155, 49, 7 };
     float pressStartScale = 300.0f / 49.0f;
     Rectangle pressStartDest = {
         centerX - (49 * pressStartScale)/2,
