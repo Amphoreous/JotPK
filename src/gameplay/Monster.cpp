@@ -1,7 +1,9 @@
 #include "gameplay/Monster.hpp"
+#include "gameplay/PrairieKing.hpp"
+#include <cmath>
 
-CowboyMonster::CowboyMonster(int which, int health, int speed, Vector2 position)
-    : health(health), type(which), speed(speed),
+CowboyMonster::CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position)
+    : PrairieKing(assets), health(health), type(which), speed(speed),
     position({ position.x, position.y, static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM), static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) }),
     movementDirection(0), movedLastTurn(false), oppositeMotionGuy(false),
     invisible(false), special(false), uninterested(false), flyer(false),
@@ -11,8 +13,8 @@ CowboyMonster::CowboyMonster(int which, int health, int speed, Vector2 position)
     uninterested = (rand() % 100 < 25);
 }
 
-CowboyMonster::CowboyMonster(int which, Vector2 position)
-    : type(which),
+CowboyMonster::CowboyMonster(AssetManager& assets, int which, Vector2 position)
+    : PrairieKing(assets), type(which),
     position({ position.x, position.y, static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM), static_cast<float>(BASE_TILE_SIZE * PIXEL_ZOOM) }),
     movementDirection(0), movedLastTurn(false), oppositeMotionGuy(false),
     invisible(false), special(false), uninterested(false), flyer(false),
@@ -512,8 +514,8 @@ void CowboyMonster::SpikeyEndBehavior(int extraInfo)
 }
 
 // Implementation of the Dracula class
-Dracula::Dracula()
-    : CowboyMonster(-2, Vector2{ static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM),
+Dracula::Dracula(AssetManager& assets)
+    : CowboyMonster(assets, -2, Vector2{ static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM),
                                 static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM) })
 {
     homePosition = { position.x, position.y };
@@ -677,8 +679,8 @@ void Dracula::SummonEnemies(Vector2 origin, int which)
 }
 
 // Implementation of the Outlaw class
-Outlaw::Outlaw(Vector2 position, int health)
-    : CowboyMonster(-1, position)
+Outlaw::Outlaw(AssetManager& assets, Vector2 position, int health)
+    : CowboyMonster(assets, -1, position)
 {
     homePosition = { position.x, position.y };
     this->health = health;

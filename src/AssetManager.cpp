@@ -5,7 +5,7 @@ void AssetManager::LoadAssets() {
     InitAudioDevice();
     
     // Load textures
-    m_textures["cursors"] = LoadTexture("cursors/cursors.png");
+    m_textures["cursors"] = LoadTexture("cursors/cursors_1.png");
     
     // Load sounds
     m_sounds["pickup_coin"] = LoadSound("sounds/Pickup_Coin15.wav");
