@@ -625,7 +625,7 @@ void PrairieKing::AddGuts(Vector2 position, int whichGuts)
     {
         // Blood splat animation
         TemporaryAnimatedSprite blood(
-            Rectangle{512.0f, 1696.0f, 16.0f, 16.0f},
+            Rectangle{384.0f, 48.0f, 16.0f, 16.0f},
             80.0f, 6, 0,
             {position.x + instance->m_topLeftScreenCoordinate.x, position.y + instance->m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, GetRandomFloat(0, 1) < 0.5f,
@@ -634,7 +634,7 @@ void PrairieKing::AddGuts(Vector2 position, int whichGuts)
 
         // Lingering guts
         TemporaryAnimatedSprite guts(
-            Rectangle{592.0f, 1696.0f, 16.0f, 16.0f},
+            Rectangle{464.0f, 48.0f, 16.0f, 16.0f},
             10000.0f, 1, 0,
             {position.x + instance->m_topLeftScreenCoordinate.x, position.y + instance->m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, GetRandomFloat(0, 1) < 0.5f,
@@ -648,7 +648,7 @@ void PrairieKing::AddGuts(Vector2 position, int whichGuts)
     {
         // Mummy specific death animation
         TemporaryAnimatedSprite mummyDeath(
-            Rectangle{464.0f, 1792.0f, 16.0f, 16.0f},
+            Rectangle{336.0f, 144.0f, 16.0f, 16.0f},
             80.0f, 5, 0,
             {position.x + instance->m_topLeftScreenCoordinate.x, position.y + instance->m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, GetRandomFloat(0, 1) < 0.5f,
@@ -662,7 +662,7 @@ void PrairieKing::AddGuts(Vector2 position, int whichGuts)
     {
         // Ghost/Devil specific death animation
         TemporaryAnimatedSprite ghostDeath(
-            Rectangle{544.0f, 1728.0f, 16.0f, 16.0f},
+            Rectangle{416.0f, 80.0f, 16.0f, 16.0f},
             80.0f, 4, 0,
             {position.x + instance->m_topLeftScreenCoordinate.x, position.y + instance->m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, GetRandomFloat(0, 1) < 0.5f,
@@ -2228,7 +2228,7 @@ void PrairieKing::Draw()
         // Draw title
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{128.0f, 1744.0f, 96.0f, 56.0f},
+            Rectangle{0.0f, 96.0f, 96.0f, 56.0f},
             Rectangle{GetScreenWidth() / 2.0f - 3 * GetTileSize(),
                       m_topLeftScreenCoordinate.y + 5 * GetTileSize(),
                       288.0f, 168.0f},
@@ -2293,8 +2293,8 @@ void PrairieKing::Draw()
             {
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{464.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                              1680.0f - m_world * 16.0f,
+                    Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                              32.0f - m_world * 16.0f,
                               16.0f,
                               16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
@@ -2317,8 +2317,8 @@ void PrairieKing::Draw()
                 {
                     DrawTexturePro(
                         GetTexture("cursors"),
-                        Rectangle{464.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                                  1680.0f - m_world * 16.0f,
+                        Rectangle{336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                                  32.0f - m_world * 16.0f,
                                   16.0f,
                                   16.0f},
                         Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
@@ -2355,7 +2355,7 @@ void PrairieKing::Draw()
             // Drawing controls instruction box
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{352, 1648, 80, 48},
+                Rectangle{224, 0, 80, 48},
                 Rectangle{pos.x, pos.y, 240, 144}, // 3x scaling
                 Vector2{0, 0},
                 0.0f,
@@ -2370,7 +2370,7 @@ void PrairieKing::Draw()
                 // Draw player holding item
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{384.0f, 1760.0f, 16.0f, 16.0f},
+                    Rectangle{256.0f, 112.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
@@ -2381,7 +2381,7 @@ void PrairieKing::Draw()
                 // Draw held item above player
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{320.0f + m_itemToHold * 16.0f, 1776.0f, 16.0f, 16.0f},
+                    Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
                               48.0f, 48.0f},
@@ -2394,7 +2394,7 @@ void PrairieKing::Draw()
                 // Draw zombie player
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{352.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 1760.0f, 16.0f, 16.0f},
+                    Rectangle{224.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 112.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
@@ -2407,7 +2407,7 @@ void PrairieKing::Draw()
                 // Draw idle player
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{496.0f, 1760.0f, 16.0f, 16.0f},
+                    Rectangle{368.0f, 112.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
@@ -2437,7 +2437,7 @@ void PrairieKing::Draw()
 
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{483.0f, 1760.0f + footFrame * 3.0f, 10.0f, 3.0f},
+                    Rectangle{355.0f, 112.0f + footFrame * 3.0f, 10.0f, 3.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y + 39.0f,
                               30.0f, 9.0f},
@@ -2448,7 +2448,7 @@ void PrairieKing::Draw()
                 // Draw player body
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{464.0f + facingDirection * 16.0f, 1744.0f, 16.0f, 16.0f},
+                    Rectangle{336.0f + facingDirection * 16.0f, 96.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                               m_topLeftScreenCoordinate.y + m_playerPosition.y,
                               48.0f, 48.0f},
@@ -2475,7 +2475,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{518.0f, 1760.0f + (m_bulletDamage - 1) * 4.0f, 4.0f, 4.0f},
+                Rectangle{390.0f, 112.0f + (m_bulletDamage - 1) * 4.0f, 4.0f, 4.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + bullet.position.x,
                           m_topLeftScreenCoordinate.y + bullet.position.y,
                           12.0f, 12.0f}, // Slightly smaller for crisper appearance
@@ -2489,7 +2489,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{523.0f, 1760.0f, 5.0f, 5.0f},
+                Rectangle{395.0f, 112.0f, 5.0f, 5.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + bullet.position.x,
                           m_topLeftScreenCoordinate.y + bullet.position.y,
                           15.0f, 15.0f},
@@ -2501,7 +2501,7 @@ void PrairieKing::Draw()
         // Draw UI elements
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{294.0f, 1782.0f, 22.0f, 22.0f},
+            Rectangle{166.0f, 134.0f, 22.0f, 22.0f},
             Rectangle{m_topLeftScreenCoordinate.x - (GetTileSize() + 27),
                       m_topLeftScreenCoordinate.y,
                       66.0f, 66.0f},
@@ -2514,7 +2514,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{272.0f + m_heldItem->which * 16.0f, 1808.0f, 16.0f, 16.0f},
+                Rectangle{144.0f + m_heldItem->which * 16.0f, 160.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x - (GetTileSize() + 18),
                           m_topLeftScreenCoordinate.y + 9.0f,
                           48.0f, 48.0f},
@@ -2526,7 +2526,7 @@ void PrairieKing::Draw()
         // Draw lives icon and count
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{400.0f, 1776.0f, 16.0f, 16.0f},
+            Rectangle{272.0f, 128.0f, 16.0f, 16.0f},
             Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
                       m_topLeftScreenCoordinate.y + GetTileSize() + 18,
                       48.0f, 48.0f},
@@ -2545,7 +2545,7 @@ void PrairieKing::Draw()
         // Draw coins icon and count
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{272.0f, 1808.0f, 16.0f, 16.0f},
+            Rectangle{144.0f, 160.0f, 16.0f, 16.0f},
             Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
                       m_topLeftScreenCoordinate.y + GetTileSize() * 2 + 18,
                       48.0f, 48.0f},
@@ -2566,7 +2566,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{512.0f, 1760.0f, 5.0f, 5.0f},
+                Rectangle{384.0f, 112.0f, 5.0f, 5.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + GetTileSize() * 16 + 3,
                           m_topLeftScreenCoordinate.y + static_cast<float>(i * 3 * 6),
                           15.0f, 15.0f},
@@ -2578,7 +2578,7 @@ void PrairieKing::Draw()
         // Draw timer bar
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{595.0f, 1748.0f, 9.0f, 11.0f},
+            Rectangle{467.0f, 100.0f, 9.0f, 11.0f},
             Rectangle{m_topLeftScreenCoordinate.x,
                       m_topLeftScreenCoordinate.y - GetTileSize() / 2 - 12,
                       27.0f, 33.0f},
@@ -2610,7 +2610,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{416.0f + (m_ammoLevel - 1) * 16.0f, 1776.0f, 16.0f, 16.0f},
+                Rectangle{288.0f + (m_ammoLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
                           m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize(),
                           48.0f, 48.0f},
@@ -2623,7 +2623,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{320.0f + (m_fireSpeedLevel - 1) * 16.0f, 1776.0f, 16.0f, 16.0f},
+                Rectangle{192.0f + (m_fireSpeedLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
                           m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 2,
                           48.0f, 48.0f},
@@ -2636,7 +2636,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{368.0f + (m_runSpeedLevel - 1) * 16.0f, 1776.0f, 16.0f, 16.0f},
+                Rectangle{240.0f + (m_runSpeedLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
                           m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 3,
                           48.0f, 48.0f},
@@ -2649,7 +2649,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{464.0f, 1776.0f, 16.0f, 16.0f},
+                Rectangle{336.0f, 128.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
                           m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 4,
                           48.0f, 48.0f},
@@ -2674,7 +2674,7 @@ void PrairieKing::Draw()
             // Draw the arrow at the bottom of the screen
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{355.0f, 1750.0f, 8.0f, 8.0f},
+                Rectangle{227.0f, 102.0f, 8.0f, 8.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
                         m_topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
                         24.0f, 24.0f},
