@@ -21,7 +21,7 @@ void PrairieKing::CowboyPowerup::Draw(const Texture2D &cursorTexture, Vector2 to
 {
     if (duration > 2000 || duration / 200 % 2 == 0)
     {
-        Rectangle source = {272.0f + which * 16.0f, 1808.0f, 16.0f, 16.0f};
+        Rectangle source = {144.0f + which * 16.0f, 160.0f, 16.0f, 16.0f};
         DrawTexturePro(
             cursorTexture,
             source,
@@ -205,11 +205,11 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         Rectangle sourceRect;
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {480.0f, 1696.0f, 16.0f, 16.0f};
+            sourceRect = {352.0f, 48.0f, 16.0f, 16.0f};
         }
         else
         {
-            sourceRect = {576.0f, 1712.0f, 16.0f, 16.0f};
+            sourceRect = {448.0f, 64.0f, 16.0f, 16.0f};
         }
 
         DrawTexturePro(
@@ -225,12 +225,12 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         Rectangle sourceRect;
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {352.0f + type * 16.0f, 1696.0f, 16.0f, 16.0f};
+            sourceRect = {224.0f + type * 16.0f, 48.0f, 16.0f, 16.0f};
         }
         else
         {
             int frame = (movementAnimationTimer < 250.0f) ? 1 : 0;
-            sourceRect = {352.0f + (type * 2 + frame) * 16.0f, 1712.0f, 16.0f, 16.0f};
+            sourceRect = {224.0f + (type * 2 + frame) * 16.0f, 64.0f, 16.0f, 16.0f};
         }
 
         DrawTexturePro(
@@ -604,7 +604,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             {
                 // Add temporary sprite animation for spike formation
                 PrairieKing::TemporaryAnimatedSprite spike(
-                    Rectangle{352, 1728, 16, 16},
+                    Rectangle{224, 64, 16, 16},
                     60.0f, 3, 0,
                     Vector2{position.x + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x, position.y + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y},
                     0.0f, 3.0f, false,
@@ -664,7 +664,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     {
         DrawTexturePro(
             texture,
-            Rectangle{464.0f, 1696.0f, 16.0f, 16.0f},
+            Rectangle{336.0f, 48.0f, 16.0f, 16.0f},
             Rectangle{topLeftScreenCoordinate.x + position.x, topLeftScreenCoordinate.y + position.y, position.width, position.height},
             Vector2{0, 0},
             0.0f,
@@ -677,7 +677,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     {
         DrawTexturePro(
             texture,
-            Rectangle{592.0f + (phaseInternalTimer / 100 % 3) * 16.0f, 1760.0f, 16.0f, 16.0f},
+            Rectangle{464.0f + (phaseInternalTimer / 100 % 3) * 16.0f, 112.0f, 16.0f, 16.0f},
             Rectangle{topLeftScreenCoordinate.x + position.x, topLeftScreenCoordinate.y + position.y, position.width, position.height},
             Vector2{0, 0},
             0.0f,
@@ -688,7 +688,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
             // Draw floating effect
             DrawTexturePro(
                 texture,
-                Rectangle{528.0f, 1776.0f, 16.0f, 16.0f},
+                Rectangle{400.0f, 1776.0f, 16.0f, 16.0f},
                 Rectangle{
                     topLeftScreenCoordinate.x + position.x,
                     topLeftScreenCoordinate.y + position.y + position.height + sinf(phaseInternalTimer / 1000.0f) * 3,
