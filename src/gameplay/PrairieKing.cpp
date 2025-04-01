@@ -2100,21 +2100,21 @@ void PrairieKing::Update(float deltaTime)
                     // Determinar si vamos a tienda o siguiente nivel
                     if (m_whichWave > 0)
                     {
-                        if (m_whichWave % 2 == 0)
-                        {
-                            StartShoppingLevel();
-                            // Solo detener la música si vamos a la tienda
-                            Music music = m_assets.GetMusic("overworld");
-                            // StopMusicStream(music);
-                        }
-                        else
-                        {
+                        //if (m_whichWave % 2 == 0)
+                        //{
+                        //    StartShoppingLevel();
+                        //    // Solo detener la música si vamos a la tienda
+                        //    Music music = m_assets.GetMusic("overworld");
+                        //    // StopMusicStream(music);
+                        //}
+                        //else
+                        //{
                             m_waitingForPlayerToMoveDownAMap = true;
                             m_map[8][15] = MAP_DESERT;
                             m_map[7][15] = MAP_DESERT;
                             m_map[9][15] = MAP_DESERT;
                             // No detener la música durante la transición de mapa
-                        }
+                        //}
                     }
                     
                     // Reiniciar timers
@@ -2813,20 +2813,20 @@ void PrairieKing::StartNewWave()
     // Determinar si vamos a tienda o siguiente nivel
     if (m_whichWave > 0)
     {
-        if (m_whichWave % 2 == 0)
-        {
-            StartShoppingLevel();
-            // Solo detener la música si vamos a la tienda
-            Music music = m_assets.GetMusic("overworld");
-            StopMusicStream(music);
-        }
-        else
-        {
+        //if (m_whichWave % 2 == 0)
+        //{
+        //    StartShoppingLevel();
+        //    // Solo detener la música si vamos a la tienda
+        //    Music music = m_assets.GetMusic("overworld");
+        //    StopMusicStream(music);
+        //}
+        //else
+        //{
             m_waitingForPlayerToMoveDownAMap = true;
             m_map[8][15] = MAP_DESERT;
             m_map[7][15] = MAP_DESERT;
             m_map[9][15] = MAP_DESERT;
-        }
+        //}
     }
 
     // Reiniciar timers
