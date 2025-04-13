@@ -17,6 +17,28 @@ class CowboyMonster;
 class Dracula;
 class Outlaw;
 
+// Game constants namespace to avoid duplication
+namespace GameConstants {
+    constexpr int MONSTER_ANIMATION_DELAY = 500;
+    constexpr int BASE_TILE_SIZE = 16;
+    constexpr int PIXEL_ZOOM = 3;
+    constexpr int ORC = 0;
+    constexpr int GHOST = 1;
+    constexpr int OGRE = 2;
+    constexpr int MUMMY = 3;
+    constexpr int DEVIL = 4;
+    constexpr int MUSHROOM = 5;
+    constexpr int SPIKEY = 6;
+    constexpr int ORC_SPEED = 2;
+    constexpr int OGRE_SPEED = 1;
+    constexpr int GHOST_SPEED = 3;
+    constexpr int SPIKEY_SPEED = 3;
+    constexpr int ORC_HEALTH = 1;
+    constexpr int GHOST_HEALTH = 1;
+    constexpr int OGRE_HEALTH = 3;
+    constexpr int SPIKEY_HEALTH = 2;
+}
+
 // Equality operators for raylib types
 inline bool operator==(const Rectangle& lhs, const Rectangle& rhs) {
     return lhs.x == rhs.x && lhs.y == rhs.y && 
@@ -81,6 +103,11 @@ public:
         Exit,
         MAX
     };
+
+    // Helper functions
+    std::vector<Vector2> GetBorderPoints();
+    static float GetRandomFloat(float min, float max);
+    Vector2 GetRandomVector2(float minX, float maxX, float minY, float maxY);
 
     // Delegate type for motion pause behavior
     using BehaviorAfterMotionPause = std::function<void(int)>;
@@ -271,8 +298,6 @@ public:
     void AfterPlayerDeathFunction(int extra);
     void StartNewRound();
     void ProcessInputs();
-    static Vector2 GetRandomVector2(float minX, float maxX, float minY, float maxY);
-    static float GetRandomFloat(float min, float max);
     void SpawnBullets(const std::vector<int>& directions, Vector2 spawn);
     bool IsSpawnQueueEmpty();
     static bool IsMapTilePassable(int tileType);
@@ -393,7 +418,7 @@ private:
     std::unordered_map<Rectangle, int, std::hash<Rectangle>> m_storeItems;
     
     // Data structures needed for game state
-    std::vector<std::vector<int>> m_spawnQueue;
+    std::vector<std::vector<std::pair<int, int>>> m_spawnQueue;
     std::vector<Vector2> m_monsterChances;
     int m_map[MAP_WIDTH][MAP_HEIGHT];
     int m_nextMap[MAP_WIDTH][MAP_HEIGHT]; // Add buffer for next map
@@ -409,4 +434,87 @@ private:
     bool IsKeyReleased(GameKeys key);
 
     int GetTileSize() const { return BASE_TILE_SIZE * PIXEL_ZOOM; }
+};
+
+// Monster class definitions
+class CowboyMonster {
+public:
+    int health;
+    int type;
+    int speed;
+    float movementAnimationTimer;
+    Rectangle position;
+    int movementDirection;
+    bool movedLastTurn;
+    bool oppositeMotionGuy;
+    bool invisible;
+    bool special;
+    bool uninterested;
+    bool flyer;
+    Color tint;
+    Color flashColor;
+    float flashColorTimer;
+    int ticksSinceLastMovement;
+    Vector2 acceleration;
+    Vector2 targetPosition;
+    PrairieKing* gameInstance;
+
+    CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position);
+    CowboyMonster(AssetManager& assets, int which, Vector2 position);
+    virtual ~CowboyMonster() = default;
+
+    virtual void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate);
+    virtual bool TakeDamage(int damage);
+    virtual int GetLootDrop();
+    virtual bool Move(Vector2 playerPosition, float deltaTime);
+    void SpikeyEndBehavior(int extraInfo);
+};
+
+class Dracula : public CowboyMonster {
+public:
+    static const int GLOATING_PHASE = -1;
+    static const int WALK_RANDOMLY_AND_SHOOT_PHASE = 0;
+    static const int SPREAD_SHOT_PHASE = 1;
+    static const int SUMMON_DEMON_PHASE = 2;
+    static const int SUMMON_MUMMY_PHASE = 3;
+
+    int phase;
+    int phaseInternalTimer;
+    int phaseInternalCounter;
+    int shootTimer;
+    int fullHealth;
+    Vector2 homePosition;
+
+    Dracula(AssetManager& assets);
+    void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
+    int GetLootDrop() override;
+    bool TakeDamage(int damage) override;
+    bool Move(Vector2 playerPosition, float deltaTime) override;
+    void FireSpread(Vector2 origin, double offsetAngle);
+    void SummonEnemies(Vector2 origin, int which);
+};
+
+class Outlaw : public CowboyMonster {
+public:
+    static const int TALKING_PHASE = -1;
+    static const int HIDING_PHASE = 0;
+    static const int DART_OUT_AND_SHOOT_PHASE = 1;
+    static const int RUN_AND_GUN_PHASE = 2;
+    static const int RUN_GUN_AND_PANT_PHASE = 3;
+    static const int SHOOT_AT_PLAYER_PHASE = 4;
+
+    int phase;
+    int phaseCountdown;
+    int shootTimer;
+    int phaseInternalTimer;
+    int phaseInternalCounter;
+    bool dartLeft;
+    int fullHealth;
+    Vector2 homePosition;
+
+    Outlaw(AssetManager& assets, Vector2 position, int health);
+    void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
+    bool Move(Vector2 playerPosition, float deltaTime) override;
+    int GetLootDrop() override;
+    bool TakeDamage(int damage) override;
 };

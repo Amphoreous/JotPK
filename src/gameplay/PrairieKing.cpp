@@ -1,5 +1,4 @@
 #include "gameplay/PrairieKing.hpp"
-#include "gameplay/Monster.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <ctime>
@@ -52,16 +51,16 @@ PrairieKing::CowboyBullet::CowboyBullet(Vector2 position, int direction, int dam
 {
     switch (direction)
     {
-    case 0:
-        motion = {0, -BULLET_SPEED}; // Use the constant
+    case 0: // Up
+        motion = {0, -BULLET_SPEED};
         break;
-    case 1:
+    case 1: // Right
         motion = {BULLET_SPEED, 0};
         break;
-    case 2:
+    case 2: // Down
         motion = {0, BULLET_SPEED};
         break;
-    case 3:
+    case 3: // Left
         motion = {-BULLET_SPEED, 0};
         break;
     }
@@ -370,7 +369,7 @@ void PrairieKing::ApplyLevelSpecificStates()
     if (m_whichWave == 12)
     {
         m_shootoutLevel = true;
-        m_monsters.push_back(new Dracula(m_assets));
+        // m_monsters.push_back(new Dracula(m_assets));
 
         if (m_whichRound > 0)
         {
@@ -380,7 +379,7 @@ void PrairieKing::ApplyLevelSpecificStates()
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
         m_shootoutLevel = true;
-        m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
+        // m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
 
         // Play outlaw music
         PlaySound(GetSound("cowboy_outlawsong"));
@@ -2157,6 +2156,121 @@ void PrairieKing::Update(float deltaTime)
                 if (!m_waitingForPlayerToMoveDownAMap && !m_scrollingMap)
                 {
                     m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
+                    
+                    // Lógica de spawn de monstruos
+                    if (m_waveTimer > 0)
+                    {
+                        // Generar monstruos según las probabilidades
+                        for (size_t i = 0; i < m_monsterChances.size(); i++)
+                        {
+                            // Aumentar la probabilidad si no hay monstruos
+                            float spawnMultiplier = (m_monsters.empty()) ? 2.0f : 1.0f;
+                            
+                            // Intentar spawn basado en la probabilidad
+                            if (GetRandomFloat(0.0f, 1.0f) < m_monsterChances[i].x * spawnMultiplier)
+                            {
+                                // Determinar cuántos monstruos spawnear
+                                int numMonsters = 1;
+                                while (GetRandomFloat(0.0f, 1.0f) < m_monsterChances[i].y && numMonsters < 15)
+                                {
+                                    numMonsters++;
+                                }
+                                
+                                // Añadir a la cola de spawn
+                                int spawnQueueIndex;
+                                if (m_whichWave == 11)
+                                {
+                                    // En la ola 11, usar índices 1 o 3
+                                    spawnQueueIndex = (GetRandomFloat(0.0f, 1.0f) < 0.5f) ? 1 : 3;
+                                }
+                                else
+                                {
+                                    // En otras olas, usar un índice aleatorio
+                                    spawnQueueIndex = static_cast<int>(GetRandomFloat(0.0f, 3.0f));
+                                }
+                                
+                                // Añadir a la cola de spawn
+                                m_spawnQueue[spawnQueueIndex].push_back({static_cast<int>(i), numMonsters});
+                            }
+                        }
+                        
+                        // Procesar la cola de spawn
+                        for (int queueIndex = 0; queueIndex < 4; queueIndex++)
+                        {
+                            if (!m_spawnQueue[queueIndex].empty())
+                            {
+                                auto& spawnInfo = m_spawnQueue[queueIndex].front();
+                                int monsterType = spawnInfo.first;
+                                int numMonsters = spawnInfo.second;
+                                
+                                // Obtener puntos de spawn en el borde
+                                std::vector<Vector2> spawnPoints = GetBorderPoints({0, 0, MAP_WIDTH, MAP_HEIGHT});
+                                if (!spawnPoints.empty())
+                                {
+                                    // Filtrar puntos según el borde deseado
+                                    std::vector<Vector2> filteredPoints;
+                                    for (const auto& point : spawnPoints) {
+                                        switch (queueIndex) {
+                                            case 0: // Borde superior
+                                                if (point.y == 0) filteredPoints.push_back(point);
+                                                break;
+                                            case 1: // Borde derecho
+                                                if (point.x == MAP_WIDTH - 1) filteredPoints.push_back(point);
+                                                break;
+                                            case 2: // Borde inferior
+                                                if (point.y == MAP_HEIGHT - 1) filteredPoints.push_back(point);
+                                                break;
+                                            case 3: // Borde izquierdo
+                                                if (point.x == 0) filteredPoints.push_back(point);
+                                                break;
+                                        }
+                                    }
+                                    
+                                    if (!filteredPoints.empty()) {
+                                        // Intentar spawnear los monstruos
+                                        int spawnedCount = 0;
+                                        for (int i = 0; i < numMonsters && spawnedCount < 15; i++)
+                                        {
+                                            // Seleccionar un punto de spawn aleatorio
+                                            int pointIndex = static_cast<int>(GetRandomFloat(0.0f, filteredPoints.size() - 1));
+                                            Vector2 spawnPos = {
+                                                filteredPoints[pointIndex].x * GetTileSize(),
+                                                filteredPoints[pointIndex].y * GetTileSize()
+                                            };
+                                            
+                                            // Verificar colisiones con otros monstruos
+                                            bool canSpawn = true;
+                                            for (const auto& monster : m_monsters)
+                                            {
+                                                float dx = spawnPos.x - monster->position.x;
+                                                float dy = spawnPos.y - monster->position.y;
+                                                float distance = sqrtf(dx * dx + dy * dy);
+                                                if (distance < 32.0f)
+                                                {
+                                                    canSpawn = false;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (canSpawn)
+                                            {
+                                                // Crear el monstruo
+                                                auto* monster = new CowboyMonster(m_assets, monsterType, spawnPos);
+                                                monster->health += m_whichWave;
+                                                m_monsters.push_back(monster);
+                                                spawnedCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Remover el punto de la cola
+                                if (!m_spawnQueue[queueIndex].empty()) {
+                                    m_spawnQueue[queueIndex].erase(m_spawnQueue[queueIndex].begin());
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -2212,6 +2326,99 @@ void PrairieKing::Update(float deltaTime)
 
     // Actualizar movimiento y disparo del jugador
     UpdatePlayer(deltaTime);
+
+    // Update wave timer
+    if (m_waveTimer > 0 && !m_died && !m_shootoutLevel && !m_betweenWaveTimer)
+    {
+        m_waveTimer -= GetFrameTime() * 1000;
+    }
+
+    // Monster spawn logic
+    if (m_waveTimer > 0 && !m_died && !m_shootoutLevel && !m_betweenWaveTimer)
+    {
+        // Get border points for spawning
+        std::vector<Vector2> borderPoints = GetBorderPoints();
+        
+        // Base chance to spawn a monster
+        float spawnChance = m_monsters.empty() ? 0.4f : 0.014f;
+        
+        // Try to spawn monsters
+        if (GetRandomFloat(0.0f, 1.0f) < spawnChance)
+        {
+            // Determine how many monsters to spawn (1-4)
+            int monstersToSpawn = static_cast<int>(GetRandomFloat(1.0f, 4.99f));
+            
+            for (int i = 0; i < monstersToSpawn; i++)
+            {
+                if (borderPoints.empty()) break;
+                
+                // Get random spawn point
+                int spawnIndex = static_cast<int>(GetRandomFloat(0.0f, static_cast<float>(borderPoints.size() - 1)));
+                Vector2 spawnPoint = borderPoints[spawnIndex];
+                borderPoints.erase(borderPoints.begin() + spawnIndex);
+                
+                // Create monster based on current wave
+                int monsterType = 0; // Default to ORC
+                if (m_whichWave >= 4) monsterType = static_cast<int>(GetRandomFloat(0.0f, 1.99f)); // ORC or GHOST
+                if (m_whichWave >= 8) monsterType = static_cast<int>(GetRandomFloat(0.0f, 2.99f)); // ORC, GHOST, or OGRE
+                
+                // Create and add the monster
+                CowboyMonster* monster = new CowboyMonster(m_assets, monsterType, spawnPoint);
+                AddMonster(monster);
+            }
+        }
+    }
+
+    // Actualizar timer de la oleada
+    if (m_waveTimer > 0)
+    {
+        m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
+        
+        // Generar monstruos durante la oleada
+        if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving)
+        {
+            // Calcular probabilidad de spawn basada en monstruos existentes
+            float spawnChance = 0.02f; // Probabilidad base
+            if (m_monsters.empty())
+            {
+                spawnChance = 0.1f; // Mayor probabilidad si no hay monstruos
+            }
+            
+            // Intentar generar monstruos
+            if (GetRandomFloat(0.0f, 1.0f) < spawnChance)
+            {
+                // Determinar cuántos monstruos generar
+                int numMonsters = 1;
+                if (m_whichWave > 5 && GetRandomFloat(0.0f, 1.0f) < 0.3f)
+                {
+                    numMonsters = 2;
+                }
+                
+                // Generar monstruos
+                for (int i = 0; i < numMonsters; i++)
+                {
+                    // Obtener punto de spawn válido
+                    Vector2 spawnPoint = GetRandomVector2(2.0f * BASE_TILE_SIZE * PIXEL_ZOOM, 14.0f * BASE_TILE_SIZE * PIXEL_ZOOM,
+                                                        2.0f * BASE_TILE_SIZE * PIXEL_ZOOM, 14.0f * BASE_TILE_SIZE * PIXEL_ZOOM);
+                    if (spawnPoint.x >= 0 && spawnPoint.y >= 0)
+                    {
+                        // Crear nuevo monstruo
+                        CowboyMonster* monster = new CowboyMonster(m_assets, ORC, spawnPoint);
+                        monster->health = 3 + (m_whichWave / 2);
+                        monster->speed = 1.0f + (m_whichWave * 0.1f);
+                        
+                        // Agregar monstruo a la lista
+                        m_monsters.push_back(monster);
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        // Iniciar nueva oleada
+        StartNewWave();
+    }
 }
 
 void PrairieKing::Draw()
@@ -2792,7 +2999,7 @@ void PrairieKing::AddMonster(CowboyMonster* monster)
 
 void PrairieKing::AddTemporarySprite(const TemporaryAnimatedSprite &sprite)
 {
-    m_temporarySprites.push_back(sprite);
+                    m_temporarySprites.push_back(sprite);
 }
 
 PrairieKing *PrairieKing::GetGameInstance()
@@ -3182,4 +3389,30 @@ void PrairieKing::UpdatePlayer(float deltaTime)
         // Asegurar timer mínimo de disparo
         m_shotTimer = std::max(m_shotTimer, 20);
     }
+}
+
+std::vector<Vector2> PrairieKing::GetBorderPoints()
+{
+    std::vector<Vector2> points;
+    const int tileSize = GetTileSize();
+    
+    // Add top and bottom border points
+    for (int x = 1; x < MAP_WIDTH - 1; x++)
+    {
+        // Top border
+        points.push_back({static_cast<float>(x * tileSize), 0.0f});
+        // Bottom border
+        points.push_back({static_cast<float>(x * tileSize), static_cast<float>((MAP_HEIGHT - 1) * tileSize)});
+    }
+    
+    // Add left and right border points
+    for (int y = 1; y < MAP_HEIGHT - 1; y++)
+    {
+        // Left border
+        points.push_back({0.0f, static_cast<float>(y * tileSize)});
+        // Right border
+        points.push_back({static_cast<float>((MAP_WIDTH - 1) * tileSize), static_cast<float>(y * tileSize)});
+    }
+    
+    return points;
 }
