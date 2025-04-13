@@ -1,33 +1,49 @@
 #pragma once
-#include "raylib.h"
 #include "AssetManager.hpp"
-#include "gameplay/PrairieKing.hpp"
+#include "raylib.h"
 #include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <memory>
+#include <functional>
+#include <string>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
 
 // Forward declarations
-class PrairieKing;
+class CowboyMonster;
+class Dracula;
+class Outlaw;
 
-class CowboyMonster : public PrairieKing {
+// Game constants namespace to avoid duplication
+namespace GameConstants {
+    constexpr int MONSTER_ANIMATION_DELAY = 500;
+    constexpr int BASE_TILE_SIZE = 16;
+    constexpr int PIXEL_ZOOM = 3;
+    constexpr int ORC = 0;
+    constexpr int GHOST = 1;
+    constexpr int OGRE = 2;
+    constexpr int MUMMY = 3;
+    constexpr int DEVIL = 4;
+    constexpr int MUSHROOM = 5;
+    constexpr int SPIKEY = 6;
+    constexpr int ORC_SPEED = 2;
+    constexpr int OGRE_SPEED = 1;
+    constexpr int GHOST_SPEED = 3;
+    constexpr int SPIKEY_SPEED = 3;
+    constexpr int ORC_HEALTH = 1;
+    constexpr int GHOST_HEALTH = 1;
+    constexpr int OGRE_HEALTH = 3;
+    constexpr int SPIKEY_HEALTH = 2;
+}
+
+// ... existing code ...
+
+// Monster class definitions
+class CowboyMonster {
 public:
-    static const int MONSTER_ANIMATION_DELAY = 500;
-    static const int BASE_TILE_SIZE = 16;
-    static const int PIXEL_ZOOM = 3;
-    static const int ORC = 0;
-    static const int GHOST = 1;
-    static const int OGRE = 2;
-    static const int MUMMY = 3;
-    static const int DEVIL = 4;
-    static const int MUSHROOM = 5;
-    static const int SPIKEY = 6;
-    static const int ORC_SPEED = 2;
-    static const int OGRE_SPEED = 1;
-    static const int GHOST_SPEED = 3;
-    static const int SPIKEY_SPEED = 3;
-    static const int ORC_HEALTH = 1;
-    static const int GHOST_HEALTH = 1;
-    static const int OGRE_HEALTH = 3;
-    static const int SPIKEY_HEALTH = 2;
-
     int health;
     int type;
     int speed;
@@ -46,6 +62,7 @@ public:
     int ticksSinceLastMovement;
     Vector2 acceleration;
     Vector2 targetPosition;
+    PrairieKing* gameInstance;
 
     CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position);
     CowboyMonster(AssetManager& assets, int which, Vector2 position);
@@ -105,4 +122,4 @@ public:
     bool Move(Vector2 playerPosition, float deltaTime) override;
     int GetLootDrop() override;
     bool TakeDamage(int damage) override;
-};
+}; 
