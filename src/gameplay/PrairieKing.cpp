@@ -2099,21 +2099,21 @@ void PrairieKing::Update(float deltaTime)
                     // Determinar si vamos a tienda o siguiente nivel
                     if (m_whichWave > 0)
                     {
-                        //if (m_whichWave % 2 == 0)
-                        //{
-                        //    StartShoppingLevel();
-                        //    // Solo detener la música si vamos a la tienda
-                        //    Music music = m_assets.GetMusic("overworld");
-                        //    // StopMusicStream(music);
-                        //}
-                        //else
-                        //{
+                        if (m_whichWave % 2 == 0)
+                        {
+                            StartShoppingLevel();
+                            // Solo detener la música si vamos a la tienda
+                            Music music = m_assets.GetMusic("overworld");
+                            StopMusicStream(music);
+                        }
+                        else
+                        {
                             m_waitingForPlayerToMoveDownAMap = true;
                             m_map[8][15] = MAP_DESERT;
                             m_map[7][15] = MAP_DESERT;
                             m_map[9][15] = MAP_DESERT;
                             // No detener la música durante la transición de mapa
-                        //}
+                        }
                     }
                     
                     // Reiniciar timers
@@ -2133,18 +2133,29 @@ void PrairieKing::Update(float deltaTime)
                     if (!m_scrollingMap && !m_waitingForPlayerToMoveDownAMap)
                     {
                         m_waveTimer = WAVE_DURATION;
+                        
+                        // Iniciar la música de fondo cuando el between wave timer termina
+                        if (!m_shootoutLevel && !m_shopping)
+                        {
+                            Music music = m_assets.GetMusic("overworld");
+                            if (!IsMusicStreamPlaying(music))
+                            {
+                                PlayMusicStream(music);
+                                SetMusicVolume(music, 0.7f);
+                            }
+                        }
                     }
                 }
             }
 
-            // Manejar la música del overworld
-            if (!m_shootoutLevel && !m_shopping)
+            // Manejar la música del overworld - Solo si no estamos en el between wave timer inicial
+            if (!m_shootoutLevel && !m_shopping && m_betweenWaveTimer <= 0)
             {
                 Music music = m_assets.GetMusic("overworld");
                 if (!IsMusicStreamPlaying(music))
                 {
                     PlayMusicStream(music);
-                    SetMusicVolume(music, 1.5f);
+                    SetMusicVolume(music, 0.7f);
                 }
                 UpdateMusicStream(music);
             }
@@ -2158,116 +2169,93 @@ void PrairieKing::Update(float deltaTime)
                     m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
                     
                     // Lógica de spawn de monstruos
-                    if (m_waveTimer > 0)
+                    if (m_waveTimer > 0 && m_monsters.size() < 30 && IsSpawnQueueEmpty())
                     {
                         // Generar monstruos según las probabilidades
                         for (size_t i = 0; i < m_monsterChances.size(); i++)
                         {
                             // Aumentar la probabilidad si no hay monstruos
-                            float spawnMultiplier = (m_monsters.empty()) ? 2.0f : 1.0f;
+                            float spawnMultiplier = 1.0f;
                             
+                            // Ajustar multiplicador según la ola
+                            if (m_whichWave > 5)
+                            {
+                                spawnMultiplier = 1.0f + (m_whichWave - 5) * 0.1f;
+                            }
+                            
+                            // Ajustar multiplicador para New Game Plus
+                            if (m_whichRound > 0)
+                            {
+                                spawnMultiplier *= 1.0f + m_whichRound * 0.2f;
+                            }
+                            
+                            // Aumentar probabilidad si no hay monstruos
+                            if (m_monsters.empty())
+                            {
+                                spawnMultiplier *= 2.0f;
+                            }
+
                             // Intentar spawn basado en la probabilidad
                             if (GetRandomFloat(0.0f, 1.0f) < m_monsterChances[i].x * spawnMultiplier)
                             {
                                 // Determinar cuántos monstruos spawnear
                                 int numMonsters = 1;
-                                while (GetRandomFloat(0.0f, 1.0f) < m_monsterChances[i].y && numMonsters < 15)
+                                float groupChance = m_monsterChances[i].y;
+                                
+                                // Ajustar probabilidad de grupo según la ola
+                                if (m_whichWave > 3)
+                                {
+                                    groupChance += (m_whichWave - 3) * 0.02f;
+                                }
+                                
+                                // Intentar generar grupos de monstruos
+                                while (GetRandomFloat(0.0f, 1.0f) < groupChance && numMonsters < 5)
                                 {
                                     numMonsters++;
                                 }
                                 
+                                // Limitar el número máximo de monstruos según la ola
+                                int maxMonsters = 5;
+                                if (m_whichWave > 7)
+                                {
+                                    maxMonsters = 7;
+                                }
+                                if (m_whichWave > 10)
+                                {
+                                    maxMonsters = 10;
+                                }
+                                
+                                numMonsters = std::min(numMonsters, maxMonsters);
+                                
                                 // Añadir a la cola de spawn
                                 int spawnQueueIndex;
+                                
+                                // En la ola 11, usar índices 1 o 3 (bordes laterales)
                                 if (m_whichWave == 11)
                                 {
-                                    // En la ola 11, usar índices 1 o 3
                                     spawnQueueIndex = (GetRandomFloat(0.0f, 1.0f) < 0.5f) ? 1 : 3;
                                 }
+                                // En olas avanzadas, preferir bordes laterales
+                                else if (m_whichWave > 8)
+                                {
+                                    float rand = GetRandomFloat(0.0f, 1.0f);
+                                    if (rand < 0.4f)
+                                        spawnQueueIndex = 0; // Arriba
+                                    else if (rand < 0.7f)
+                                        spawnQueueIndex = 1; // Derecha
+                                    else if (rand < 0.9f)
+                                        spawnQueueIndex = 2; // Abajo
+                                    else
+                                        spawnQueueIndex = 3; // Izquierda
+                                }
+                                // En otras olas, usar un índice aleatorio
                                 else
                                 {
-                                    // En otras olas, usar un índice aleatorio
                                     spawnQueueIndex = static_cast<int>(GetRandomFloat(0.0f, 3.0f));
                                 }
                                 
                                 // Añadir a la cola de spawn
                                 m_spawnQueue[spawnQueueIndex].push_back({static_cast<int>(i), numMonsters});
-                            }
-                        }
-                        
-                        // Procesar la cola de spawn
-                        for (int queueIndex = 0; queueIndex < 4; queueIndex++)
-                        {
-                            if (!m_spawnQueue[queueIndex].empty())
-                            {
-                                auto& spawnInfo = m_spawnQueue[queueIndex].front();
-                                int monsterType = spawnInfo.first;
-                                int numMonsters = spawnInfo.second;
-                                
-                                // Obtener puntos de spawn en el borde
-                                std::vector<Vector2> spawnPoints = GetBorderPoints({0, 0, MAP_WIDTH, MAP_HEIGHT});
-                                if (!spawnPoints.empty())
-                                {
-                                    // Filtrar puntos según el borde deseado
-                                    std::vector<Vector2> filteredPoints;
-                                    for (const auto& point : spawnPoints) {
-                                        switch (queueIndex) {
-                                            case 0: // Borde superior
-                                                if (point.y == 0) filteredPoints.push_back(point);
-                                                break;
-                                            case 1: // Borde derecho
-                                                if (point.x == MAP_WIDTH - 1) filteredPoints.push_back(point);
-                                                break;
-                                            case 2: // Borde inferior
-                                                if (point.y == MAP_HEIGHT - 1) filteredPoints.push_back(point);
-                                                break;
-                                            case 3: // Borde izquierdo
-                                                if (point.x == 0) filteredPoints.push_back(point);
-                                                break;
-                                        }
-                                    }
-                                    
-                                    if (!filteredPoints.empty()) {
-                                        // Intentar spawnear los monstruos
-                                        int spawnedCount = 0;
-                                        for (int i = 0; i < numMonsters && spawnedCount < 15; i++)
-                                        {
-                                            // Seleccionar un punto de spawn aleatorio
-                                            int pointIndex = static_cast<int>(GetRandomFloat(0.0f, filteredPoints.size() - 1));
-                                            Vector2 spawnPos = {
-                                                filteredPoints[pointIndex].x * GetTileSize(),
-                                                filteredPoints[pointIndex].y * GetTileSize()
-                                            };
-                                            
-                                            // Verificar colisiones con otros monstruos
-                                            bool canSpawn = true;
-                                            for (const auto& monster : m_monsters)
-                                            {
-                                                float dx = spawnPos.x - monster->position.x;
-                                                float dy = spawnPos.y - monster->position.y;
-                                                float distance = sqrtf(dx * dx + dy * dy);
-                                                if (distance < 32.0f)
-                                                {
-                                                    canSpawn = false;
-                                                    break;
-                                                }
-                                            }
-                                            
-                                            if (canSpawn)
-                                            {
-                                                // Crear el monstruo
-                                                auto* monster = new CowboyMonster(m_assets, monsterType, spawnPos);
-                                                monster->health += m_whichWave;
-                                                m_monsters.push_back(monster);
-                                                spawnedCount++;
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // Remover el punto de la cola
-                                if (!m_spawnQueue[queueIndex].empty()) {
-                                    m_spawnQueue[queueIndex].erase(m_spawnQueue[queueIndex].begin());
-                                }
                             }
                         }
                     }
@@ -2568,7 +2556,7 @@ void PrairieKing::Draw()
                 Vector2{0, 0},
                 0.0f,
                 WHITE);
-                    }
+        }
 
         // Draw player if not dead or invincible
         if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
@@ -3020,20 +3008,20 @@ void PrairieKing::StartNewWave()
     // Determinar si vamos a tienda o siguiente nivel
     if (m_whichWave > 0)
     {
-        //if (m_whichWave % 2 == 0)
-        //{
-        //    StartShoppingLevel();
-        //    // Solo detener la música si vamos a la tienda
-        //    Music music = m_assets.GetMusic("overworld");
-        //    StopMusicStream(music);
-        //}
-        //else
-        //{
+        if (m_whichWave % 2 == 0)
+        {
+            StartShoppingLevel();
+            // Solo detener la música si vamos a la tienda
+            Music music = m_assets.GetMusic("overworld");
+            StopMusicStream(music);
+        }
+        else
+        {
             m_waitingForPlayerToMoveDownAMap = true;
             m_map[8][15] = MAP_DESERT;
             m_map[7][15] = MAP_DESERT;
             m_map[9][15] = MAP_DESERT;
-        //}
+        }
     }
 
     // Reiniciar timers
@@ -3046,12 +3034,13 @@ void PrairieKing::StartNewWave()
         case 1:
         case 2:
         case 3:
-            m_monsterChances[0] = {m_monsterChances[0].x + 0.001f, m_monsterChances[0].y + 0.02f}; // Orcs
+            // Olas iniciales: Orcs, Ogres y Spikeys
+            m_monsterChances[0] = {0.01f + (m_whichWave - 1) * 0.005f, 0.1f + (m_whichWave - 1) * 0.05f}; // Orcs
             if (m_whichWave > 1)
             {
-                m_monsterChances[2] = {m_monsterChances[2].x + 0.001f, m_monsterChances[2].y + 0.01f}; // Ogres
+                m_monsterChances[2] = {0.005f + (m_whichWave - 2) * 0.003f, 0.05f + (m_whichWave - 2) * 0.03f}; // Ogres
             }
-            m_monsterChances[6] = {m_monsterChances[6].x + 0.001f, m_monsterChances[6].y + 0.01f}; // Spikeys
+            m_monsterChances[6] = {0.005f + (m_whichWave - 1) * 0.003f, 0.05f + (m_whichWave - 1) * 0.03f}; // Spikeys
             if (m_whichRound > 0)
             {
                 m_monsterChances[4] = {0.002f, 0.1f}; // Devils en New Game Plus
@@ -3062,6 +3051,7 @@ void PrairieKing::StartNewWave()
         case 5:
         case 6:
         case 7:
+            // Olas medias: Ogres, Mushrooms y Ghosts
             if (m_monsterChances[5].x == 0 && m_monsterChances[5].y == 0)
             {
                 m_monsterChances[5] = {0.01f, 0.15f}; // Mushrooms
@@ -3073,9 +3063,9 @@ void PrairieKing::StartNewWave()
             }
             m_monsterChances[0] = {0, 0}; // Desactivar Orcs
             m_monsterChances[6] = {0, 0}; // Desactivar Spikeys
-            m_monsterChances[2] = {m_monsterChances[2].x + 0.002f, m_monsterChances[2].y + 0.02f}; // Más Ogres
-            m_monsterChances[5] = {m_monsterChances[5].x + 0.001f, m_monsterChances[5].y + 0.02f}; // Más Mushrooms
-            m_monsterChances[1] = {m_monsterChances[1].x + 0.0018f, m_monsterChances[1].y + 0.08f}; // Más Ghosts
+            m_monsterChances[2] = {0.01f + (m_whichWave - 4) * 0.005f, 0.1f + (m_whichWave - 4) * 0.05f}; // Más Ogres
+            m_monsterChances[5] = {0.01f + (m_whichWave - 4) * 0.003f, 0.15f + (m_whichWave - 4) * 0.03f}; // Más Mushrooms
+            m_monsterChances[1] = {0.005f + (m_whichWave - 4) * 0.003f, 0.05f + (m_whichWave - 4) * 0.03f}; // Más Ghosts
             if (m_whichRound > 0)
             {
                 m_monsterChances[4] = {0.001f, 0.1f}; // Devils en New Game Plus
@@ -3086,6 +3076,7 @@ void PrairieKing::StartNewWave()
         case 9:
         case 10:
         case 11:
+            // Olas avanzadas: Mummies y Devils
             m_monsterChances[5] = {0, 0}; // Desactivar Mushrooms
             m_monsterChances[1] = {0, 0}; // Desactivar Ghosts
             m_monsterChances[2] = {0, 0}; // Desactivar Ogres
@@ -3102,13 +3093,23 @@ void PrairieKing::StartNewWave()
             {
                 m_monsterChances[4] = {0.003f, 0.1f}; // Devils
             }
-            m_monsterChances[3] = {m_monsterChances[3].x + 0.002f, m_monsterChances[3].y + 0.05f}; // Más Mummies
-            m_monsterChances[4] = {m_monsterChances[4].x + 0.0015f, m_monsterChances[4].y + 0.04f}; // Más Devils
+            m_monsterChances[3] = {0.012f + (m_whichWave - 8) * 0.005f, 0.4f + (m_whichWave - 8) * 0.05f}; // Más Mummies
+            m_monsterChances[4] = {0.003f + (m_whichWave - 8) * 0.003f, 0.1f + (m_whichWave - 8) * 0.03f}; // Más Devils
             if (m_whichWave == 11)
             {
                 m_monsterChances[4] = {m_monsterChances[4].x + 0.01f, m_monsterChances[4].y + 0.04f}; // Aún más Devils
                 m_monsterChances[3] = {m_monsterChances[3].x - 0.01f, m_monsterChances[3].y + 0.04f}; // Menos Mummies
             }
+            break;
+            
+        case 12:
+            // Ola final: Jefe
+            // Limpiar todas las probabilidades de monstruos normales
+            for (auto& chance : m_monsterChances)
+            {
+                chance = {0, 0};
+            }
+            // El jefe se maneja en otra parte del código
             break;
     }
 
@@ -3415,4 +3416,444 @@ std::vector<Vector2> PrairieKing::GetBorderPoints()
     }
     
     return points;
+}
+
+// Implementación de los constructores de CowboyMonster
+PrairieKing::CowboyMonster::CowboyMonster(AssetManager& assets, int which, Vector2 position)
+    : type(which), position({position.x, position.y, 16.0f * 3, 16.0f * 3})
+{
+    // Inicialización básica del monstruo
+    health = 100;  // Valor por defecto
+    speed = 1.0f;  // Valor por defecto
+    movementAnimationTimer = 0.0f;
+    movementDirection = 0;
+    movedLastTurn = false;
+    oppositeMotionGuy = false;
+    invisible = false;
+    special = false;
+    uninterested = false;
+    flyer = false;
+    tint = WHITE;
+    flashColor = WHITE;
+    flashColorTimer = 0.0f;
+    ticksSinceLastMovement = 0;
+    acceleration = {0, 0};
+    targetPosition = position;
+}
+
+PrairieKing::CowboyMonster::CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position)
+    : type(which), health(health), speed(speed), position({position.x, position.y, 16.0f * 3, 16.0f * 3})
+{
+    movementAnimationTimer = 0.0f;
+    movementDirection = 0;
+    movedLastTurn = false;
+    oppositeMotionGuy = false;
+    invisible = false;
+    special = false;
+    uninterested = false;
+    flyer = false;
+    tint = WHITE;
+    flashColor = WHITE;
+    flashColorTimer = 0.0f;
+    ticksSinceLastMovement = 0;
+    acceleration = {0, 0};
+    targetPosition = position;
+}
+
+// Implementación de los métodos virtuales de CowboyMonster
+void PrairieKing::CowboyMonster::Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate)
+{
+    // No dibujar si el monstruo está invisible
+    if (invisible) return;
+
+    Rectangle destRect = {
+        topLeftScreenCoordinate.x + position.x,
+        topLeftScreenCoordinate.y + position.y,
+        position.width,
+        position.height
+    };
+    
+    // Determinar el rectángulo de la textura según el tipo de monstruo
+    Rectangle sourceRect;
+    
+    if (type == 6 && special)
+    {
+        if (flashColorTimer > 0.0f)
+        {
+            sourceRect = {480 - 128, 1696 - 1648, 16, 16};
+        }
+        else
+        {
+            sourceRect = {576 - 128, 1712 - 1648, 16, 16};
+        }
+    }
+    else
+    {
+        if (flashColorTimer > 0.0f)
+        {
+            sourceRect = {static_cast<float>((352 + type * 16) - 128), static_cast<float>(1696 - 1648), 16, 16};
+        }
+        else
+        {
+            sourceRect = {static_cast<float>((352 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16) - 128), static_cast<float>(1712 - 1648), 16, 16};
+        }
+    }
+    
+    // Dibujar el monstruo con su textura correspondiente
+    DrawTexturePro(texture, sourceRect, destRect, Vector2{0, 0}, 0.0f, WHITE);
+    
+    // Dibujar el signo de interrogación si el monstruo está confundido
+    if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
+    {
+        // Implementación del signo de interrogación (se puede añadir más tarde)
+    }
+}
+
+bool PrairieKing::CowboyMonster::TakeDamage(int damage)
+{
+    // Implementación básica del método TakeDamage
+    health -= damage;
+    return health <= 0;
+}
+
+int PrairieKing::CowboyMonster::GetLootDrop()
+{
+    // Implementación básica del método GetLootDrop
+    // Retorna un valor por defecto, ajusta según la lógica del juego
+    return 0;
+}
+
+bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
+{
+    // Actualizar el temporizador de animación de movimiento
+    movementAnimationTimer -= deltaTime * 1000.0f; // Convertir a milisegundos
+    if (movementAnimationTimer <= 0.0f)
+    {
+        movementAnimationTimer = std::max(100.0f, 500.0f - speed * 50.0f);
+    }
+
+    // Si el monstruo está parpadeando, no se mueve
+    if (flashColorTimer > 0.0f)
+    {
+        flashColorTimer -= deltaTime * 1000.0f;
+        return false;
+    }
+
+    // Si hay confusión de monstruos, no se mueve
+    if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
+    {
+        return false;
+    }
+
+    // Si estamos en la tienda, actualizar el temporizador de compra
+    if (PrairieKing::GetGameInstance()->m_shopping)
+    {
+        PrairieKing::GetGameInstance()->m_shoppingTimer -= deltaTime * 1000.0f;
+        if (PrairieKing::GetGameInstance()->m_shoppingTimer <= 0)
+        {
+            PrairieKing::GetGameInstance()->m_shoppingTimer = 100;
+        }
+    }
+
+    // Incrementar el contador de ticks desde el último movimiento
+    ticksSinceLastMovement++;
+
+    // Comportamiento específico según el tipo de monstruo
+    switch (type)
+    {
+        case GameConstants::ORC:
+        case GameConstants::OGRE:
+        case GameConstants::MUMMY:
+        case GameConstants::MUSHROOM:
+        case GameConstants::SPIKEY:
+        {
+            // Comportamiento especial para Spikey
+            if (type == GameConstants::SPIKEY)
+            {
+                if (special || invisible)
+                {
+                    break;
+                }
+                if (ticksSinceLastMovement > 20)
+                {
+                    int tries = 0;
+                    do
+                    {
+                        targetPosition = {
+                            static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                            static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())
+                        };
+                        tries++;
+                    } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
+                }
+            }
+            else if (ticksSinceLastMovement > 20)
+            {
+                int tries = 0;
+                do
+                {
+                    oppositeMotionGuy = !oppositeMotionGuy;
+                    targetPosition = {
+                        static_cast<float>(GetRandomInt(
+                            static_cast<int>(position.x) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
+                            static_cast<int>(position.x) + PrairieKing::GetGameInstance()->GetTileSize() * 2)),
+                        static_cast<float>(GetRandomInt(
+                            static_cast<int>(position.y) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
+                            static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2))
+                    };
+                    tries++;
+                } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
+            }
+
+            // Determinar el objetivo
+            Vector2 target = (targetPosition.x != 0.0f || targetPosition.y != 0.0f) ? targetPosition : playerPosition;
+
+            // Si el gopher está corriendo, perseguir al gopher
+            if (PrairieKing::GetGameInstance()->m_gopherRunning)
+            {
+                target = { PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y };
+            }
+
+            // Ocasionalmente cambiar la dirección del movimiento
+            if (GetRandomFloat(0.0f, 1.0f) < 0.001f)
+            {
+                oppositeMotionGuy = !oppositeMotionGuy;
+            }
+
+            // Determinar la dirección del movimiento
+            if ((type == GameConstants::SPIKEY && !oppositeMotionGuy) || 
+                std::abs(target.x - position.x) > std::abs(target.y - position.y))
+            {
+                if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
+                {
+                    movementDirection = 3; // Izquierda
+                }
+                else if (target.x > position.x + speed && (movedLastTurn || movementDirection != 1))
+                {
+                    movementDirection = 1; // Derecha
+                }
+                else if (target.y > position.y + speed && (movedLastTurn || movementDirection != 2))
+                {
+                    movementDirection = 2; // Abajo
+                }
+                else if (target.y + speed < position.y && (movedLastTurn || movementDirection != 0))
+                {
+                    movementDirection = 0; // Arriba
+                }
+            }
+            else
+            {
+                if (target.y > position.y + speed && (movedLastTurn || movementDirection != 2))
+                {
+                    movementDirection = 2; // Abajo
+                }
+                else if (target.y + speed < position.y && (movedLastTurn || movementDirection != 0))
+                {
+                    movementDirection = 0; // Arriba
+                }
+                else if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
+                {
+                    movementDirection = 3; // Izquierda
+                }
+                else if (target.x > position.x + speed && (movedLastTurn || movementDirection != 1))
+                {
+                    movementDirection = 1; // Derecha
+                }
+            }
+
+            movedLastTurn = false;
+            Rectangle attemptedPosition = position;
+
+            // Calcular la posición intentada según la dirección
+            switch (movementDirection)
+            {
+                case 0: // Arriba
+                    attemptedPosition.y -= speed;
+                    break;
+                case 1: // Derecha
+                    attemptedPosition.x += speed;
+                    break;
+                case 2: // Abajo
+                    attemptedPosition.y += speed;
+                    break;
+                case 3: // Izquierda
+                    attemptedPosition.x -= speed;
+                    break;
+            }
+
+            // Si estamos en modo zombie, invertir la dirección
+            if (PrairieKing::GetGameInstance()->m_zombieModeTimer > 0)
+            {
+                attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
+                attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
+            }
+
+            // Comportamiento especial para Ogre (tipo 2)
+            if (type == GameConstants::OGRE)
+            {
+                for (int i = PrairieKing::GetGameInstance()->m_monsters.size() - 1; i >= 0; i--)
+                {
+                    auto* monster = PrairieKing::GetGameInstance()->m_monsters[i];
+                    if (monster->type == GameConstants::SPIKEY && monster->special && 
+                        CheckCollisionRecs(attemptedPosition, monster->position))
+                    {
+                        PrairieKing::AddGuts({ monster->position.x, monster->position.y }, monster->type);
+                        PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+                        delete monster;
+                        PrairieKing::GetGameInstance()->m_monsters.erase(
+                            PrairieKing::GetGameInstance()->m_monsters.begin() + i);
+                    }
+                }
+            }
+
+            // Verificar colisiones
+            if (PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) || 
+                PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this) || 
+                PrairieKing::GetGameInstance()->m_deathTimer > 0.0f)
+            {
+                break;
+            }
+
+            // Actualizar posición
+            ticksSinceLastMovement = 0;
+            position = attemptedPosition;
+            movedLastTurn = true;
+
+            // Si llegamos al objetivo, resetear
+            if (!CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, 
+                                         target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f }, 
+                                      position))
+            {
+                break;
+            }
+
+            targetPosition = { 0.0f, 0.0f };
+
+            // Comportamiento especial para Orc y Mummy
+            if ((type == GameConstants::ORC || type == GameConstants::MUMMY) && uninterested)
+            {
+                targetPosition = {
+                    static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                    static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())
+                };
+                if (GetRandomFloat(0.0f, 1.0f) < 0.5f)
+                {
+                    uninterested = false;
+                    targetPosition = { 0.0f, 0.0f };
+                }
+            }
+
+            // Comportamiento especial para Spikey
+            if (type == GameConstants::SPIKEY && !invisible)
+            {
+                // Aquí se añadiría un sprite temporal (se implementará en otra tarea)
+                invisible = true;
+            }
+            break;
+        }
+        case GameConstants::GHOST:
+        case GameConstants::DEVIL:
+        {
+            // Comportamiento para monstruos voladores
+            if (ticksSinceLastMovement > 20)
+            {
+                int tries = 0;
+                do
+                {
+                    oppositeMotionGuy = !oppositeMotionGuy;
+                    targetPosition = {
+                        static_cast<float>(GetRandomInt(
+                            static_cast<int>(position.x) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
+                            static_cast<int>(position.x) + PrairieKing::GetGameInstance()->GetTileSize() * 2)),
+                        static_cast<float>(GetRandomInt(
+                            static_cast<int>(position.y) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
+                            static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2))
+                    };
+                    tries++;
+                } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
+            }
+
+            // Determinar el objetivo
+            Vector2 target = (targetPosition.x != 0.0f || targetPosition.y != 0.0f) ? targetPosition : playerPosition;
+            
+            // Calcular la velocidad hacia el objetivo
+            Vector2 targetToFly = GetVelocityTowardPoint(
+                { position.x, position.y }, 
+                { target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, 
+                  target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f }, 
+                speed);
+            
+            // Ajustar la aceleración
+            float accelerationMultiplier = (targetToFly.x != 0.0f && targetToFly.y != 0.0f) ? 1.5f : 1.0f;
+            
+            if (targetToFly.x > acceleration.x)
+            {
+                acceleration.x += 0.1f * accelerationMultiplier;
+            }
+            if (targetToFly.x < acceleration.x)
+            {
+                acceleration.x -= 0.1f * accelerationMultiplier;
+            }
+            if (targetToFly.y > acceleration.y)
+            {
+                acceleration.y += 0.1f * accelerationMultiplier;
+            }
+            if (targetToFly.y < acceleration.y)
+            {
+                acceleration.y -= 0.1f * accelerationMultiplier;
+            }
+
+            // Verificar colisiones y mover
+            Rectangle newPosition = {
+                position.x + static_cast<int>(std::ceil(acceleration.x)),
+                position.y + static_cast<int>(std::ceil(acceleration.y)),
+                position.width,
+                position.height
+            };
+
+            if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(newPosition, this) && 
+                PrairieKing::GetGameInstance()->m_deathTimer <= 0.0f)
+            {
+                ticksSinceLastMovement = 0;
+                position.x += static_cast<int>(std::ceil(acceleration.x));
+                position.y += static_cast<int>(std::ceil(acceleration.y));
+
+                if (CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, 
+                                           target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f }, 
+                                        position))
+                {
+                    targetPosition = { 0.0f, 0.0f };
+                }
+            }
+            break;
+        }
+    }
+
+    return false;
+}
+
+// Función auxiliar para calcular la velocidad hacia un punto
+Vector2 PrairieKing::CowboyMonster::GetVelocityTowardPoint(Vector2 start, Vector2 end, float speed)
+{
+    Vector2 direction = { end.x - start.x, end.y - start.y };
+    float length = sqrt(direction.x * direction.x + direction.y * direction.y);
+    
+    if (length > 0)
+    {
+        direction.x /= length;
+        direction.y /= length;
+    }
+    
+    return { direction.x * speed, direction.y * speed };
+}
+
+// Función auxiliar para generar números aleatorios
+int PrairieKing::CowboyMonster::GetRandomInt(int min, int max)
+{
+    return min + (std::rand() % (max - min + 1));
+}
+
+float PrairieKing::CowboyMonster::GetRandomFloat(float min, float max)
+{
+    return min + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / (max - min)));
 }

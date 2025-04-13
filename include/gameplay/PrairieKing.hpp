@@ -13,7 +13,6 @@
 #include <algorithm>
 
 // Forward declarations
-class CowboyMonster;
 class Dracula;
 class Outlaw;
 
@@ -79,14 +78,11 @@ namespace std {
 
 class PrairieKing {
 public:
-    friend class CowboyMonster;
-    friend class Dracula;
-    friend class Outlaw;
-
     // Forward declarations
     class CowboyBullet;
     class CowboyPowerup;
     class JOTPKProgress;
+    class CowboyMonster;
 
     // Enum declarations
     enum class GameKeys {
@@ -199,7 +195,7 @@ public:
     static constexpr int OPTION_QUIT = 1;
 
     // Wave constants
-    static constexpr int WAVE_DURATION = 3000;
+    static constexpr int WAVE_DURATION = 80000;
     static constexpr int BETWEEN_WAVE_DURATION = 5000;
 
     // Inner class definitions
@@ -268,6 +264,92 @@ public:
                                bool flip, float depth, Color color);
         bool Update(float deltaTime);
         void Draw(const Texture2D& texture);
+    };
+
+    class CowboyMonster {
+    public:
+        int health;
+        int type;
+        int speed;
+        float movementAnimationTimer;
+        Rectangle position;
+        int movementDirection;
+        bool movedLastTurn;
+        bool oppositeMotionGuy;
+        bool invisible;
+        bool special;
+        bool uninterested;
+        bool flyer;
+        Color tint;
+        Color flashColor;
+        float flashColorTimer;
+        int ticksSinceLastMovement;
+        Vector2 acceleration;
+        Vector2 targetPosition;
+
+        CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position);
+        CowboyMonster(AssetManager& assets, int which, Vector2 position);
+        virtual ~CowboyMonster() = default;
+
+        virtual void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate);
+        virtual bool TakeDamage(int damage);
+        virtual int GetLootDrop();
+        virtual bool Move(Vector2 playerPosition, float deltaTime);
+        void SpikeyEndBehavior(int extraInfo);
+        
+        // Funciones auxiliares para el movimiento
+        Vector2 GetVelocityTowardPoint(Vector2 start, Vector2 end, float speed);
+        int GetRandomInt(int min, int max);
+        float GetRandomFloat(float min, float max);
+    };
+
+    class Dracula : public CowboyMonster {
+    public:
+        static const int GLOATING_PHASE = -1;
+        static const int WALK_RANDOMLY_AND_SHOOT_PHASE = 0;
+        static const int SPREAD_SHOT_PHASE = 1;
+        static const int SUMMON_DEMON_PHASE = 2;
+        static const int SUMMON_MUMMY_PHASE = 3;
+
+        int phase;
+        int phaseInternalTimer;
+        int phaseInternalCounter;
+        int shootTimer;
+        int fullHealth;
+        Vector2 homePosition;
+
+        Dracula(AssetManager& assets);
+        void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
+        int GetLootDrop() override;
+        bool TakeDamage(int damage) override;
+        bool Move(Vector2 playerPosition, float deltaTime) override;
+        void FireSpread(Vector2 origin, double offsetAngle);
+        void SummonEnemies(Vector2 origin, int which);
+    };
+
+    class Outlaw : public CowboyMonster {
+    public:
+        static const int TALKING_PHASE = -1;
+        static const int HIDING_PHASE = 0;
+        static const int DART_OUT_AND_SHOOT_PHASE = 1;
+        static const int RUN_AND_GUN_PHASE = 2;
+        static const int RUN_GUN_AND_PANT_PHASE = 3;
+        static const int SHOOT_AT_PLAYER_PHASE = 4;
+
+        int phase;
+        int phaseCountdown;
+        int shootTimer;
+        int phaseInternalTimer;
+        int phaseInternalCounter;
+        bool dartLeft;
+        int fullHealth;
+        Vector2 homePosition;
+
+        Outlaw(AssetManager& assets, Vector2 position, int health);
+        void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
+        bool Move(Vector2 playerPosition, float deltaTime) override;
+        int GetLootDrop() override;
+        bool TakeDamage(int damage) override;
     };
 
     PrairieKing(AssetManager& assets);
@@ -434,87 +516,4 @@ private:
     bool IsKeyReleased(GameKeys key);
 
     int GetTileSize() const { return BASE_TILE_SIZE * PIXEL_ZOOM; }
-};
-
-// Monster class definitions
-class CowboyMonster {
-public:
-    int health;
-    int type;
-    int speed;
-    float movementAnimationTimer;
-    Rectangle position;
-    int movementDirection;
-    bool movedLastTurn;
-    bool oppositeMotionGuy;
-    bool invisible;
-    bool special;
-    bool uninterested;
-    bool flyer;
-    Color tint;
-    Color flashColor;
-    float flashColorTimer;
-    int ticksSinceLastMovement;
-    Vector2 acceleration;
-    Vector2 targetPosition;
-    PrairieKing* gameInstance;
-
-    CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position);
-    CowboyMonster(AssetManager& assets, int which, Vector2 position);
-    virtual ~CowboyMonster() = default;
-
-    virtual void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate);
-    virtual bool TakeDamage(int damage);
-    virtual int GetLootDrop();
-    virtual bool Move(Vector2 playerPosition, float deltaTime);
-    void SpikeyEndBehavior(int extraInfo);
-};
-
-class Dracula : public CowboyMonster {
-public:
-    static const int GLOATING_PHASE = -1;
-    static const int WALK_RANDOMLY_AND_SHOOT_PHASE = 0;
-    static const int SPREAD_SHOT_PHASE = 1;
-    static const int SUMMON_DEMON_PHASE = 2;
-    static const int SUMMON_MUMMY_PHASE = 3;
-
-    int phase;
-    int phaseInternalTimer;
-    int phaseInternalCounter;
-    int shootTimer;
-    int fullHealth;
-    Vector2 homePosition;
-
-    Dracula(AssetManager& assets);
-    void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
-    int GetLootDrop() override;
-    bool TakeDamage(int damage) override;
-    bool Move(Vector2 playerPosition, float deltaTime) override;
-    void FireSpread(Vector2 origin, double offsetAngle);
-    void SummonEnemies(Vector2 origin, int which);
-};
-
-class Outlaw : public CowboyMonster {
-public:
-    static const int TALKING_PHASE = -1;
-    static const int HIDING_PHASE = 0;
-    static const int DART_OUT_AND_SHOOT_PHASE = 1;
-    static const int RUN_AND_GUN_PHASE = 2;
-    static const int RUN_GUN_AND_PANT_PHASE = 3;
-    static const int SHOOT_AT_PLAYER_PHASE = 4;
-
-    int phase;
-    int phaseCountdown;
-    int shootTimer;
-    int phaseInternalTimer;
-    int phaseInternalCounter;
-    bool dartLeft;
-    int fullHealth;
-    Vector2 homePosition;
-
-    Outlaw(AssetManager& assets, Vector2 position, int health);
-    void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
-    bool Move(Vector2 playerPosition, float deltaTime) override;
-    int GetLootDrop() override;
-    bool TakeDamage(int damage) override;
 };
