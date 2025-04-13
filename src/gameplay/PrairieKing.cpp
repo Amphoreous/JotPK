@@ -2257,6 +2257,12 @@ void PrairieKing::Update(float deltaTime)
         // Iniciar nueva oleada
         StartNewWave();
     }
+
+    // Update between wave timer
+    if (m_betweenWaveTimer > 0 && m_monsters.empty() && m_spawnQueue.empty() && !m_scrollingMap)
+    {
+        m_betweenWaveTimer -= GetFrameTime() * 1000.0f;
+    }
 }
 
 void PrairieKing::Draw()
