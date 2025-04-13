@@ -1,4 +1,4 @@
-# Tareas para completar el port de AbigailGame.cs a PrairieKing.cpp/hpp
+# Tareas para completar el juego
 
 ## Funcionalidades que faltan implementar
 
@@ -63,7 +63,7 @@
 - [ ] Optimizar el manejo de recursos gráficos y de sonido
 
 ### Compatibilidad C# a C++
-- [ ] Ajustar las diferencias de tipos de datos
+- [x] Ajustar las diferencias de tipos de datos
 - [ ] Corregir la gestión de memoria
 - [ ] Adaptar las estructuras de datos
 - [ ] Ajustar los sistemas de coordenadas
@@ -75,7 +75,9 @@
 - [ ] Corregir problemas con power-ups
 - [ ] Arreglar problemas de sincronización de sonido
 - [ ] Corregir problemas de rendimiento y estabilidad
-- [ ] Corregir problemas con el inicio de la canción de fondo, que no se reproduce hasta que haya pasado between wave timer y haya desaparecido controls instructions box.
+- [ ] Corregir problemas con el inicio de la canción de fondo, que no se reproduce hasta que haya pasado between wave timer y haya desaparecido controls instructions box
+- [ ] Corregir el between wave timer que no funciona correctamente
+- [x] Corregir el problema de monstruos invisibles que atacan al jugador
 
 ## Características específicas a implementar
 
