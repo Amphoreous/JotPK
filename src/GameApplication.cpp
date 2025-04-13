@@ -8,7 +8,7 @@ GameApplication::~GameApplication() {
 }
 
 void GameApplication::Initialize() {
-        SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
     SearchAndSetResourceDir("resources");
     
     // Load and prepare the icon before creating the window

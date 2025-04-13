@@ -2133,26 +2133,16 @@ void PrairieKing::Update(float deltaTime)
                     if (!m_scrollingMap && !m_waitingForPlayerToMoveDownAMap)
                     {
                         m_waveTimer = WAVE_DURATION;
-                        
-                        // Iniciar la música de fondo cuando el between wave timer termina
-                        if (!m_shootoutLevel && !m_shopping)
-                        {
-                            Music music = m_assets.GetMusic("overworld");
-                            if (!IsMusicStreamPlaying(music))
-                            {
-                                PlayMusicStream(music);
-                                SetMusicVolume(music, 0.7f);
-                            }
-                        }
                     }
                 }
             }
 
-            // Manejar la música del overworld - Solo si no estamos en el between wave timer inicial
-            if (!m_shootoutLevel && !m_shopping && m_betweenWaveTimer <= 0)
+            // Manejar la música del overworld de forma independiente
+            if (!m_shootoutLevel && !m_shopping)
             {
                 Music music = m_assets.GetMusic("overworld");
-                if (!IsMusicStreamPlaying(music))
+                // Solo reproducir música si NO estamos en el betweenWaveTimer inicial (m_whichWave == 0)
+                if (!IsMusicStreamPlaying(music) && (m_betweenWaveTimer <= 0 || m_whichWave > 0))
                 {
                     PlayMusicStream(music);
                     SetMusicVolume(music, 0.7f);
@@ -2163,150 +2153,10 @@ void PrairieKing::Update(float deltaTime)
             // Actualizar timer de ola solo si betweenWaveTimer ha terminado
             if (m_waveTimer > 0 && m_betweenWaveTimer <= 0 && !m_shootoutLevel)
             {
-                // Solo actualizar el timer si no estamos en una transición de mapa
+                // Solo actualizar el timer si no estamos en una transición
                 if (!m_waitingForPlayerToMoveDownAMap && !m_scrollingMap)
                 {
                     m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
-                    
-                    // Lógica de spawn de monstruos
-                    if (m_waveTimer > 0 && m_monsters.size() < 30 && IsSpawnQueueEmpty())
-                    {
-                        // Generar monstruos según las probabilidades
-                        for (size_t i = 0; i < m_monsterChances.size(); i++)
-                        {
-                            // Aumentar la probabilidad si no hay monstruos
-                            float spawnMultiplier = 1.0f;
-                            
-                            // Ajustar multiplicador según la ola
-                            if (m_whichWave > 5)
-                            {
-                                spawnMultiplier = 1.0f + (m_whichWave - 5) * 0.1f;
-                            }
-                            
-                            // Ajustar multiplicador para New Game Plus
-                            if (m_whichRound > 0)
-                            {
-                                spawnMultiplier *= 1.0f + m_whichRound * 0.2f;
-                            }
-                            
-                            // Aumentar probabilidad si no hay monstruos
-                            if (m_monsters.empty())
-                            {
-                                spawnMultiplier *= 2.0f;
-                            }
-
-                            // Intentar spawn basado en la probabilidad
-                            if (GetRandomFloat(0.0f, 1.0f) < m_monsterChances[i].x * spawnMultiplier)
-                            {
-                                // Determinar cuántos monstruos spawnear
-                                int numMonsters = 1;
-                                float groupChance = m_monsterChances[i].y;
-                                
-                                // Ajustar probabilidad de grupo según la ola
-                                if (m_whichWave > 3)
-                                {
-                                    groupChance += (m_whichWave - 3) * 0.02f;
-                                }
-                                
-                                // Intentar generar grupos de monstruos
-                                while (GetRandomFloat(0.0f, 1.0f) < groupChance && numMonsters < 5)
-                                {
-                                    numMonsters++;
-                                }
-                                
-                                // Limitar el número máximo de monstruos según la ola
-                                int maxMonsters = 5;
-                                if (m_whichWave > 7)
-                                {
-                                    maxMonsters = 7;
-                                }
-                                if (m_whichWave > 10)
-                                {
-                                    maxMonsters = 10;
-                                }
-                                
-                                numMonsters = std::min(numMonsters, maxMonsters);
-                                
-                                // Añadir a la cola de spawn
-                                int spawnQueueIndex;
-                                
-                                // En la ola 11, usar índices 1 o 3 (bordes laterales)
-                                if (m_whichWave == 11)
-                                {
-                                    spawnQueueIndex = (GetRandomFloat(0.0f, 1.0f) < 0.5f) ? 1 : 3;
-                                }
-                                // En olas avanzadas, preferir bordes laterales
-                                else if (m_whichWave > 8)
-                                {
-                                    float rand = GetRandomFloat(0.0f, 1.0f);
-                                    if (rand < 0.4f)
-                                        spawnQueueIndex = 0; // Arriba
-                                    else if (rand < 0.7f)
-                                        spawnQueueIndex = 1; // Derecha
-                                    else if (rand < 0.9f)
-                                        spawnQueueIndex = 2; // Abajo
-                                    else
-                                        spawnQueueIndex = 3; // Izquierda
-                                }
-                                // En otras olas, usar un índice aleatorio
-                                else
-                                {
-                                    spawnQueueIndex = static_cast<int>(GetRandomFloat(0.0f, 3.0f));
-                                }
-                                
-                                // Añadir a la cola de spawn
-                                m_spawnQueue[spawnQueueIndex].push_back({static_cast<int>(i), numMonsters});
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Verificar si la ola ha terminado
-            if (m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty() && !m_waitingForPlayerToMoveDownAMap && !m_scrollingMap)
-            {
-                m_hasGopherAppeared = false;
-                m_whichWave++;
-                StartNewWave();
-            }
-
-            // Manejar el gopherTrain y el cambio de mundo
-            if (m_gopherTrain)
-            {
-                m_gopherTrainPosition += 3;
-                if (m_gopherTrainPosition % 30 == 0)
-                {
-                    PlaySound(GetSound("Cowboy_Footstep"));
-                }
-
-                if (m_playerJumped)
-                {
-                    m_playerPosition.y += 3.0f;
-                }
-
-                if (fabsf(m_playerPosition.y - static_cast<float>(m_gopherTrainPosition - GetTileSize())) <= 16.0f)
-                {
-                    m_playerJumped = true;
-                    m_playerPosition.y = static_cast<float>(m_gopherTrainPosition - GetTileSize());
-                }
-
-                if (m_gopherTrainPosition > 16 * GetTileSize() + GetTileSize())
-                {
-                    // Detener la música cuando realmente cambiamos de mundo
-                    Music music = m_assets.GetMusic("overworld");
-                    StopMusicStream(music);
-
-                    m_gopherTrain = false;
-                    m_playerJumped = false;
-                    m_whichWave++;
-                    GetMap(m_whichWave, m_map);
-                    m_playerPosition = {static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
-                    m_world = (m_world != 0) ? 1 : 2;
-                    m_waveTimer = WAVE_DURATION;
-                    m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
-                    m_waitingForPlayerToMoveDownAMap = false;
-                    m_shootoutLevel = false;
-                    SaveGame();
                 }
             }
         }
@@ -2316,13 +2166,13 @@ void PrairieKing::Update(float deltaTime)
     UpdatePlayer(deltaTime);
 
     // Update wave timer
-    if (m_waveTimer > 0 && !m_died && !m_shootoutLevel && !m_betweenWaveTimer)
+    if (m_waveTimer > 0 && !m_died && !m_shootoutLevel && m_betweenWaveTimer <= 0)
     {
         m_waveTimer -= GetFrameTime() * 1000;
     }
 
     // Monster spawn logic
-    if (m_waveTimer > 0 && !m_died && !m_shootoutLevel && !m_betweenWaveTimer)
+    if (m_waveTimer > 0 && !m_died && !m_shootoutLevel && m_betweenWaveTimer <= 0)
     {
         // Get border points for spawning
         std::vector<Vector2> borderPoints = GetBorderPoints();
@@ -2358,7 +2208,7 @@ void PrairieKing::Update(float deltaTime)
     }
 
     // Actualizar timer de la oleada
-    if (m_waveTimer > 0)
+    if (m_waveTimer > 0 && m_betweenWaveTimer <= 0)
     {
         m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
         
