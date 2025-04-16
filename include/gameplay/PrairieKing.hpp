@@ -1,6 +1,7 @@
 #pragma once
 #include "AssetManager.hpp"
 #include "raylib.h"
+#include "raymath.h"
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -40,12 +41,8 @@ namespace GameConstants {
 
 // Equality operators for raylib types
 inline bool operator==(const Rectangle& lhs, const Rectangle& rhs) {
-    return lhs.x == rhs.x && lhs.y == rhs.y && 
-           lhs.width == rhs.width && lhs.height == rhs.height;
-}
-
-inline bool operator==(const Vector2& lhs, const Vector2& rhs) {
-    return lhs.x == rhs.x && lhs.y == rhs.y;
+    return lhs.x == rhs.x && lhs.y == rhs.y &&
+        lhs.width == rhs.width && lhs.height == rhs.height;
 }
 
 // Custom hash functions for raylib types
@@ -103,6 +100,7 @@ public:
     // Helper functions
     std::vector<Vector2> GetBorderPoints();
     static float GetRandomFloat(float min, float max);
+    static int GetRandomInt(int min, int max);
     Vector2 GetRandomVector2(float minX, float maxX, float minY, float maxY);
 
     // Delegate type for motion pause behavior
@@ -258,10 +256,10 @@ public:
         std::function<void(int)> endFunction;
         int extraData;
         float alpha; // Added alpha property for transparency effects
-        
-        TemporaryAnimatedSprite(Rectangle sourceRect, float interval, int frameCount, 
-                               int startFrame, Vector2 pos, float rot, float scale, 
-                               bool flip, float depth, Color color);
+
+        TemporaryAnimatedSprite(Rectangle sourceRect, float interval, int frameCount,
+            int startFrame, Vector2 pos, float rot, float scale,
+            bool flip, float depth, Color color);
         bool Update(float deltaTime);
         void Draw(const Texture2D& texture);
     };
@@ -296,7 +294,7 @@ public:
         virtual int GetLootDrop();
         virtual bool Move(Vector2 playerPosition, float deltaTime);
         void SpikeyEndBehavior(int extraInfo);
-        
+
         // Funciones auxiliares para el movimiento
         Vector2 GetVelocityTowardPoint(Vector2 start, Vector2 end, float speed);
         int GetRandomInt(int min, int max);
@@ -359,7 +357,7 @@ public:
     void Update(float deltaTime);
     void Draw();
     bool IsGameOver() const { return m_gameOver; }
-    
+
     // Game state functions
     bool LoadGame();
     void SaveGame();
@@ -394,11 +392,11 @@ public:
     int GetPriceForItem(int whichItem);
     void GetMap(int wave, int(&newMap)[MAP_WIDTH][MAP_HEIGHT]);
     std::vector<Vector2> GetBorderPoints(const Rectangle& rect);
-    
+
     // Helper functions for rendering and resource access
-    Texture2D GetTexture(const std::string &name);
-    Sound GetSound(const std::string &name);
-    static Sound GetSoundStatic(const std::string &name);
+    Texture2D GetTexture(const std::string& name);
+    Sound GetSound(const std::string& name);
+    static Sound GetSoundStatic(const std::string& name);
     Rectangle GetRectForShopItem(int itemID);
     JOTPKProgress GetProgress() const;
     void SetButtonState(GameKeys key, bool pressed);
@@ -406,14 +404,24 @@ public:
     void StartNewWave();
     void AddMonster(CowboyMonster* monster);
     void AddTemporarySprite(const TemporaryAnimatedSprite& sprite);
-    
+
     // Static function to get the current game instance
     static PrairieKing* GetGameInstance();
+
+    // Helper functions for input
+    bool IsKeyPressed(GameKeys key);
+    bool IsKeyDown(GameKeys key);
+    bool IsKeyReleased(GameKeys key);
+
+    // Helper functions for monster spawning
+    std::vector<Vector2> GetMonsterChancesForWave(int wave);
+    Vector2 GetRandomSpawnPosition();
+    int ChooseMonsterType(const std::vector<Vector2>& chances);
 
 private:
     // Asset references
     AssetManager& m_assets;
-    
+
     // Game state
     bool m_isGameOver;
     bool m_gameOver;
@@ -434,9 +442,9 @@ private:
     bool m_playerJumped;
     bool m_endCutscene;
     bool m_spreadPistol;
-    
+
     Sound m_overworldSong;
-    
+
     // Game variables
     int m_runSpeedLevel;
     int m_fireSpeedLevel;
@@ -471,7 +479,7 @@ private:
     int m_waveTimer;
     int m_betweenWaveTimer;
     static int m_world;
-    
+
     // Game objects
     Vector2 m_playerPosition;
     Rectangle m_playerBoundingBox;
@@ -486,7 +494,7 @@ private:
     float m_playerFootstepSoundTimer = 200.0f;
     float m_playerMotionAnimationTimer = 0.0f;
     BehaviorAfterMotionPause m_behaviorAfterPause;
-    
+
     // Collections
     std::vector<CowboyMonster*> m_monsters;
     std::unordered_set<Vector2> m_borderTiles;
@@ -498,7 +506,7 @@ private:
     std::vector<TemporaryAnimatedSprite> m_temporarySprites;
     std::unique_ptr<CowboyPowerup> m_heldItem; // Changed from raw pointer to unique_ptr
     std::unordered_map<Rectangle, int, std::hash<Rectangle>> m_storeItems;
-    
+
     // Data structures needed for game state
     std::vector<std::vector<std::pair<int, int>>> m_spawnQueue;
     std::vector<Vector2> m_monsterChances;
@@ -509,11 +517,6 @@ private:
     // Input handling
     std::unordered_set<GameKeys> m_buttonHeldState;
     std::unordered_map<GameKeys, int> m_buttonHeldFrames;
-    
-    // Helper functions for input
-    bool IsKeyPressed(GameKeys key);
-    bool IsKeyDown(GameKeys key);
-    bool IsKeyReleased(GameKeys key);
 
     int GetTileSize() const { return BASE_TILE_SIZE * PIXEL_ZOOM; }
 };
