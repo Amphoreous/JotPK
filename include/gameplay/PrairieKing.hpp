@@ -37,6 +37,11 @@ namespace GameConstants {
     constexpr int GHOST_HEALTH = 1;
     constexpr int OGRE_HEALTH = 3;
     constexpr int SPIKEY_HEALTH = 2;
+    constexpr int WAVE_DURATION = 80000;        // 80 seconds per wave
+    constexpr int BETWEEN_WAVE_DURATION = 5000; // 5 seconds between waves
+    constexpr int START_MENU_DURATION = 1500;   // 1.5 seconds for start menu
+    constexpr int DEATH_DELAY = 3000;           // 3 seconds death delay
+    constexpr int PLAYER_INVINCIBLE_DURATION = 5000; // 5 seconds invincibility after death
 }
 
 // Equality operators for raylib types
@@ -417,6 +422,13 @@ public:
     std::vector<Vector2> GetMonsterChancesForWave(int wave);
     Vector2 GetRandomSpawnPosition();
     int ChooseMonsterType(const std::vector<Vector2>& chances);
+
+    // Wave and timer related functions
+    void UpdateWaveTimer(float deltaTime);
+    void UpdateBetweenWaveTimer(float deltaTime);
+    void HandleWaveCompletion();
+    void SpawnMonstersForWave();
+    void UpdateMonsterChancesForWave();
 
 private:
     // Asset references
