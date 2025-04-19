@@ -215,13 +215,13 @@ void PrairieKing::Initialize()
 
     // Initialize monster chances
     m_monsterChances.clear();
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Orc
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Ghost
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Ogre
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Mummy
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Devil
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Mushroom
-    m_monsterChances.push_back(Vector2{0.0f, 0.0f}); // Spikey
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Orc
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Ghost
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Ogre
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Mummy
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Devil
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Mushroom
+    m_monsterChances.push_back(Vector2{ 0.0f, 0.0f }); // Spikey
 
     // Load music
     m_overworldSong = GetSound("overworld");
@@ -231,7 +231,7 @@ void PrairieKing::Initialize()
     memcpy(m_nextMap, m_map, sizeof(m_map));
 
     // Initialize player position
-    m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
+    m_playerPosition = Vector2{ static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize()) };
     m_playerBoundingBox = Rectangle{
         m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
         m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
@@ -240,10 +240,10 @@ void PrairieKing::Initialize()
     };
 
     // Initialize other game objects
-    m_merchantBox = Rectangle{0.0f, 0.0f, 0.0f, 0.0f};
-    m_noPickUpBox = Rectangle{0.0f, 0.0f, 0.0f, 0.0f};
-    m_gopherBox = Rectangle{0.0f, 0.0f, 0.0f, 0.0f};
-    m_shoppingCarpetNoPickup = Rectangle{0.0f, 0.0f, 0.0f, 0.0f};
+    m_merchantBox = Rectangle{ 0.0f, 0.0f, 0.0f, 0.0f };
+    m_noPickUpBox = Rectangle{ 0.0f, 0.0f, 0.0f, 0.0f };
+    m_gopherBox = Rectangle{ 0.0f, 0.0f, 0.0f, 0.0f };
+    m_shoppingCarpetNoPickup = Rectangle{ 0.0f, 0.0f, 0.0f, 0.0f };
 
     // Clear collections
     m_monsters.clear();
@@ -1873,38 +1873,38 @@ void PrairieKing::UpdateMonsterChancesForWave()
 {
     switch (m_whichWave)
     {
-        case 1:
-        case 2:
-        case 3:
-            m_monsterChances[0] = Vector2Add(m_monsterChances[0], Vector2{0.001f, 0.02f});
-            if (m_whichWave > 1)
-            {
-                m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f, 0.01f});
-            }
-            m_monsterChances[6] = Vector2Add(m_monsterChances[6], Vector2{0.001f, 0.01f});
-            break;
+    case 1:
+    case 2:
+    case 3:
+        m_monsterChances[0] = Vector2Add(m_monsterChances[0], Vector2{ 0.001f, 0.02f });
+        if (m_whichWave > 1)
+        {
+            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{ 0.001f, 0.01f });
+        }
+        m_monsterChances[6] = Vector2Add(m_monsterChances[6], Vector2{ 0.001f, 0.01f });
+        break;
 
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            m_monsterChances[0] = Vector2Zero();
-            m_monsterChances[6] = Vector2Zero();
-            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.002f, 0.02f});
-            m_monsterChances[5] = Vector2Add(m_monsterChances[5], Vector2{0.001f, 0.02f});
-            m_monsterChances[1] = Vector2Add(m_monsterChances[1], Vector2{0.0018f, 0.08f});
-            break;
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+        m_monsterChances[0] = Vector2Zero();
+        m_monsterChances[6] = Vector2Zero();
+        m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{ 0.002f, 0.02f });
+        m_monsterChances[5] = Vector2Add(m_monsterChances[5], Vector2{ 0.001f, 0.02f });
+        m_monsterChances[1] = Vector2Add(m_monsterChances[1], Vector2{ 0.0018f, 0.08f });
+        break;
 
-        case 8:
-        case 9:
-        case 10:
-        case 11:
-            m_monsterChances[5] = Vector2Zero();
-            m_monsterChances[1] = Vector2Zero();
-            m_monsterChances[2] = Vector2Zero();
-            m_monsterChances[3] = Vector2Add(m_monsterChances[3], Vector2{0.002f, 0.05f});
-            m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.0015f, 0.04f});
-            break;
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+        m_monsterChances[5] = Vector2Zero();
+        m_monsterChances[1] = Vector2Zero();
+        m_monsterChances[2] = Vector2Zero();
+        m_monsterChances[3] = Vector2Add(m_monsterChances[3], Vector2{ 0.002f, 0.05f });
+        m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{ 0.0015f, 0.04f });
+        break;
     }
 }
 
@@ -2979,6 +2979,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager& assets, int which, Vecto
     targetPosition = position;
 }
 
+
 // Implementación de los métodos virtuales de CowboyMonster
 void PrairieKing::CowboyMonster::Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate)
 {
@@ -3048,12 +3049,12 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
         {
             // Add powerup at monster position
             PrairieKing::GetGameInstance()->m_powerups.push_back(
-                CowboyPowerup(lootDrop, Vector2{position.x, position.y}, 10000)
+                CowboyPowerup(lootDrop, Vector2{ position.x, position.y }, 10000)
             );
         }
 
         // Add guts animation
-        PrairieKing::AddGuts(Vector2{position.x, position.y}, type);
+        PrairieKing::AddGuts(Vector2{ position.x, position.y }, type);
 
         return true;
     }
@@ -3432,40 +3433,45 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
 
 Vector2 PrairieKing::GetRandomSpawnPosition()
 {
-    // Try to find a valid spawn position
+    const int tileSize = GetTileSize();
+
+    // Definir los 3 tiles centrales de cada lado del mapa
+    std::vector<Vector2> sideSpawnPositions = {
+        {0.0f, 6.0f * tileSize}, {0.0f, 7.0f * tileSize}, {0.0f, 8.0f * tileSize}, // Lado izquierdo
+        {15.0f * tileSize, 6.0f * tileSize}, {15.0f * tileSize, 7.0f * tileSize}, {15.0f * tileSize, 8.0f * tileSize}, // Lado derecho
+        {6.0f * tileSize, 0.0f}, {7.0f * tileSize, 0.0f}, {8.0f * tileSize, 0.0f}, // Lado superior
+        {6.0f * tileSize, 15.0f * tileSize}, {7.0f * tileSize, 15.0f * tileSize}, {8.0f * tileSize, 15.0f * tileSize} // Lado inferior
+    };
+
+    // Intentar seleccionar una posición válida
     for (int attempts = 0; attempts < 10; attempts++)
     {
-        int x = GetRandomInt(1, MAP_WIDTH - 2);
-        int y = GetRandomInt(1, MAP_HEIGHT - 2);
+        // Seleccionar aleatoriamente una posición de la lista
+        Vector2 pos = sideSpawnPositions[GetRandomInt(0, sideSpawnPositions.size() - 1)];
 
-        Vector2 pos = {
-            static_cast<float>(x * GetTileSize()),
-            static_cast<float>(y * GetTileSize())
-        };
+        // Depurar: Registrar la posición intentada
+        std::cout << "Intentando posición: (" << pos.x << ", " << pos.y << ")\n";
 
-        // Check if position is valid (not colliding with map or other monsters)
-        if (IsMapTilePassable(m_map[x][y]) && !IsCollidingWithMap(pos))
+        // Validar que la posición no colisione con el mapa ni con otros monstruos
+        if (IsMapTilePassable(m_map[static_cast<int>(pos.x / tileSize)][static_cast<int>(pos.y / tileSize)]) &&
+            !IsCollidingWithMap(pos))
         {
-            bool valid = true;
-            for (const auto& monster : m_monsters)
-            {
-                if (Vector2Distance(pos, Vector2{ monster->position.x, monster->position.y }) < GetTileSize() * 2)
-                {
-                    valid = false;
-                    break;
-                }
-            }
-
-            if (valid)
-            {
-                return pos;
-            }
+            std::cout << "Posición válida encontrada: (" << pos.x << ", " << pos.y << ")\n";
+            return pos; // Retornar la posición válida
+        }
+        else
+        {
+            std::cout << "Posición inválida: (" << pos.x << ", " << pos.y << ")\n";
         }
     }
 
-    // If no valid position found, return a default position
-    return { static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize()) };
+    // Si no se encuentra una posición válida, usar una posición de fallback aleatoria
+    Vector2 fallback = sideSpawnPositions[GetRandomInt(0, sideSpawnPositions.size() - 1)];
+    std::cout << "Usando posición de fallback: (" << fallback.x << ", " << fallback.y << ")\n";
+    return fallback;
 }
+
+
 
 int PrairieKing::ChooseMonsterType(const std::vector<Vector2>& chances)
 {
