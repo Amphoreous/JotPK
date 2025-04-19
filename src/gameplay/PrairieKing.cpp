@@ -331,10 +331,11 @@ void PrairieKing::ApplyLevelSpecificStates()
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
         m_shootoutLevel = true;
-        // m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
+        //m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
 
         // Play outlaw music
         PlaySound(GetSound("cowboy_outlawsong"));
+        
     }
 }
 
@@ -2922,28 +2923,46 @@ std::vector<Vector2> PrairieKing::GetBorderPoints()
 PrairieKing::CowboyMonster::CowboyMonster(AssetManager& assets, int which, Vector2 position)
     : type(which), position({ position.x, position.y, 16.0f * 3, 16.0f * 3 })
 {
-    // Inicialización básica del monstruo
-    health = 100;  // Valor por defecto
-    speed = 1.0f;  // Valor por defecto
-    movementAnimationTimer = 0.0f;
-    movementDirection = 0;
-    movedLastTurn = false;
-    oppositeMotionGuy = false;
-    invisible = false;
-    special = false;
-    uninterested = false;
-    flyer = false;
-    tint = WHITE;
-    flashColor = WHITE;
-    flashColorTimer = 0.0f;
-    ticksSinceLastMovement = 0;
-    acceleration = { 0, 0 };
-    targetPosition = position;
-}
+    // Inicializar salud y velocidad según el tipo de monstruo
+    switch (type)
+    {
+    case GameConstants::ORC:
+        health = 1;  // Los orcos deben morir con un disparo
+        speed = 1.5f;  // Velocidad base para los orcos
+        break;
 
-PrairieKing::CowboyMonster::CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position)
-    : type(which), health(health), speed(speed), position({ position.x, position.y, 16.0f * 3, 16.0f * 3 })
-{
+    case GameConstants::OGRE:
+        health = 3;  // Los ogros son más resistentes
+        speed = 1.0f;  // Velocidad más lenta para los ogros
+        break;
+
+    case GameConstants::GHOST:
+        health = 2;  // Los fantasmas tienen salud moderada
+        speed = 2.0f;  // Los fantasmas son rápidos
+        break;
+
+    case GameConstants::MUMMY:
+        health = 4;  // Las momias son muy resistentes
+        speed = 0.8f;  // Las momias son lentas
+        break;
+
+    case GameConstants::SPIKEY:
+        health = 2;  // Los Spikey tienen salud moderada
+        speed = 1.8f;  // Velocidad ligeramente superior
+        break;
+
+    case GameConstants::DEVIL:
+        health = 5;  // Los demonios son muy resistentes
+        speed = 2.5f;  // Los demonios son muy rápidos
+        break;
+
+    default:
+        health = 100;  // Valor por defecto para otros tipos
+        speed = 1.0f;  // Velocidad por defecto
+        break;
+    }
+
+    // Inicializar otros atributos
     movementAnimationTimer = 0.0f;
     movementDirection = 0;
     movedLastTurn = false;
