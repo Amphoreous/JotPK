@@ -33,7 +33,7 @@ namespace GameConstants {
     constexpr int OGRE_SPEED = 1;
     constexpr int GHOST_SPEED = 3;
     constexpr int SPIKEY_SPEED = 3;
-    constexpr int ORC_HEALTH = 1;
+    constexpr int ORC_HEALTH = 0;
     constexpr int GHOST_HEALTH = 1;
     constexpr int OGRE_HEALTH = 3;
     constexpr int SPIKEY_HEALTH = 2;
@@ -115,12 +115,12 @@ public:
     static constexpr int MAP_WIDTH = 16;
     static constexpr int MAP_HEIGHT = 16;
     static constexpr int PIXEL_ZOOM = 3;
-    static constexpr int BULLET_SPEED = 8;
+    static constexpr int BULLET_SPEED = 23;
     static constexpr double LOOT_CHANCE = 0.05;
     static constexpr double COIN_CHANCE = 0.05;
     static constexpr int LOOT_DURATION = 7500;
     static constexpr int POWERUP_DURATION = 10000;
-    static constexpr float PLAYER_SPEED = 3.0f;
+    static constexpr float PLAYER_SPEED = 2.0f;
     static constexpr int BASE_TILE_SIZE = 16;
     static constexpr int ORC_SPEED = 2;
     static constexpr int OGRE_SPEED = 1;
