@@ -37,7 +37,7 @@ namespace GameConstants {
     constexpr int GHOST_HEALTH = 1;
     constexpr int OGRE_HEALTH = 3;
     constexpr int SPIKEY_HEALTH = 2;
-    constexpr int WAVE_DURATION = 5000;        // 80 seconds per wave
+    constexpr int WAVE_DURATION = 80000;        // 80 seconds per wave
     constexpr int BETWEEN_WAVE_DURATION = 5000; // 5 seconds between waves
     constexpr int START_MENU_DURATION = 1500;   // 1.5 seconds for start menu
     constexpr int DEATH_DELAY = 3000;           // 3 seconds death delay
@@ -492,6 +492,7 @@ private:
     int m_betweenWaveTimer;
     static int m_world;
     float m_monsterClearTimer = -1.0f;
+    bool m_waveCompleted = false;
 
     // Game objects
     Vector2 m_playerPosition;

@@ -207,6 +207,8 @@ void PrairieKing::Initialize()
     m_ammoLevel = 0;
     m_runSpeedLevel = 0;
     m_spreadPistol = false;
+    m_waveCompleted = false;
+    m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
 
     // Center the screen
     m_topLeftScreenCoordinate = Vector2{
@@ -1682,6 +1684,58 @@ bool PrairieKing::IsKeyReleased(GameKeys key)
 
 void PrairieKing::Update(float deltaTime)
 {
+    // Manejar el temporizador del menú de inicio
+    if (m_onStartMenu)
+    {
+        if (m_startTimer > 0)
+        {
+            m_startTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (m_startTimer <= 0)
+            {
+                m_onStartMenu = false;
+                m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION; // Configurar el retraso inicial
+            }
+        }
+        return; // No continuar con la lógica del juego mientras esté en el menú de inicio
+    }
+
+    // Manejar el temporizador entre olas
+    if (m_betweenWaveTimer > 0)
+    {
+        m_betweenWaveTimer -= deltaTime * 1000.0f;
+        if (m_betweenWaveTimer <= 0)
+        {
+            m_betweenWaveTimer = 0;
+            m_waveTimer = GameConstants::WAVE_DURATION; // Iniciar la ola
+            std::cout << "Wave started!" << std::endl;
+        }
+    }
+
+    // Manejar el temporizador de la ola
+    if (m_waveTimer > 0)
+    {
+        m_waveTimer -= deltaTime * 1000.0f;
+        if (m_waveTimer <= 0)
+        {
+            m_waveTimer = 0;
+            std::cout << "Wave timer finished. Checking conditions..." << std::endl;
+        }
+    }
+
+    // Depuración: Mostrar el estado de los temporizadores
+    std::cout << "Wave Timer: " << m_waveTimer / 1000.0 << " seconds" << std::endl;
+    std::cout << "Between Wave Timer: " << m_betweenWaveTimer / 1000.0 << " seconds" << std::endl;
+
+    // Verificar si la ola está completa
+    if (!m_waveCompleted && m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty())
+    {
+        if (m_monsterClearTimer <= 0)
+        {
+            m_monsterClearTimer = 3000.0; // 3 segundos
+            std::cout << "Wave complete. Starting monster clear timer..." << std::endl;
+        }
+    }
+
     // Update button held state
     for (const auto& key : m_buttonHeldState)
     {
@@ -2592,6 +2646,12 @@ PrairieKing* PrairieKing::GetGameInstance()
 
 void PrairieKing::StartNewWave()
 {
+    if (m_betweenWaveTimer > 0)
+    {
+        // No iniciar la ola hasta que termine el temporizador entre olas
+        return;
+    }
+
     // Limpiar monstruos y power-ups existentes
     for (auto monster : m_monsters)
     {
@@ -2599,6 +2659,15 @@ void PrairieKing::StartNewWave()
     }
     m_monsters.clear();
     m_powerups.clear();
+
+    // Configurar el temporizador de la ola
+    m_waveTimer = GameConstants::WAVE_DURATION;
+    //m_waveCompleted = false;
+
+    // Actualizar probabilidades de monstruos según la ola
+    UpdateMonsterChancesForWave();
+
+    std::cout << "New wave started: " << m_whichWave << std::endl;
 
     // Determinar si vamos a tienda o siguiente nivel
     if (m_whichWave > 0)
