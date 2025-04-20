@@ -1739,7 +1739,7 @@ void PrairieKing::Update(float deltaTime)
         if (m_betweenWaveTimer <= 0)
         {
             m_waveTimer = GameConstants::WAVE_DURATION;
-            // Start overworld music
+            // Iniciar música del overworld
             if (!IsSoundPlaying(m_overworldSong))
             {
                 PlaySound(m_overworldSong);
@@ -1748,55 +1748,26 @@ void PrairieKing::Update(float deltaTime)
     }
 
     // Handle wave timer
+// Handle wave timer
     if (m_waveTimer > 0 && m_betweenWaveTimer <= 0 && !m_shootoutLevel)
     {
         m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
 
-        // Spawn monsters during the wave
-        if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving)
-        {
-            // Calculate spawn chance based on existing monsters
-            float spawnChance = 0.02f; // Base chance
-            if (m_monsters.empty())
-            {
-                spawnChance = 0.1f; // Higher chance if no monsters
-            }
-
-            // Try to spawn monsters
-            if (GetRandomFloat(0.0f, 1.0f) < spawnChance)
-            {
-                // Determine number of monsters to spawn
-                int numMonsters = 1;
-                if (m_whichWave > 5 && GetRandomFloat(0.0f, 1.0f) < 0.3f)
-                {
-                    numMonsters = 2;
-                }
-
-                // Spawn monsters
-                for (int i = 0; i < numMonsters; i++)
-                {
-                    Vector2 spawnPoint = GetRandomSpawnPosition();
-                    if (spawnPoint.x >= 0 && spawnPoint.y >= 0)
-                    {
-                        int monsterType = ChooseMonsterType(m_monsterChances);
-                        CowboyMonster* monster = new CowboyMonster(m_assets, monsterType, spawnPoint);
-                        AddMonster(monster);
-                    }
-                }
-            }
-        }
-
-        // Check for wave completion
+        // Verificar la finalización de la ola
         if (m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty())
         {
+            std::cout << "Wave completed! Timer: " << m_waveTimer
+                << ", Monsters: " << m_monsters.size()
+                << ", SpawnQueueEmpty: " << IsSpawnQueueEmpty() << std::endl;
+
             m_waveTimer = GameConstants::WAVE_DURATION;
-            m_betweenWaveTimer = 3333; // 3.33 seconds between waves
+            m_betweenWaveTimer = 3333; // 3.33 segundos entre olas
             m_whichWave++;
 
-            // Update monster chances for next wave
+            // Actualizar probabilidades de monstruos para la siguiente ola
             UpdateMonsterChancesForWave();
 
-            // Handle wave progression
+            // Manejar la progresión de la ola
             if (m_whichWave > 0)
             {
                 if (m_whichWave % 2 == 0)
@@ -1805,12 +1776,60 @@ void PrairieKing::Update(float deltaTime)
                 }
                 else
                 {
+                    // Habilitar la transición al siguiente mapa
                     m_waitingForPlayerToMoveDownAMap = true;
-                    m_map[8][15] = MAP_DESERT;
+                    m_map[8][15] = MAP_DESERT; // Desbloquear la parte inferior del mapa
                     m_map[7][15] = MAP_DESERT;
                     m_map[9][15] = MAP_DESERT;
+
+                    // Generar el siguiente mapa (pero no iniciar el scroll aún)
+                    GetMap(m_whichWave, m_nextMap);
                 }
             }
+        }
+        else
+        {
+            // Depurar condiciones que no se cumplen
+            if (m_waveTimer > 0)
+                std::cout << "Wave timer not finished: " << m_waveTimer << std::endl;
+            if (!m_monsters.empty())
+                std::cout << "Monsters still present: " << m_monsters.size() << std::endl;
+            if (!IsSpawnQueueEmpty())
+                std::cout << "Spawn queue not empty." << std::endl;
+        }
+    }
+
+
+    // Manejar el scroll del mapa
+    if (m_scrollingMap)
+    {
+        m_newMapPosition -= GetTileSize() / 8;
+        m_playerPosition.y -= GetTileSize() / 8;
+        m_playerPosition.y += 3.0f;
+
+        m_playerBoundingBox.x = m_playerPosition.x + GetTileSize() / 4;
+        m_playerBoundingBox.y = m_playerPosition.y + GetTileSize() / 4;
+        m_playerBoundingBox.width = GetTileSize() / 2;
+        m_playerBoundingBox.height = GetTileSize() / 2;
+
+        if (m_playerMovementDirections.empty())
+        {
+            m_playerMovementDirections.push_back(2);
+        }
+
+        m_playerMotionAnimationTimer += deltaTime * 1000.0f;
+        m_playerMotionAnimationTimer = fmodf(m_playerMotionAnimationTimer, 400.0f);
+
+        if (m_newMapPosition <= 0)
+        {
+            m_scrollingMap = false;
+            memcpy(m_map, m_nextMap, sizeof(m_map)); // Copiar el nuevo mapa
+            m_newMapPosition = 16 * GetTileSize();
+            m_shopping = false;
+            m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
+            m_waitingForPlayerToMoveDownAMap = false;
+            m_playerMovementDirections.clear();
+            ApplyLevelSpecificStates();
         }
     }
 
@@ -2463,29 +2482,24 @@ PrairieKing::JOTPKProgress PrairieKing::GetProgress() const
 
 void PrairieKing::AddMonster(CowboyMonster* monster)
 {
-    // Verificar si hay espacio para el monstruo
     if (!IsCollidingWithMonster(monster->position, nullptr) &&
         !IsCollidingWithMapForMonsters(monster->position))
     {
-        // Aumentar la salud en New Game Plus
         if (m_whichRound > 0)
         {
             monster->health += m_whichRound * 2;
         }
 
-        // Agregar el monstruo a la lista
         m_monsters.push_back(monster);
-
-        // Reproducir sonido de spawn
         PlaySound(GetSound("cowboy_monsterhit"));
+        std::cout << "Monster added at position: (" << monster->position.x << ", " << monster->position.y << ")" << std::endl;
     }
     else
     {
-        // Si no hay espacio, eliminar el monstruo
+        std::cout << "Failed to add monster due to collision or invalid position." << std::endl;
         delete monster;
     }
 }
-
 void PrairieKing::AddTemporarySprite(const TemporaryAnimatedSprite& sprite)
 {
     m_temporarySprites.push_back(sprite);
@@ -2768,8 +2782,9 @@ void PrairieKing::UpdatePlayer(float deltaTime)
 
         // Verificar transiciones de mapa
         if (m_waitingForPlayerToMoveDownAMap &&
-            m_playerBoundingBox.y + m_playerBoundingBox.height >= 16.0f * GetTileSize() - GetTileSize() / 2)
+            CheckCollisionRecs(m_playerBoundingBox, Rectangle{ 8.5f * GetTileSize() - 12, 15.0f * GetTileSize(), 24.0f, 24.0f }))
         {
+            std::cout << "Player collided with arrow. Transitioning to next map." << std::endl;
             SaveGame();
             m_shopping = false;
             m_merchantArriving = false;
@@ -2777,12 +2792,14 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             m_merchantShopOpen = false;
             m_merchantBox.y = -GetTileSize();
             m_scrollingMap = true;
+
             // Generar siguiente mapa al iniciar scroll
-            GetMap(m_whichWave, m_nextMap);
             m_newMapPosition = 16 * GetTileSize();
             m_temporarySprites.clear();
             m_powerups.clear();
         }
+
+
     }
 
     // Verificar colisiones con monstruos
@@ -3434,44 +3451,27 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
 Vector2 PrairieKing::GetRandomSpawnPosition()
 {
     const int tileSize = GetTileSize();
-
-    // Definir los 3 tiles centrales de cada lado del mapa
     std::vector<Vector2> sideSpawnPositions = {
-        {0.0f, 6.0f * tileSize}, {0.0f, 7.0f * tileSize}, {0.0f, 8.0f * tileSize}, // Lado izquierdo
-        {15.0f * tileSize, 6.0f * tileSize}, {15.0f * tileSize, 7.0f * tileSize}, {15.0f * tileSize, 8.0f * tileSize}, // Lado derecho
-        {6.0f * tileSize, 0.0f}, {7.0f * tileSize, 0.0f}, {8.0f * tileSize, 0.0f}, // Lado superior
-        {6.0f * tileSize, 15.0f * tileSize}, {7.0f * tileSize, 15.0f * tileSize}, {8.0f * tileSize, 15.0f * tileSize} // Lado inferior
+        {0.0f, 6.0f * tileSize}, {0.0f, 7.0f * tileSize}, {0.0f, 8.0f * tileSize},
+        {15.0f * tileSize, 6.0f * tileSize}, {15.0f * tileSize, 7.0f * tileSize}, {15.0f * tileSize, 8.0f * tileSize},
+        {6.0f * tileSize, 0.0f}, {7.0f * tileSize, 0.0f}, {8.0f * tileSize, 0.0f},
+        {6.0f * tileSize, 15.0f * tileSize}, {7.0f * tileSize, 15.0f * tileSize}, {8.0f * tileSize, 15.0f * tileSize}
     };
 
-    // Intentar seleccionar una posición válida
     for (int attempts = 0; attempts < 10; attempts++)
     {
-        // Seleccionar aleatoriamente una posición de la lista
         Vector2 pos = sideSpawnPositions[GetRandomInt(0, sideSpawnPositions.size() - 1)];
-
-        // Depurar: Registrar la posición intentada
-        std::cout << "Intentando posición: (" << pos.x << ", " << pos.y << ")\n";
-
-        // Validar que la posición no colisione con el mapa ni con otros monstruos
         if (IsMapTilePassable(m_map[static_cast<int>(pos.x / tileSize)][static_cast<int>(pos.y / tileSize)]) &&
             !IsCollidingWithMap(pos))
         {
-            std::cout << "Posición válida encontrada: (" << pos.x << ", " << pos.y << ")\n";
-            return pos; // Retornar la posición válida
-        }
-        else
-        {
-            std::cout << "Posición inválida: (" << pos.x << ", " << pos.y << ")\n";
+            std::cout << "Valid spawn position: (" << pos.x << ", " << pos.y << ")" << std::endl;
+            return pos;
         }
     }
 
-    // Si no se encuentra una posición válida, usar una posición de fallback aleatoria
-    Vector2 fallback = sideSpawnPositions[GetRandomInt(0, sideSpawnPositions.size() - 1)];
-    std::cout << "Usando posición de fallback: (" << fallback.x << ", " << fallback.y << ")\n";
-    return fallback;
+    std::cout << "Fallback spawn position used" << std::endl;
+    return sideSpawnPositions[GetRandomInt(0, sideSpawnPositions.size() - 1)];
 }
-
-
 
 int PrairieKing::ChooseMonsterType(const std::vector<Vector2>& chances)
 {
@@ -3489,14 +3489,14 @@ int PrairieKing::ChooseMonsterType(const std::vector<Vector2>& chances)
         current += chance.y;
         if (roll <= current)
         {
+            std::cout << "Monster type chosen: " << static_cast<int>(chance.x) << std::endl;
             return static_cast<int>(chance.x);
         }
     }
 
+    std::cout << "Defaulting to ORC" << std::endl;
     return ORC; // Default to orc if something goes wrong
-}
-
-int PrairieKing::GetRandomInt(int min, int max)
+}int PrairieKing::GetRandomInt(int min, int max)
 {
     return min + (std::rand() % (max - min + 1));
 }
