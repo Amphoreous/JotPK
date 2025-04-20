@@ -491,6 +491,7 @@ private:
     int m_waveTimer;
     int m_betweenWaveTimer;
     static int m_world;
+    float m_monsterClearTimer = -1.0f;
 
     // Game objects
     Vector2 m_playerPosition;
