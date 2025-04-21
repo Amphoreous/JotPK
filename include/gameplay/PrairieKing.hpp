@@ -18,7 +18,8 @@ class Dracula;
 class Outlaw;
 
 // Game constants namespace to avoid duplication
-namespace GameConstants {
+namespace GameConstants
+{
     constexpr int MONSTER_ANIMATION_DELAY = 500;
     constexpr int BASE_TILE_SIZE = 16;
     constexpr int PIXEL_ZOOM = 3;
@@ -37,24 +38,28 @@ namespace GameConstants {
     constexpr int GHOST_HEALTH = 1;
     constexpr int OGRE_HEALTH = 3;
     constexpr int SPIKEY_HEALTH = 2;
-    constexpr int WAVE_DURATION = 80000;        // 80 seconds per wave
-    constexpr int BETWEEN_WAVE_DURATION = 5000; // 5 seconds between waves
-    constexpr int START_MENU_DURATION = 1500;   // 1.5 seconds for start menu
-    constexpr int DEATH_DELAY = 3000;           // 3 seconds death delay
+    constexpr int WAVE_DURATION = 80000;             // 80 seconds per wave
+    constexpr int BETWEEN_WAVE_DURATION = 5000;      // 5 seconds between waves
+    constexpr int START_MENU_DURATION = 1500;        // 1.5 seconds for start menu
+    constexpr int DEATH_DELAY = 3000;                // 3 seconds death delay
     constexpr int PLAYER_INVINCIBLE_DURATION = 5000; // 5 seconds invincibility after death
 }
 
 // Equality operators for raylib types
-inline bool operator==(const Rectangle& lhs, const Rectangle& rhs) {
+inline bool operator==(const Rectangle &lhs, const Rectangle &rhs)
+{
     return lhs.x == rhs.x && lhs.y == rhs.y &&
-        lhs.width == rhs.width && lhs.height == rhs.height;
+           lhs.width == rhs.width && lhs.height == rhs.height;
 }
 
 // Custom hash functions for raylib types
-namespace std {
-    template<>
-    struct hash<Vector2> {
-        size_t operator()(const Vector2& vec) const {
+namespace std
+{
+    template <>
+    struct hash<Vector2>
+    {
+        size_t operator()(const Vector2 &vec) const
+        {
             // Combine the hash of both Vector2 components
             size_t seed = 0;
             seed ^= std::hash<float>()(vec.x) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -63,9 +68,11 @@ namespace std {
         }
     };
 
-    template<>
-    struct hash<Rectangle> {
-        size_t operator()(const Rectangle& rect) const {
+    template <>
+    struct hash<Rectangle>
+    {
+        size_t operator()(const Rectangle &rect) const
+        {
             // Use hash_combine technique for combining hashes
             size_t seed = 0;
             // Combine the hash of all Rectangle components using boost's hash_combine technique
@@ -78,7 +85,8 @@ namespace std {
     };
 }
 
-class PrairieKing {
+class PrairieKing
+{
 public:
     // Forward declarations
     class CowboyBullet;
@@ -87,7 +95,8 @@ public:
     class CowboyMonster;
 
     // Enum declarations
-    enum class GameKeys {
+    enum class GameKeys
+    {
         MoveLeft,
         MoveRight,
         MoveUp,
@@ -202,18 +211,20 @@ public:
     static constexpr int BETWEEN_WAVE_DURATION = 5000;
 
     // Inner class definitions
-    class CowboyPowerup {
+    class CowboyPowerup
+    {
     public:
+        CowboyPowerup(int which, Vector2 position, int duration);
+        void Draw(const Texture2D &cursorTexture, Vector2 topLeftScreenCoordinate) const; // Add const here
+
         int which;
         Vector2 position;
         int duration;
         float yOffset;
-
-        CowboyPowerup(int which, Vector2 position, int duration);
-        void Draw(const Texture2D& cursorTexture, Vector2 topLeftScreenCoordinate);
     };
 
-    class JOTPKProgress {
+    class JOTPKProgress
+    {
     public:
         int bulletDamage;
         int fireSpeedLevel;
@@ -234,7 +245,8 @@ public:
         JOTPKProgress();
     };
 
-    class CowboyBullet {
+    class CowboyBullet
+    {
     public:
         Vector2 position;
         Vector2 motion;
@@ -244,7 +256,8 @@ public:
         CowboyBullet(Vector2 position, int direction, int damage);
     };
 
-    class TemporaryAnimatedSprite {
+    class TemporaryAnimatedSprite
+    {
     public:
         Rectangle sourceRect;
         Vector2 position;
@@ -263,13 +276,14 @@ public:
         float alpha; // Added alpha property for transparency effects
 
         TemporaryAnimatedSprite(Rectangle sourceRect, float interval, int frameCount,
-            int startFrame, Vector2 pos, float rot, float scale,
-            bool flip, float depth, Color color);
+                                int startFrame, Vector2 pos, float rot, float scale,
+                                bool flip, float depth, Color color);
         bool Update(float deltaTime);
-        void Draw(const Texture2D& texture);
+        void Draw(const Texture2D &texture);
     };
 
-    class CowboyMonster {
+    class CowboyMonster
+    {
     public:
         int health;
         int type;
@@ -290,11 +304,11 @@ public:
         Vector2 acceleration;
         Vector2 targetPosition;
 
-        CowboyMonster(AssetManager& assets, int which, int health, int speed, Vector2 position);
-        CowboyMonster(AssetManager& assets, int which, Vector2 position);
+        CowboyMonster(AssetManager &assets, int which, int health, int speed, Vector2 position);
+        CowboyMonster(AssetManager &assets, int which, Vector2 position);
         virtual ~CowboyMonster() = default;
 
-        virtual void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate);
+        virtual void Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate);
         virtual bool TakeDamage(int damage);
         virtual int GetLootDrop();
         virtual bool Move(Vector2 playerPosition, float deltaTime);
@@ -306,7 +320,8 @@ public:
         float GetRandomFloat(float min, float max);
     };
 
-    class Dracula : public CowboyMonster {
+    class Dracula : public CowboyMonster
+    {
     public:
         static const int GLOATING_PHASE = -1;
         static const int WALK_RANDOMLY_AND_SHOOT_PHASE = 0;
@@ -321,8 +336,8 @@ public:
         int fullHealth;
         Vector2 homePosition;
 
-        Dracula(AssetManager& assets);
-        void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
+        Dracula(AssetManager &assets);
+        void Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate) override;
         int GetLootDrop() override;
         bool TakeDamage(int damage) override;
         bool Move(Vector2 playerPosition, float deltaTime) override;
@@ -330,7 +345,8 @@ public:
         void SummonEnemies(Vector2 origin, int which);
     };
 
-    class Outlaw : public CowboyMonster {
+    class Outlaw : public CowboyMonster
+    {
     public:
         static const int TALKING_PHASE = -1;
         static const int HIDING_PHASE = 0;
@@ -348,14 +364,14 @@ public:
         int fullHealth;
         Vector2 homePosition;
 
-        Outlaw(AssetManager& assets, Vector2 position, int health);
-        void Draw(const Texture2D& texture, Vector2 topLeftScreenCoordinate) override;
+        Outlaw(AssetManager &assets, Vector2 position, int health);
+        void Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate) override;
         bool Move(Vector2 playerPosition, float deltaTime) override;
         int GetLootDrop() override;
         bool TakeDamage(int damage) override;
     };
 
-    PrairieKing(AssetManager& assets);
+    PrairieKing(AssetManager &assets);
     ~PrairieKing() = default;
 
     void Initialize();
@@ -383,11 +399,11 @@ public:
     void AfterPlayerDeathFunction(int extra);
     void StartNewRound();
     void ProcessInputs();
-    void SpawnBullets(const std::vector<int>& directions, Vector2 spawn);
+    void SpawnBullets(const std::vector<int> &directions, Vector2 spawn);
     bool IsSpawnQueueEmpty();
     static bool IsMapTilePassable(int tileType);
     static bool IsMapTilePassableForMonsters(int tileType);
-    bool IsCollidingWithMonster(Rectangle r, CowboyMonster* subject);
+    bool IsCollidingWithMonster(Rectangle r, CowboyMonster *subject);
     bool IsCollidingWithMapForMonsters(Rectangle positionToCheck);
     bool IsCollidingWithMap(Rectangle positionToCheck);
     bool IsCollidingWithMap(Vector2 position);
@@ -395,23 +411,23 @@ public:
     void AddPlayerShootingDirection(int direction);
     void StartShoppingLevel();
     int GetPriceForItem(int whichItem);
-    void GetMap(int wave, int(&newMap)[MAP_WIDTH][MAP_HEIGHT]);
-    std::vector<Vector2> GetBorderPoints(const Rectangle& rect);
+    void GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT]);
+    std::vector<Vector2> GetBorderPoints(const Rectangle &rect);
 
     // Helper functions for rendering and resource access
-    Texture2D GetTexture(const std::string& name);
-    Sound GetSound(const std::string& name);
-    static Sound GetSoundStatic(const std::string& name);
+    Texture2D GetTexture(const std::string &name);
+    Sound GetSound(const std::string &name);
+    static Sound GetSoundStatic(const std::string &name);
     Rectangle GetRectForShopItem(int itemID);
     JOTPKProgress GetProgress() const;
     void SetButtonState(GameKeys key, bool pressed);
     void UpdatePlayer(float deltaTime);
     void StartNewWave();
-    void AddMonster(CowboyMonster* monster);
-    void AddTemporarySprite(const TemporaryAnimatedSprite& sprite);
+    void AddMonster(CowboyMonster *monster);
+    void AddTemporarySprite(const TemporaryAnimatedSprite &sprite);
 
     // Static function to get the current game instance
-    static PrairieKing* GetGameInstance();
+    static PrairieKing *GetGameInstance();
 
     // Helper functions for input
     bool IsKeyPressed(GameKeys key);
@@ -421,7 +437,7 @@ public:
     // Helper functions for monster spawning
     std::vector<Vector2> GetMonsterChancesForWave(int wave);
     Vector2 GetRandomSpawnPosition();
-    int ChooseMonsterType(const std::vector<Vector2>& chances);
+    int ChooseMonsterType(const std::vector<Vector2> &chances);
 
     // Wave and timer related functions
     void UpdateWaveTimer(float deltaTime);
@@ -432,7 +448,7 @@ public:
 
 private:
     // Asset references
-    AssetManager& m_assets;
+    AssetManager &m_assets;
 
     // Game state
     bool m_isGameOver;
@@ -507,7 +523,7 @@ private:
     BehaviorAfterMotionPause m_behaviorAfterPause;
 
     // Collections
-    std::vector<CowboyMonster*> m_monsters;
+    std::vector<CowboyMonster *> m_monsters;
     std::unordered_set<Vector2> m_borderTiles;
     std::vector<int> m_playerMovementDirections;
     std::vector<int> m_playerShootingDirections;
