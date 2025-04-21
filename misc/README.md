@@ -2,7 +2,7 @@
 
 ## Links
 - **GitHub Repository:** [https://github.com/Amphoreous/JotPK](https://github.com/Amphoreous/JotPK)
-- **Demo Video:** 
+- **Demo Video:** [https://youtu.be/q4D6h2tgzlw](https://youtu.be/q4D6h2tgzlw)
 
 ## Team Members
 - **Zakaria Hamdaoui** - [@TheUnrealZaka](https://github.com/TheUnrealZaka)
