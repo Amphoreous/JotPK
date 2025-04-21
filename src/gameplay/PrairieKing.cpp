@@ -789,14 +789,15 @@ void PrairieKing::PlayerDie()
 
     // Add death animation
     m_temporarySprites.push_back(TemporaryAnimatedSprite(
-        {336, 160, 16, 16},
+        { 336, 160, 16, 16 },
         120.0f, 5, 0,
-        {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
+        { m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y },
         0.0f, 3.0f, false,
         1.0f, WHITE));
 
-    // Make enemies wait longer between waves
-    m_waveTimer = std::min(WAVE_DURATION, m_waveTimer + 10000);
+    // Remove this line to prevent the timer from resetting
+    // m_waveTimer = std::min(WAVE_DURATION, m_waveTimer + 10000);
+
     m_betweenWaveTimer = 4000;
 
     // Lose a life
@@ -805,12 +806,12 @@ void PrairieKing::PlayerDie()
 
     if (m_shootoutLevel)
     {
-        m_playerPosition = {static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())};
+        m_playerPosition = { static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize()) };
         PlaySound(PrairieKing::GetSoundStatic("Cowboy_monsterDie"));
     }
     else
     {
-        m_playerPosition = {static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())};
+        m_playerPosition = { static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize()) };
         m_playerBoundingBox = {
             m_playerPosition.x,                        // Sin offset en X
             m_playerPosition.y - GetTileSize() / 4.0f, // Offset negativo en Y para incluir la gorra
@@ -824,14 +825,14 @@ void PrairieKing::PlayerDie()
     {
         // Game over
         m_temporarySprites.push_back(TemporaryAnimatedSprite(
-            {464, 1808, 16, 16},
+            { 464, 1808, 16, 16 },
             550.0f, 5, 0,
-            {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
+            { m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y },
             0.0f, 3.0f, false,
             1.0f, WHITE));
         m_temporarySprites.back().alpha = 0.001f;
         m_temporarySprites.back().endFunction = [this](int extra)
-        { AfterPlayerDeathFunction(extra); };
+            { AfterPlayerDeathFunction(extra); };
 
         m_deathTimer *= 3.0f;
     }
@@ -1701,6 +1702,12 @@ void PrairieKing::Update(float deltaTime)
 {
     UpdateMusicStream(m_overworldSong);
 
+    // Reanudar la música si el jugador no está muerto y la música no está sonando
+    if (m_deathTimer <= 0.0f && !IsMusicStreamPlaying(m_overworldSong))
+    {
+        PlayMusicStream(m_overworldSong);
+    }
+
     // Update button held state
     for (const auto &key : m_buttonHeldState)
     {
@@ -1747,9 +1754,7 @@ void PrairieKing::Update(float deltaTime)
     if (m_betweenWaveTimer > 0)
     {
         m_betweenWaveTimer -= deltaTime * 1000.0f;
-        if (m_betweenWaveTimer <= 0)
-        {
-            std::cout << "Between wave timer finished. Starting new wave!" << std::endl;
+        if (m_betweenWaveTimer <= 0 && !m_died) { // Evitar reinicio si el jugador murió
             m_waveTimer = GameConstants::WAVE_DURATION;
             m_waveCompleted = false;
             UpdateMonsterChancesForWave();
