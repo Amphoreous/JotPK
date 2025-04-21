@@ -1,4 +1,5 @@
 #include "gameplay/PrairieKing.hpp"
+#include "discord/DiscordManager.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <ctime>
@@ -1716,6 +1717,7 @@ void PrairieKing::Update(float deltaTime)
     // Handle game over state
     if (m_gameOver)
     {
+        DiscordManager::UpdatePresence("Game Over", "Press Enter to retry");
         return;
     }
 
@@ -1927,6 +1929,18 @@ void PrairieKing::Update(float deltaTime)
             m_playerMovementDirections.clear();
             ApplyLevelSpecificStates();
         }
+    }
+
+    // Update Discord Rich Presence based on game state
+    if (m_shopping)
+    {
+        DiscordManager::UpdatePresence("Shopping", "Upgrading equipment");
+    }
+    else
+    {
+        const char *details = TextFormat("Wave %d", m_whichWave + 1);
+        const char *state = TextFormat("Score: %d", m_score);
+        DiscordManager::UpdatePresence(state, details);
     }
 }
 
