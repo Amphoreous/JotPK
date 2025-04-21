@@ -819,21 +819,7 @@ void PrairieKing::PlayerDie()
     if (m_lives < 0)
     {
         // Game over
-        m_temporarySprites.push_back(TemporaryAnimatedSprite(
-            {336, 160, 16, 16},
-            550.0f, 5, 0,
-            {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
-            0.0f, 3.0f, false,
-            1.0f, WHITE));
-        m_temporarySprites.back().alpha = 0.001f;
-        m_temporarySprites.back().endFunction = [this](int extra)
-        { AfterPlayerDeathFunction(extra); };
-
-        m_deathTimer *= 3.0f;
-    }
-    else if (!m_shootoutLevel)
-    {
-        SaveGame();
+        m_gameOver = true;
     }
 }
 
@@ -843,7 +829,10 @@ void PrairieKing::AfterPlayerDeathFunction(int extra)
     {
         m_gameOver = true;
 
-        // Clear monsters and powerups
+        // Stop music
+        StopMusicStream(m_overworldSong);
+
+        // Clear game objects
         for (auto monster : m_monsters)
         {
             delete monster;
@@ -852,7 +841,7 @@ void PrairieKing::AfterPlayerDeathFunction(int extra)
         m_powerups.clear();
         m_died = false;
 
-        PlaySound(PrairieKing::GetSoundStatic("Cowboy_monsterDie"));
+        PlaySound(GetSound("cowboy_monsterDie"));
     }
 }
 
@@ -865,6 +854,56 @@ void PrairieKing::StartNewRound()
 
 void PrairieKing::ProcessInputs()
 {
+    if (m_gameOver)
+    {
+        // Handle game over menu navigation
+        if (IsKeyDown(GameKeys::ShootUp))
+        {
+            m_gameOverOption = 0; // Retry
+            PlaySound(GetSound("cowboy_gunshot"));
+        }
+        else if (IsKeyDown(GameKeys::ShootDown))
+        {
+            m_gameOverOption = 1; // Quit
+            PlaySound(GetSound("cowboy_gunshot"));
+        }
+        else if (IsKeyDown(GameKeys::SelectOption))
+        {
+            if (m_gameOverOption == 1)
+            {
+                m_quit = true;
+            }
+            else
+            {
+                // Complete reset when selecting Retry
+                Initialize(); // Reset to initial state
+                m_gameOver = false;
+                m_gameOverOption = 0;
+                m_lives = 3;
+                m_score = 0;
+                m_whichWave = 0;
+                m_whichRound = 0;
+                m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+                m_waveTimer = 0;
+                m_bulletDamage = 1;
+                m_fireSpeedLevel = 0;
+                m_ammoLevel = 0;
+                m_runSpeedLevel = 0;
+                m_spreadPistol = false;
+                m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
+                m_playerBoundingBox = Rectangle{
+                    m_playerPosition.x + GetTileSize() / 4.0f,
+                    m_playerPosition.y + GetTileSize() / 4.0f,
+                    static_cast<float>(GetTileSize()) / 2.0f,
+                    static_cast<float>(GetTileSize()) / 2.0f};
+                GetMap(0, m_map); // Reset to first map
+                PlaySound(GetSound("Pickup_Coin15"));
+            }
+        }
+
+        return; // Don't process other inputs while in game over
+    }
+
     // Clear previous movement and shooting directions
     m_playerMovementDirections.clear();
     m_playerShootingDirections.clear();
@@ -919,22 +958,6 @@ void PrairieKing::ProcessInputs()
     if (IsKeyDown(GameKeys::ShootRight))
     {
         AddPlayerShootingDirection(1);
-    }
-
-    // Process other inputs
-    if (IsKeyPressed(GameKeys::SelectOption) && m_gameOver)
-    {
-        if (m_gameOverOption == 1)
-        {
-            m_quit = true;
-        }
-        else
-        {
-            m_gameRestartTimer = 1500;
-            m_gameOver = false;
-            m_gameOverOption = 0;
-            PlaySound(GetSound("Pickup_Coin15"));
-        }
     }
 
     if (IsKeyDown(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr)
@@ -1985,69 +2008,133 @@ void PrairieKing::UpdateMonsterChancesForWave()
 
 void PrairieKing::Draw()
 {
-    if ((m_gameOver || m_gameRestartTimer > 0) && !m_endCutscene)
+    if (m_gameOver)
     {
-        // Draw black background
-        DrawRectangle(
-            static_cast<int>(m_topLeftScreenCoordinate.x),
-            static_cast<int>(m_topLeftScreenCoordinate.y),
-            16 * GetTileSize(),
-            16 * GetTileSize(),
-            BLACK);
+        // Clear the screen with black background
+        ClearBackground(BLACK);
 
-        // Draw game over text
-        const char *text = "Game Over";
+        float centerX = GetScreenWidth() / 2.0f;
+        float centerY = GetScreenHeight() / 2.0f;
+
+        // Draw "GAME OVER" text with specific shadow pattern
+        const char *gameOverText = "Game Over";
+        float textWidth = MeasureTextEx(m_assets.GetFont("title"), gameOverText, 48, 1).x;
+        Vector2 basePosition = {centerX - textWidth / 2.0f, centerY - 100};
+
+        // Draw center shadow
         DrawTextEx(m_assets.GetFont("title"),
-                   text,
-                   Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                           m_topLeftScreenCoordinate.y + 7.0f * GetTileSize()},
+                   gameOverText,
+                   Vector2{basePosition.x, basePosition.y},
+                   48,
+                   1,
+                   WHITE);
+
+        // Draw left shadow
+        DrawTextEx(m_assets.GetFont("title"),
+                   gameOverText,
+                   Vector2{basePosition.x - 1, basePosition.y},
+                   48,
+                   1,
+                   WHITE);
+
+        // Draw right shadow
+        DrawTextEx(m_assets.GetFont("title"),
+                   gameOverText,
+                   Vector2{basePosition.x + 1, basePosition.y},
+                   48,
+                   1,
+                   WHITE);
+        // Draw score
+        const char *scoreText = TextFormat("Score: %d", m_score);
+        float scoreWidth = MeasureTextEx(m_assets.GetFont("text"), scoreText, 32, 1).x;
+        DrawTextEx(m_assets.GetFont("text"),
+                   scoreText,
+                   Vector2{centerX - scoreWidth / 2.0f, centerY - 20},
                    32,
                    1,
                    WHITE);
 
-        // Draw options
-        std::string option1 = "> Retry";
-        std::string option2 = "Quit";
-        if (m_gameOverOption == 1)
-        {
-            option1 = "Retry";
-            option2 = "> Quit";
-        }
+        // Draw menu options with selector
+        const char *retryText = TextFormat("%sRetry", m_gameOverOption == 0 ? "> " : "  ");
+        const char *quitText = TextFormat("%sQuit", m_gameOverOption == 1 ? "> " : "  ");
 
-        if (m_gameRestartTimer <= 0 || m_gameRestartTimer / 500 % 2 == 0)
+        float retryWidth = MeasureTextEx(m_assets.GetFont("text"), retryText, 32, 1).x;
+        float quitWidth = MeasureTextEx(m_assets.GetFont("text"), quitText, 32, 1).x;
+
+        // Only draw retry option if not in restart timer or blinking
+        if (m_gameRestartTimer <= 0 || (m_gameRestartTimer / 500) % 2 == 0)
         {
             DrawTextEx(m_assets.GetFont("text"),
-                       option1.c_str(),
-                       Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                               m_topLeftScreenCoordinate.y + 9.0f * GetTileSize()},
-                       24,
+                       retryText,
+                       Vector2{centerX - retryWidth / 2.0f, centerY + 40},
+                       32,
                        1,
                        WHITE);
         }
 
         DrawTextEx(m_assets.GetFont("text"),
-                   option2.c_str(),
-                   Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                           m_topLeftScreenCoordinate.y + 9.0f * GetTileSize() + GetTileSize() * 2.0f / 3.0f},
-                   24,
+                   quitText,
+                   Vector2{centerX - quitWidth / 2.0f, centerY + 90},
+                   32,
                    1,
                    WHITE);
+
+        return; // Exit Draw method early
     }
-    else
+
+    // Draw the current game map
+    for (int x = 0; x < MAP_WIDTH; x++)
     {
-        // Draw the current game map
+        for (int y = 0; y < MAP_HEIGHT; y++)
+        {
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                          32.0f - m_world * 16.0f,
+                          16.0f,
+                          16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
+                          m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0),
+                          static_cast<float>(GetTileSize()),
+                          static_cast<float>(GetTileSize())},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+        }
+    }
+
+    // Draw temporary sprites
+    for (auto &sprite : m_temporarySprites)
+    {
+        // Only draw death effects and guts here
+        if (sprite.sourceRect.y >= 48 && sprite.sourceRect.y <= 80) // Adjust these values based on your sprite sheet
+        {
+            sprite.Draw(GetTexture("cursors"));
+        }
+    }
+
+    // Draw monsters
+    for (auto monster : m_monsters)
+    {
+        monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
+    }
+
+    // Draw scrolling map if needed - now drawing both maps for proper scrolling effect
+    if (m_scrollingMap)
+    {
+        // Draw next map coming in from below - using the buffered next map
         for (int x = 0; x < MAP_WIDTH; x++)
         {
             for (int y = 0; y < MAP_HEIGHT; y++)
             {
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                    Rectangle{336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
                               32.0f - m_world * 16.0f,
                               16.0f,
                               16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                              m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0),
+                              m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition,
                               static_cast<float>(GetTileSize()),
                               static_cast<float>(GetTileSize())},
                     Vector2{0, 0},
@@ -2056,392 +2143,351 @@ void PrairieKing::Draw()
             }
         }
 
-        // Draw temporary sprites
-        for (auto &sprite : m_temporarySprites)
-        {
-            // Only draw death effects and guts here
-            if (sprite.sourceRect.y >= 48 && sprite.sourceRect.y <= 80) // Adjust these values based on your sprite sheet
-            {
-                sprite.Draw(GetTexture("cursors"));
-            }
-        }
+        // Draw black borders above and below the visible map area
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x),
+            -1,
+            16 * GetTileSize(),
+            static_cast<int>(m_topLeftScreenCoordinate.y),
+            BLACK);
 
-        // Draw monsters
-        for (auto monster : m_monsters)
-        {
-            monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
-        }
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x),
+            static_cast<int>(m_topLeftScreenCoordinate.y + 16 * GetTileSize()),
+            16 * GetTileSize(),
+            static_cast<int>(m_topLeftScreenCoordinate.y + 2),
+            BLACK);
+    }
 
-        // Draw scrolling map if needed - now drawing both maps for proper scrolling effect
-        if (m_scrollingMap)
-        {
-            // Draw next map coming in from below - using the buffered next map
-            for (int x = 0; x < MAP_WIDTH; x++)
-            {
-                for (int y = 0; y < MAP_HEIGHT; y++)
-                {
-                    DrawTexturePro(
-                        GetTexture("cursors"),
-                        Rectangle{336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                                  32.0f - m_world * 16.0f,
-                                  16.0f,
-                                  16.0f},
-                        Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                                  m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition,
-                                  static_cast<float>(GetTileSize()),
-                                  static_cast<float>(GetTileSize())},
-                        Vector2{0, 0},
-                        0.0f,
-                        WHITE);
-                }
-            }
-
-            // Draw black borders above and below the visible map area
-            DrawRectangle(
-                static_cast<int>(m_topLeftScreenCoordinate.x),
-                -1,
-                16 * GetTileSize(),
-                static_cast<int>(m_topLeftScreenCoordinate.y),
-                BLACK);
-
-            DrawRectangle(
-                static_cast<int>(m_topLeftScreenCoordinate.x),
-                static_cast<int>(m_topLeftScreenCoordinate.y + 16 * GetTileSize()),
-                16 * GetTileSize(),
-                static_cast<int>(m_topLeftScreenCoordinate.y + 2),
-                BLACK);
-        }
-
-        // Draw bullets with crisper rendering
-        for (const auto &bullet : m_bullets)
-        {
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{390.0f, 112.0f + (m_bulletDamage - 1) * 4.0f, 4.0f, 4.0f},
-                Rectangle{m_topLeftScreenCoordinate.x + bullet.position.x,
-                          m_topLeftScreenCoordinate.y + bullet.position.y,
-                          12.0f, 12.0f}, // Slightly smaller for crisper appearance
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
-
-        // Draw enemy bullets
-        for (const auto &bullet : m_enemyBullets)
-        {
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{395.0f, 112.0f, 5.0f, 5.0f},
-                Rectangle{m_topLeftScreenCoordinate.x + bullet.position.x,
-                          m_topLeftScreenCoordinate.y + bullet.position.y,
-                          15.0f, 15.0f},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
-
-        // Draw powerups on the map
-        for (const auto &powerup : m_powerups)
-        {
-            powerup.Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
-        }
-
-        // Draw UI elements
+    // Draw bullets with crisper rendering
+    for (const auto &bullet : m_bullets)
+    {
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{166.0f, 134.0f, 22.0f, 22.0f},
-            Rectangle{m_topLeftScreenCoordinate.x - (GetTileSize() + 27),
-                      m_topLeftScreenCoordinate.y,
-                      66.0f, 66.0f},
+            Rectangle{390.0f, 112.0f + (m_bulletDamage - 1) * 4.0f, 4.0f, 4.0f},
+            Rectangle{m_topLeftScreenCoordinate.x + bullet.position.x,
+                      m_topLeftScreenCoordinate.y + bullet.position.y,
+                      12.0f, 12.0f}, // Slightly smaller for crisper appearance
             Vector2{0, 0},
             0.0f,
             WHITE);
+    }
 
-        // Draw held item
-        if (m_heldItem != nullptr)
-        {
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{144.0f + m_heldItem->which * 16.0f, 160.0f, 16.0f, 16.0f},
-                Rectangle{m_topLeftScreenCoordinate.x - (GetTileSize() + 18),
-                          m_topLeftScreenCoordinate.y + 9.0f,
-                          48.0f, 48.0f},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
-
-        // Draw lives icon and count
+    // Draw enemy bullets
+    for (const auto &bullet : m_enemyBullets)
+    {
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{272.0f, 128.0f, 16.0f, 16.0f},
-            Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
-                      m_topLeftScreenCoordinate.y + GetTileSize() + 18,
+            Rectangle{395.0f, 112.0f, 5.0f, 5.0f},
+            Rectangle{m_topLeftScreenCoordinate.x + bullet.position.x,
+                      m_topLeftScreenCoordinate.y + bullet.position.y,
+                      15.0f, 15.0f},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+
+    // Draw powerups on the map
+    for (const auto &powerup : m_powerups)
+    {
+        powerup.Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
+    }
+
+    // Draw UI elements
+    DrawTexturePro(
+        GetTexture("cursors"),
+        Rectangle{166.0f, 134.0f, 22.0f, 22.0f},
+        Rectangle{m_topLeftScreenCoordinate.x - (GetTileSize() + 27),
+                  m_topLeftScreenCoordinate.y,
+                  66.0f, 66.0f},
+        Vector2{0, 0},
+        0.0f,
+        WHITE);
+
+    // Draw held item
+    if (m_heldItem != nullptr)
+    {
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{144.0f + m_heldItem->which * 16.0f, 160.0f, 16.0f, 16.0f},
+            Rectangle{m_topLeftScreenCoordinate.x - (GetTileSize() + 18),
+                      m_topLeftScreenCoordinate.y + 9.0f,
                       48.0f, 48.0f},
             Vector2{0, 0},
             0.0f,
             WHITE);
+    }
 
-        DrawTextEx(m_assets.GetFont("text"),
-                   ("x" + std::to_string(std::max(0, m_lives))).c_str(),
-                   Vector2{m_topLeftScreenCoordinate.x - GetTileSize() + 8,
-                           m_topLeftScreenCoordinate.y + GetTileSize() + GetTileSize() / 4 + 18},
-                   32, // Font size
-                   1,
-                   WHITE);
+    // Draw lives icon and count
+    DrawTexturePro(
+        GetTexture("cursors"),
+        Rectangle{272.0f, 128.0f, 16.0f, 16.0f},
+        Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
+                  m_topLeftScreenCoordinate.y + GetTileSize() + 18,
+                  48.0f, 48.0f},
+        Vector2{0, 0},
+        0.0f,
+        WHITE);
 
-        // Draw coins icon and count
+    DrawTextEx(m_assets.GetFont("text"),
+               ("x" + std::to_string(std::max(0, m_lives))).c_str(),
+               Vector2{m_topLeftScreenCoordinate.x - GetTileSize() + 8,
+                       m_topLeftScreenCoordinate.y + GetTileSize() + GetTileSize() / 4 + 18},
+               32, // Font size
+               1,
+               WHITE);
+
+    // Draw coins icon and count
+    DrawTexturePro(
+        GetTexture("cursors"),
+        Rectangle{144.0f, 160.0f, 16.0f, 16.0f},
+        Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
+                  m_topLeftScreenCoordinate.y + GetTileSize() * 2 + 18,
+                  48.0f, 48.0f},
+        Vector2{0, 0},
+        0.0f,
+        WHITE);
+
+    DrawTextEx(m_assets.GetFont("text"),
+               ("x" + std::to_string(m_coins)).c_str(),
+               Vector2{m_topLeftScreenCoordinate.x - GetTileSize() + 8,
+                       m_topLeftScreenCoordinate.y + GetTileSize() * 2 + GetTileSize() / 4 + 18},
+               32, // Font size
+               1,
+               WHITE);
+
+    // Draw wave progress indicators
+    for (int i = 0; i < m_whichWave + m_whichRound * 12; i++)
+    {
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{144.0f, 160.0f, 16.0f, 16.0f},
-            Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() * 2,
-                      m_topLeftScreenCoordinate.y + GetTileSize() * 2 + 18,
+            Rectangle{384.0f, 112.0f, 5.0f, 5.0f},
+            Rectangle{m_topLeftScreenCoordinate.x + GetTileSize() * 16 + 3,
+                      m_topLeftScreenCoordinate.y + static_cast<float>(i * 3 * 6),
+                      15.0f, 15.0f},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+
+    // Draw timer bar
+    DrawTexturePro(
+        GetTexture("cursors"),
+        Rectangle{467.0f, 100.0f, 9.0f, 11.0f},
+        Rectangle{m_topLeftScreenCoordinate.x,
+                  m_topLeftScreenCoordinate.y - GetTileSize() / 2 - 12,
+                  27.0f, 33.0f},
+        Vector2{0, 0},
+        0.0f,
+        WHITE);
+
+    if (!m_shootoutLevel)
+    {
+        Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
+
+        // Constrain the timer bar width to prevent overflowing
+        int timerWidth = static_cast<int>((16 * GetTileSize() - 60) *
+                                          (static_cast<float>(m_waveTimer) / WAVE_DURATION));
+
+        // Make sure it doesn't exceed the screen width
+        timerWidth = std::min(timerWidth, 16 * GetTileSize() - 60);
+
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x + 30),
+            static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
+            timerWidth,
+            GetTileSize() / 4,
+            timerColor);
+    }
+
+    // Draw powerup indicators
+    if (m_bulletDamage > 1)
+    {
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{288.0f + (m_ammoLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
+            Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
+                      m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize(),
                       48.0f, 48.0f},
             Vector2{0, 0},
             0.0f,
             WHITE);
+    }
 
-        DrawTextEx(m_assets.GetFont("text"),
-                   ("x" + std::to_string(m_coins)).c_str(),
-                   Vector2{m_topLeftScreenCoordinate.x - GetTileSize() + 8,
-                           m_topLeftScreenCoordinate.y + GetTileSize() * 2 + GetTileSize() / 4 + 18},
-                   32, // Font size
-                   1,
-                   WHITE);
-
-        // Draw wave progress indicators
-        for (int i = 0; i < m_whichWave + m_whichRound * 12; i++)
-        {
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{384.0f, 112.0f, 5.0f, 5.0f},
-                Rectangle{m_topLeftScreenCoordinate.x + GetTileSize() * 16 + 3,
-                          m_topLeftScreenCoordinate.y + static_cast<float>(i * 3 * 6),
-                          15.0f, 15.0f},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
-
-        // Draw timer bar
+    if (m_fireSpeedLevel > 0)
+    {
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{467.0f, 100.0f, 9.0f, 11.0f},
-            Rectangle{m_topLeftScreenCoordinate.x,
-                      m_topLeftScreenCoordinate.y - GetTileSize() / 2 - 12,
-                      27.0f, 33.0f},
+            Rectangle{192.0f + (m_fireSpeedLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
+            Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
+                      m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 2,
+                      48.0f, 48.0f},
             Vector2{0, 0},
             0.0f,
             WHITE);
+    }
 
-        if (!m_shootoutLevel)
+    if (m_runSpeedLevel > 0)
+    {
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{240.0f + (m_runSpeedLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
+            Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
+                      m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 3,
+                      48.0f, 48.0f},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+
+    if (m_spreadPistol)
+    {
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{336.0f, 128.0f, 16.0f, 16.0f},
+            Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
+                      m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 4,
+                      48.0f, 48.0f},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+
+    // Draw control instructions at beginning of game
+    if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
+    {
+        Vector2 pos = {GetScreenWidth() / 2 - 120, GetScreenHeight() - 144 - 3};
+
+        // Drawing controls instruction box
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{224, 0, 80, 48},
+            Rectangle{pos.x, pos.y, 240, 144},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+
+    // Draw screen flash effect if active
+    if (m_screenFlash > 0)
+    {
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x),
+            static_cast<int>(m_topLeftScreenCoordinate.y),
+            16 * GetTileSize(),
+            16 * GetTileSize(),
+            ColorAlpha(RAYWHITE, static_cast<float>(m_screenFlash) / 1000.0f));
+    }
+
+    if (m_waitingForPlayerToMoveDownAMap && (m_merchantShopOpen || m_merchantLeaving || !m_shopping) && m_shoppingTimer < 250)
+    {
+        // Draw the arrow at the bottom of the screen
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{227.0f, 102.0f, 8.0f, 8.0f},
+            Rectangle{m_topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
+                      m_topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
+                      24.0f, 24.0f},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+    // Draw player if not dead or invincible
+    if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
+    {
+        if (m_holdItemTimer > 0)
         {
-            Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
-
-            // Constrain the timer bar width to prevent overflowing
-            int timerWidth = static_cast<int>((16 * GetTileSize() - 60) *
-                                              (static_cast<float>(m_waveTimer) / WAVE_DURATION));
-
-            // Make sure it doesn't exceed the screen width
-            timerWidth = std::min(timerWidth, 16 * GetTileSize() - 60);
-
-            DrawRectangle(
-                static_cast<int>(m_topLeftScreenCoordinate.x + 30),
-                static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
-                timerWidth,
-                GetTileSize() / 4,
-                timerColor);
-        }
-
-        // Draw powerup indicators
-        if (m_bulletDamage > 1)
-        {
+            // Draw player holding item
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{288.0f + (m_ammoLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
-                Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
-                          m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize(),
+                Rectangle{256.0f, 112.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                          48.0f, 48.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+
+            // Draw held item above player
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
                           48.0f, 48.0f},
                 Vector2{0, 0},
                 0.0f,
                 WHITE);
         }
-
-        if (m_fireSpeedLevel > 0)
+        else if (m_zombieModeTimer > 0)
         {
+            // Draw zombie player
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{192.0f + (m_fireSpeedLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
-                Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
-                          m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 2,
+                Rectangle{224.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 112.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y,
                           48.0f, 48.0f},
                 Vector2{0, 0},
                 0.0f,
                 WHITE);
         }
-
-        if (m_runSpeedLevel > 0)
+        else if (m_playerMovementDirections.empty() && m_playerShootingDirections.empty())
         {
+            // Draw idle player
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{240.0f + (m_runSpeedLevel - 1) * 16.0f, 128.0f, 16.0f, 16.0f},
-                Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
-                          m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 3,
+                Rectangle{368.0f, 112.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y,
                           48.0f, 48.0f},
                 Vector2{0, 0},
                 0.0f,
                 WHITE);
         }
-
-        if (m_spreadPistol)
+        else
         {
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{336.0f, 128.0f, 16.0f, 16.0f},
-                Rectangle{m_topLeftScreenCoordinate.x - GetTileSize() - 3,
-                          m_topLeftScreenCoordinate.y + 16 * GetTileSize() - GetTileSize() * 4,
-                          48.0f, 48.0f},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
+            // Get facing direction from movement or shooting
+            int facingDirection = m_playerShootingDirections.empty() ? (!m_playerMovementDirections.empty() ? m_playerMovementDirections[0] : 0) : m_playerShootingDirections.back();
 
-        // Draw control instructions at beginning of game
-        if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
-        {
-            Vector2 pos = {GetScreenWidth() / 2 - 120, GetScreenHeight() - 144 - 3};
-
-            // Drawing controls instruction box
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{224, 0, 80, 48},
-                Rectangle{pos.x, pos.y, 240, 144},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
-
-        // Draw screen flash effect if active
-        if (m_screenFlash > 0)
-        {
-            DrawRectangle(
-                static_cast<int>(m_topLeftScreenCoordinate.x),
-                static_cast<int>(m_topLeftScreenCoordinate.y),
-                16 * GetTileSize(),
-                16 * GetTileSize(),
-                ColorAlpha(RAYWHITE, static_cast<float>(m_screenFlash) / 1000.0f));
-        }
-
-        if (m_waitingForPlayerToMoveDownAMap && (m_merchantShopOpen || m_merchantLeaving || !m_shopping) && m_shoppingTimer < 250)
-        {
-            // Draw the arrow at the bottom of the screen
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{227.0f, 102.0f, 8.0f, 8.0f},
-                Rectangle{m_topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
-                          m_topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
-                          24.0f, 24.0f},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
-        }
-        // Draw player if not dead or invincible
-        if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
-        {
-            if (m_holdItemTimer > 0)
+            // Draw player feet - different animation when shooting
+            int footFrame;
+            if (!m_playerShootingDirections.empty() && m_playerMovementDirections.empty())
             {
-                // Draw player holding item
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{256.0f, 112.0f, 16.0f, 16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f},
-                    Vector2{0, 0},
-                    0.0f,
-                    WHITE);
-
-                // Draw held item above player
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
-                              48.0f, 48.0f},
-                    Vector2{0, 0},
-                    0.0f,
-                    WHITE);
+                // Solo usa el frame fijo cuando dispara y NO está caminando
+                footFrame = 0;
             }
-            else if (m_zombieModeTimer > 0)
+            else if (!m_playerMovementDirections.empty())
             {
-                // Draw zombie player
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{224.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 112.0f, 16.0f, 16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f},
-                    Vector2{0, 0},
-                    0.0f,
-                    WHITE);
-            }
-            else if (m_playerMovementDirections.empty() && m_playerShootingDirections.empty())
-            {
-                // Draw idle player
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{368.0f, 112.0f, 16.0f, 16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f},
-                    Vector2{0, 0},
-                    0.0f,
-                    WHITE);
+                // Usa la animación de caminar si se está moviendo
+                footFrame = static_cast<int>(m_playerMotionAnimationTimer / 100.0f) % 4;
             }
             else
             {
-                // Get facing direction from movement or shooting
-                int facingDirection = m_playerShootingDirections.empty() ? (!m_playerMovementDirections.empty() ? m_playerMovementDirections[0] : 0) : m_playerShootingDirections.back();
-
-                // Draw player feet - different animation when shooting
-                int footFrame;
-                if (!m_playerShootingDirections.empty() && m_playerMovementDirections.empty())
-                {
-                    // Solo usa el frame fijo cuando dispara y NO está caminando
-                    footFrame = 0;
-                }
-                else if (!m_playerMovementDirections.empty())
-                {
-                    // Usa la animación de caminar si se está moviendo
-                    footFrame = static_cast<int>(m_playerMotionAnimationTimer / 100.0f) % 4;
-                }
-                else
-                {
-                    // Frame por defecto cuando está quieto
-                    footFrame = 0;
-                }
-
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{355.0f, 112.0f + footFrame * 3.0f, 10.0f, 3.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y + 39.0f,
-                              30.0f, 9.0f},
-                    Vector2{0, 0},
-                    0.0f,
-                    WHITE);
-
-                // Draw player body
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{336.0f + facingDirection * 16.0f, 96.0f, 16.0f, 16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f},
-                    Vector2{0, 0},
-                    0.0f,
-                    WHITE);
+                // Frame por defecto cuando está quieto
+                footFrame = 0;
             }
+
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{355.0f, 112.0f + footFrame * 3.0f, 10.0f, 3.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y + 39.0f,
+                          30.0f, 9.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+
+            // Draw player body
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{336.0f + facingDirection * 16.0f, 96.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                          48.0f, 48.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
         }
     }
 }
