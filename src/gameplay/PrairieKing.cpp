@@ -178,7 +178,7 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_playerMotionAnimationTimer(0),
       m_playerFootstepSoundTimer(200.0f),
       m_spawnQueue(4),
-      m_overworldSong({ 0 })
+      m_overworldSong({0})
 {
     // Store the instance pointer for static access
     s_instance = this;
@@ -393,7 +393,7 @@ bool PrairieKing::GetPowerUp(CowboyPowerup c)
         // Intercambiar power-up actual con el nuevo
         auto tmp = std::move(m_heldItem);
         m_heldItem = std::make_unique<CowboyPowerup>(c);
-        m_noPickUpBox = { c.position.x, c.position.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize()) };
+        m_noPickUpBox = {c.position.x, c.position.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
         tmp->position = c.position;
         m_powerups.push_back(*tmp);
         PlaySound(GetSound("cowboy_powerup"));
@@ -789,9 +789,9 @@ void PrairieKing::PlayerDie()
 
     // Add death animation
     m_temporarySprites.push_back(TemporaryAnimatedSprite(
-        { 336, 160, 16, 16 },
+        {336, 160, 16, 16},
         120.0f, 5, 0,
-        { m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y },
+        {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
         0.0f, 3.0f, false,
         1.0f, WHITE));
 
@@ -806,12 +806,12 @@ void PrairieKing::PlayerDie()
 
     if (m_shootoutLevel)
     {
-        m_playerPosition = { static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize()) };
+        m_playerPosition = {static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())};
         PlaySound(PrairieKing::GetSoundStatic("Cowboy_monsterDie"));
     }
     else
     {
-        m_playerPosition = { static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize()) };
+        m_playerPosition = {static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())};
         m_playerBoundingBox = {
             m_playerPosition.x,                        // Sin offset en X
             m_playerPosition.y - GetTileSize() / 4.0f, // Offset negativo en Y para incluir la gorra
@@ -825,14 +825,14 @@ void PrairieKing::PlayerDie()
     {
         // Game over
         m_temporarySprites.push_back(TemporaryAnimatedSprite(
-            { 464, 1808, 16, 16 },
+            {464, 1808, 16, 16},
             550.0f, 5, 0,
-            { m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y },
+            {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, false,
             1.0f, WHITE));
         m_temporarySprites.back().alpha = 0.001f;
         m_temporarySprites.back().endFunction = [this](int extra)
-            { AfterPlayerDeathFunction(extra); };
+        { AfterPlayerDeathFunction(extra); };
 
         m_deathTimer *= 3.0f;
     }
@@ -1702,12 +1702,6 @@ void PrairieKing::Update(float deltaTime)
 {
     UpdateMusicStream(m_overworldSong);
 
-    // Reanudar la música si el jugador no está muerto y la música no está sonando
-    if (m_deathTimer <= 0.0f && !IsMusicStreamPlaying(m_overworldSong))
-    {
-        PlayMusicStream(m_overworldSong);
-    }
-
     // Update button held state
     for (const auto &key : m_buttonHeldState)
     {
@@ -1735,6 +1729,12 @@ void PrairieKing::Update(float deltaTime)
     if (m_playerInvincibleTimer > 0)
     {
         m_playerInvincibleTimer -= static_cast<int>(deltaTime * 1000.0f);
+        
+        // When invincibility timer reaches 0, resume the music
+        if (m_playerInvincibleTimer <= 0)
+        {
+            ResumeMusicStream(m_overworldSong);
+        }
     }
 
     // Update game elements that should always run
@@ -1754,7 +1754,8 @@ void PrairieKing::Update(float deltaTime)
     if (m_betweenWaveTimer > 0)
     {
         m_betweenWaveTimer -= deltaTime * 1000.0f;
-        if (m_betweenWaveTimer <= 0 && !m_died) { // Evitar reinicio si el jugador murió
+        if (m_betweenWaveTimer <= 0 && !m_died)
+        { // Evitar reinicio si el jugador murió
             m_waveTimer = GameConstants::WAVE_DURATION;
             m_waveCompleted = false;
             UpdateMonsterChancesForWave();
@@ -1766,7 +1767,7 @@ void PrairieKing::Update(float deltaTime)
     // Handle wave state
     if (!m_waveCompleted)
     {
-                
+
         if (m_waveTimer > 0 && !m_shootoutLevel)
         {
             m_waveTimer -= deltaTime * 1000.0f;
@@ -1809,7 +1810,7 @@ void PrairieKing::Update(float deltaTime)
             {
                 m_waveCompleted = true;
                 m_whichWave++;
-                
+
                 // Set up the next map/shop transition
                 if (m_whichWave > 0)
                 {
@@ -2036,21 +2037,6 @@ void PrairieKing::Draw()
                 16 * GetTileSize(),
                 static_cast<int>(m_topLeftScreenCoordinate.y + 2),
                 BLACK);
-        }
-
-        // Draw control instructions at beginning of game
-        if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
-        {
-            Vector2 pos = {GetScreenWidth() / 2 - 120, GetScreenHeight() - 144 - 3};
-
-            // Drawing controls instruction box
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{224, 0, 80, 48},
-                Rectangle{pos.x, pos.y, 240, 144}, // 3x scaling
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
         }
 
         // Draw player if not dead or invincible
@@ -2372,6 +2358,20 @@ void PrairieKing::Draw()
                 Rectangle{m_topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
                           m_topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
                           24.0f, 24.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+        }
+        // Draw control instructions at beginning of game
+        if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
+        {
+            Vector2 pos = {GetScreenWidth() / 2 - 120, GetScreenHeight() - 144 - 3};
+
+            // Drawing controls instruction box
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{224, 0, 80, 48},
+                Rectangle{pos.x, pos.y, 240, 144},
                 Vector2{0, 0},
                 0.0f,
                 WHITE);
