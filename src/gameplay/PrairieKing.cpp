@@ -942,12 +942,17 @@ void PrairieKing::ProcessInputs()
         }
     }
 
-    if (IsKeyPressed(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr && m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
+    if (IsKeyDown(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr)
     {
-        UsePowerup(m_heldItem->which);
-        m_heldItem.reset();
+        std::cout << "Attempting to use powerup..." << std::endl;
+        if (m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
+        {
+            std::cout << "Using powerup: " << m_heldItem->which << std::endl;
+            UsePowerup(m_heldItem->which);
+            m_heldItem.reset();
+        }
     }
-
+    
     if (IsKeyPressed(GameKeys::Exit))
     {
         m_quit = true;
