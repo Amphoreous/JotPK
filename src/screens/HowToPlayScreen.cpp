@@ -20,15 +20,15 @@ void HowToPlayScreen::Draw() {
     // Draw different instructions based on current page
     switch (m_currentPage) {
         case 0:
-            DrawTextEx(m_assets.GetFont("text"), "Use WASD or Arrow Keys to move",
+            DrawTextEx(m_assets.GetFont("text"), "Use WASD to move",
                       Vector2{centerX - 200, centerY - 50}, 30, 2, WHITE);
-            DrawTextEx(m_assets.GetFont("text"), "Space to shoot",
+            DrawTextEx(m_assets.GetFont("text"), "Press Arrow Keys to shoot",
                       Vector2{centerX - 200, centerY}, 30, 2, WHITE);
             break;
         case 1:
-            DrawTextEx(m_assets.GetFont("text"), "Collect power-ups to get stronger",
+            DrawTextEx(m_assets.GetFont("text"), "Space to use power-ups",
                       Vector2{centerX - 200, centerY - 50}, 30, 2, WHITE);
-            DrawTextEx(m_assets.GetFont("text"), "Avoid enemies and their projectiles",
+            DrawTextEx(m_assets.GetFont("text"), "Kill enemies and get upgrades",
                       Vector2{centerX - 200, centerY}, 30, 2, WHITE);
             break;
         case 2:

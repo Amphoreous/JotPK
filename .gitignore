@@ -398,6 +398,7 @@ FodyWeavers.xsd
 *.sln.iml
 build_files
 raylib-master
+discord_game_sdk
 json
 Makefile
 /*.sln
