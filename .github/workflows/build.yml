@@ -1,0 +1,47 @@
+name: Build Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number'
+        required: true
+        type: string
+      isPrerelease:
+        description: 'Is this a pre-release?'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Visual Studio Build Tools
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build project
+      run: |
+        ./build-VisualStudio2022.bat
+        msbuild JotPK.sln /p:Configuration=Release /p:Platform=x64
+
+    - name: Create Release ZIP
+      run: |
+        Compress-Archive -Path "bin/Release/*" -DestinationPath "JotPK-${{ github.event.inputs.version }}.zip"
+      shell: pwsh
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: JotPK-${{ github.event.inputs.version }}.zip
+        tag_name: v${{ github.event.inputs.version }}
+        name: Release v${{ github.event.inputs.version }}
+        prerelease: ${{ github.event.inputs.isPrerelease }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
