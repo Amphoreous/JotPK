@@ -360,13 +360,21 @@ bool PrairieKing::GetPowerUp(CowboyPowerup c)
         break;
 
     case COIN1:
-        m_coins++;
-        PlaySound(GetSound("Pickup_Coin15"));
+        // Verificar probabilidad antes de recoger la moneda
+        if (GetRandomFloat(0.0f, 1.0f) < COIN_CHANCE)
+        {
+            m_coins++;
+            PlaySound(GetSound("Pickup_Coin15"));
+        }
         break;
 
     case COIN5:
-        m_coins += 5;
-        PlaySound(GetSound("Pickup_Coin15"));
+        // Verificar probabilidad antes de recoger la moneda
+        if (GetRandomFloat(0.0f, 1.0f) < COIN_CHANCE)
+        {
+            m_coins += 5;
+            PlaySound(GetSound("Pickup_Coin15"));
+        }
         break;
 
     case POWERUP_LIFE:
@@ -385,7 +393,7 @@ bool PrairieKing::GetPowerUp(CowboyPowerup c)
         // Intercambiar power-up actual con el nuevo
         auto tmp = std::move(m_heldItem);
         m_heldItem = std::make_unique<CowboyPowerup>(c);
-        m_noPickUpBox = {c.position.x, c.position.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
+        m_noPickUpBox = { c.position.x, c.position.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize()) };
         tmp->position = c.position;
         m_powerups.push_back(*tmp);
         PlaySound(GetSound("cowboy_powerup"));
