@@ -197,10 +197,26 @@ void IntroScreen::Draw() {
             
             const char* titleText = "Project I";
             Vector2 titleSize = MeasureTextEx(titleFont, titleText, 40, 2);
+            
+            Color textColor = ColorAlpha(WHITE, m_alpha);
+            
+            // Texto principal
             DrawTextEx(titleFont, titleText,
                       Vector2{centerX - titleSize.x/2,
                              centerY - 100},
-                      40, 2, ColorAlpha(WHITE, m_alpha));
+                      40, 2, textColor);
+            
+            // Sombra izquierda
+            DrawTextEx(titleFont, titleText,
+                      Vector2{centerX - titleSize.x/2 - 1,
+                             centerY - 100},
+                      40, 2, textColor);
+            
+            // Sombra derecha
+            DrawTextEx(titleFont, titleText,
+                      Vector2{centerX - titleSize.x/2 + 1,
+                             centerY - 100},
+                      40, 2, textColor);
             
             const char* subtextA = "Design and Development of Videogames";
             const char* subtextB = "CITM - UPC";
@@ -228,10 +244,26 @@ void IntroScreen::Draw() {
             
             const char* titleText = "Journey of the Prairie King";
             Vector2 titleSize = MeasureTextEx(titleFont, titleText, 40, 2);
+            
+            Color textColor = ColorAlpha(WHITE, m_alpha);
+            
+            // Texto principal
             DrawTextEx(titleFont, titleText,
                       Vector2{centerX - titleSize.x/2,
                              centerY - 100},
-                      40, 2, ColorAlpha(WHITE, m_alpha));
+                      40, 2, textColor);
+            
+            // Sombra izquierda
+            DrawTextEx(titleFont, titleText,
+                      Vector2{centerX - titleSize.x/2 - 1,
+                             centerY - 100},
+                      40, 2, textColor);
+            
+            // Sombra derecha
+            DrawTextEx(titleFont, titleText,
+                      Vector2{centerX - titleSize.x/2 + 1,
+                             centerY - 100},
+                      40, 2, textColor);
             
             const char* subtextA = "Play as the Prairie King, fight against several adversaries,";
             const char* subtextB = "upgrade your equipment, use some powerful power-ups to collect";
