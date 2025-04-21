@@ -825,7 +825,7 @@ void PrairieKing::PlayerDie()
     {
         // Game over
         m_temporarySprites.push_back(TemporaryAnimatedSprite(
-            {464, 1808, 16, 16},
+            {336, 160, 16, 16},
             550.0f, 5, 0,
             {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, false,
@@ -942,12 +942,17 @@ void PrairieKing::ProcessInputs()
         }
     }
 
-    if (IsKeyPressed(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr && m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
+    if (IsKeyDown(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr)
     {
-        UsePowerup(m_heldItem->which);
-        m_heldItem.reset();
+        std::cout << "Attempting to use powerup..." << std::endl;
+        if (m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
+        {
+            std::cout << "Using powerup: " << m_heldItem->which << std::endl;
+            UsePowerup(m_heldItem->which);
+            m_heldItem.reset();
+        }
     }
-
+    
     if (IsKeyPressed(GameKeys::Exit))
     {
         m_quit = true;
