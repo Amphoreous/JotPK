@@ -521,7 +521,7 @@ void PrairieKing::UsePowerup(int which)
         for (int i = 0; i < 30; i++)
         {
             m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {464, 1792, 16, 16},
+                {336, 147, 16, 16},
                 80.0f, 5, 0,
                 {static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.x,
                  static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.y},
@@ -3048,9 +3048,6 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
 
     if (health <= 0)
     {
-        // Play death sound
-        PlaySound(GetSoundStatic("cowboy_monsterhit"));
-
         // Drop loot
         int lootDrop = GetLootDrop();
         if (lootDrop != -1)
@@ -3071,9 +3068,58 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
 
 int PrairieKing::CowboyMonster::GetLootDrop()
 {
-    // Implementación básica del método GetLootDrop
-    // Retorna un valor por defecto, ajusta según la lógica del juego
-    return 0;
+    // Special case for special spikey enemy
+    if (type == GameConstants::SPIKEY && special)
+    {
+        return -1; // No drop
+    }
+
+    // Base 5% chance for initial loot roll
+    if (GetRandomFloat(0.0f, 1.0f) < 0.05f)
+    {
+        // For non-basic enemies, 10% chance for coin
+        if (type != GameConstants::ORC && GetRandomFloat(0.0f, 1.0f) < 0.1f)
+        {
+            return COIN1;
+        }
+
+        // 1% chance for coin
+        if (GetRandomFloat(0.0f, 1.0f) < 0.01f)
+        {
+            return COIN1;
+        }
+
+        return 0; // Basic powerup
+    }
+
+    // Another 5% chance for different powerups
+    if (GetRandomFloat(0.0f, 1.0f) < 0.05f)
+    {
+        // 15% chance for special powerups
+        if (GetRandomFloat(0.0f, 1.0f) < 0.15f)
+        {
+            return GetRandomInt(6, 7);
+        }
+
+        // 7% chance for sheriff star
+        if (GetRandomFloat(0.0f, 1.0f) < 0.07f)
+        {
+            return 10;
+        }
+
+        // Random powerup between 2-9
+        int loot = GetRandomInt(2, 9);
+        
+        // 40% chance to reroll if got powerup 5
+        if (loot == 5 && GetRandomFloat(0.0f, 1.0f) < 0.4f)
+        {
+            loot = GetRandomInt(2, 9);
+        }
+
+        return loot;
+    }
+
+    return -1; // No loot drop
 }
 
 bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
