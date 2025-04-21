@@ -439,7 +439,6 @@ private:
     bool m_gameOver;
     bool m_quit;
     bool m_died;
-    bool m_onStartMenu;
     bool m_shopping;
     bool m_gopherRunning;
     bool m_store;
@@ -455,7 +454,7 @@ private:
     bool m_endCutscene;
     bool m_spreadPistol;
 
-    Sound m_overworldSong;
+    Music m_overworldSong;
 
     // Game variables
     int m_runSpeedLevel;
@@ -486,12 +485,10 @@ private:
     int m_gopherTrainPosition;
     int m_endCutsceneTimer;
     int m_endCutscenePhase;
-    int m_startTimer;
     float m_deathTimer;
     int m_waveTimer;
     int m_betweenWaveTimer;
     static int m_world;
-    float m_monsterClearTimer = -1.0f;
     bool m_waveCompleted = false;
 
     // Game objects
