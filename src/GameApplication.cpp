@@ -35,8 +35,7 @@ void GameApplication::Initialize() {
     ImageResize(&icon128, 128, 128);
 
     // Get the monitor's refresh rate for proper vsync
-    int targetFPS = GetMonitorRefreshRate(GetCurrentMonitor());
-    SetTargetFPS(targetFPS);
+    SetTargetFPS(60);
     
     InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
     
