@@ -477,7 +477,7 @@ void PrairieKing::UsePowerup(int which)
             for (int i = 0; i < 5; i++)
             {
                 m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                    {464, 1792, 16, 16},
+                    {336, 144, 16, 16},
                     120.0f, 5, 0,
                     {teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
                      teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
@@ -661,7 +661,7 @@ void PrairieKing::EndOfGopherAnimationBehavior2(int extraInfo)
 void PrairieKing::EndOfGopherAnimationBehavior(int extraInfo)
 {
     m_temporarySprites.push_back(TemporaryAnimatedSprite(
-        {384, 1792, 16, 16},
+        {256, 144, 16, 16},
         120.0f, 4, 2,
         {m_topLeftScreenCoordinate.x + m_gopherBox.x + GetTileSize() / 2,
          m_topLeftScreenCoordinate.y + m_gopherBox.y + GetTileSize() / 2},
@@ -825,7 +825,7 @@ void PrairieKing::PlayerDie()
     {
         // Game over
         m_temporarySprites.push_back(TemporaryAnimatedSprite(
-            {464, 1808, 16, 16},
+            {336, 160, 16, 16},
             550.0f, 5, 0,
             {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
             0.0f, 3.0f, false,
@@ -3008,22 +3008,22 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
     {
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {480 - 128, 1696 - 1648, 16, 16};
+            sourceRect = {352, 48, 16, 16};
         }
         else
         {
-            sourceRect = {576 - 128, 1712 - 1648, 16, 16};
+            sourceRect = {448, 64, 16, 16};
         }
     }
     else
     {
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {static_cast<float>((352 + type * 16) - 128), static_cast<float>(1696 - 1648), 16, 16};
+            sourceRect = {static_cast<float>(224 + type * 16), static_cast<float>(48), 16, 16};
         }
         else
         {
-            sourceRect = {static_cast<float>((352 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16) - 128), static_cast<float>(1712 - 1648), 16, 16};
+            sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), static_cast<float>(64), 16, 16};
         }
     }
 
