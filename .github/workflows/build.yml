@@ -42,7 +42,8 @@ jobs:
         New-Item -ItemType Directory -Path $gameFolder
         
         # Copy executable and DLLs
-        Copy-Item "bin/Release/*" -Destination $gameFolder
+        Copy-Item "bin/Release/*.exe" -Destination $gameFolder
+        Copy-Item "bin/Release/*.dll" -Destination $gameFolder
         
         # Copy resources
         Copy-Item "resources" -Destination $gameFolder -Recurse
