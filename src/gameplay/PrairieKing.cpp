@@ -1693,47 +1693,10 @@ void PrairieKing::Update(float deltaTime)
             if (m_startTimer <= 0)
             {
                 m_onStartMenu = false;
-                m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION; // Configurar el retraso inicial
+                m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
             }
         }
-        return; // No continuar con la lógica del juego mientras esté en el menú de inicio
-    }
-
-    // Manejar el temporizador entre olas
-    if (m_betweenWaveTimer > 0)
-    {
-        m_betweenWaveTimer -= deltaTime * 1000.0f;
-        if (m_betweenWaveTimer <= 0)
-        {
-            m_betweenWaveTimer = 0;
-            m_waveTimer = GameConstants::WAVE_DURATION; // Iniciar la ola
-            std::cout << "Wave started!" << std::endl;
-        }
-    }
-
-    // Manejar el temporizador de la ola
-    if (m_waveTimer > 0)
-    {
-        m_waveTimer -= deltaTime * 1000.0f;
-        if (m_waveTimer <= 0)
-        {
-            m_waveTimer = 0;
-            std::cout << "Wave timer finished. Checking conditions..." << std::endl;
-        }
-    }
-
-    // Depuración: Mostrar el estado de los temporizadores
-    std::cout << "Wave Timer: " << m_waveTimer / 1000.0 << " seconds" << std::endl;
-    std::cout << "Between Wave Timer: " << m_betweenWaveTimer / 1000.0 << " seconds" << std::endl;
-
-    // Verificar si la ola está completa
-    if (!m_waveCompleted && m_waveTimer <= 0 && m_monsters.empty() && IsSpawnQueueEmpty())
-    {
-        if (m_monsterClearTimer <= 0)
-        {
-            m_monsterClearTimer = 3000.0; // 3 segundos
-            std::cout << "Wave complete. Starting monster clear timer..." << std::endl;
-        }
+        return;
     }
 
     // Update button held state
@@ -1755,27 +1718,6 @@ void PrairieKing::Update(float deltaTime)
         return;
     }
 
-    // Handle start menu
-    if (m_onStartMenu)
-    {
-        if (m_startTimer > 0)
-        {
-            m_startTimer -= static_cast<int>(deltaTime * 1000.0f);
-            if (m_startTimer <= 0)
-            {
-                m_shotTimer = 100;
-                m_onStartMenu = false;
-                m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
-            }
-        }
-        else
-        {
-            PlaySound(GetSound("Pickup_Coin15"));
-            m_startTimer = GameConstants::START_MENU_DURATION;
-        }
-        return;
-    }
-
     // Update timers
     if (m_deathTimer > 0)
     {
@@ -1787,168 +1729,128 @@ void PrairieKing::Update(float deltaTime)
         m_playerInvincibleTimer -= static_cast<int>(deltaTime * 1000.0f);
     }
 
-    // Handle between wave state
-    if (m_betweenWaveTimer > 0 && m_monsters.empty() && IsSpawnQueueEmpty() && !m_shopping && !m_waitingForPlayerToMoveDownAMap)
+    // Update game elements that should always run
+    UpdateBullets(deltaTime);
+    UpdatePlayer(deltaTime);
+
+    // Update temporary sprites
+    for (int i = m_temporarySprites.size() - 1; i >= 0; i--)
     {
-        m_betweenWaveTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (m_temporarySprites[i].Update(deltaTime))
+        {
+            m_temporarySprites.erase(m_temporarySprites.begin() + i);
+        }
+    }
+
+    // Handle between wave timer
+    if (m_betweenWaveTimer > 0)
+    {
+        m_betweenWaveTimer -= deltaTime * 1000.0f;
         if (m_betweenWaveTimer <= 0)
         {
+            std::cout << "Between wave timer finished. Starting new wave!" << std::endl;
             m_waveTimer = GameConstants::WAVE_DURATION;
-            // Iniciar música del overworld
+            m_waveCompleted = false;
+            UpdateMonsterChancesForWave();
             if (!IsSoundPlaying(m_overworldSong))
             {
                 PlaySound(m_overworldSong);
             }
         }
+        return; // Only skip monster spawning and wave logic
     }
 
-// Handle wave timer
-    if (m_waveTimer > 0 && m_betweenWaveTimer <= 0 && !m_shootoutLevel)
+    // Handle wave state
+    if (!m_waveCompleted)
     {
-        m_waveTimer -= static_cast<int>(deltaTime * 1000.0f);
-
-        // Mostrar el tiempo restante de la ola en la consola
-        int secondsRemaining = static_cast<int>(m_waveTimer / 1000.0f);
-        std::cout << "Wave Time Remaining: " << secondsRemaining << " seconds" << std::endl;
-
-        // Spawn monsters during the wave
-        if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving)
+        if (m_waveTimer > 0 && !m_shootoutLevel)
         {
-            float spawnChance = 0.02f; // Base chance
-            if (m_monsters.empty())
-            {
-                spawnChance = 0.1f; // Higher chance if no monsters
-            }
+            m_waveTimer -= deltaTime * 1000.0f;
 
-            if (GetRandomFloat(0.0f, 1.0f) < spawnChance)
+            // Only spawn monsters if wave is not completed and we're not in special states
+            if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving && !m_waitingForPlayerToMoveDownAMap)
             {
-                int numMonsters = 1;
-                if (m_whichWave > 5 && GetRandomFloat(0.0f, 1.0f) < 0.3f)
+                float spawnChance = 0.02f;
+                if (m_monsters.empty())
                 {
-                    numMonsters = 2;
+                    spawnChance = 0.1f;
                 }
 
-                for (int i = 0; i < numMonsters; i++)
+                if (GetRandomFloat(0.0f, 1.0f) < spawnChance)
                 {
-                    Vector2 spawnPoint = GetRandomSpawnPosition();
-                    if (spawnPoint.x >= 0 && spawnPoint.y >= 0)
+                    int numMonsters = 1;
+                    if (m_whichWave > 5 && GetRandomFloat(0.0f, 1.0f) < 0.3f)
                     {
-                        int monsterType = ChooseMonsterType(m_monsterChances);
-                        CowboyMonster* monster = new CowboyMonster(m_assets, monsterType, spawnPoint);
-                        AddMonster(monster);
+                        numMonsters = 2;
+                    }
+
+                    for (int i = 0; i < numMonsters; i++)
+                    {
+                        Vector2 spawnPoint = GetRandomSpawnPosition();
+                        if (spawnPoint.x >= 0 && spawnPoint.y >= 0)
+                        {
+                            int monsterType = ChooseMonsterType(m_monsterChances);
+                            CowboyMonster* monster = new CowboyMonster(m_assets, monsterType, spawnPoint);
+                            AddMonster(monster);
+                        }
                     }
                 }
             }
         }
 
-        // Check if wave is complete
-        if (m_waveTimer <= 0)
+        // Check if wave should be completed
+        if (m_waveTimer <= 0 && !m_waveCompleted)
         {
-            // Depuración: Verificar estado de las condiciones
-            std::cout << "Wave timer finished. Checking conditions..." << std::endl;
-            std::cout << "Monsters present: " << m_monsters.size() << std::endl;
-            std::cout << "Spawn queue empty: " << (IsSpawnQueueEmpty() ? "true" : "false") << std::endl;
-            std::cout << "Monster clear timer: " << m_monsterClearTimer << std::endl;
-
-            // Cambiar la condición para considerar la ola completa si hay 1 o menos monstruos
-            if ((m_monsters.size() <= 1) && IsSpawnQueueEmpty() && m_monsterClearTimer < 0)
+            if (m_monsters.empty() && IsSpawnQueueEmpty())
             {
-                m_monsterClearTimer = 3000.0f; // 3 seconds in milliseconds
-                std::cout << "Monster clear timer started!" << std::endl;
+                std::cout << "Wave completed! Starting clear timer..." << std::endl;
+                m_waveCompleted = true;
+                m_monsterClearTimer = 3000.0f;
             }
         }
     }
     else if (m_monsterClearTimer > 0)
     {
+        // Wave is completed, counting down the clear timer
         m_monsterClearTimer -= deltaTime * 1000.0f;
 
+        // Only check once when timer expires
         if (m_monsterClearTimer <= 0)
         {
-            for (auto monster : m_monsters)
+            if (m_monsters.empty())
             {
-                delete monster;
+                std::cout << "Clear timer finished. Ready for next map." << std::endl;
+                m_monsterClearTimer = -1.0f;
+
+                // Ready for next wave - this will be activated when player moves to next map
+                m_whichWave++;
+                
+                // Set up the next map/shop transition
+                if (m_whichWave > 0)
+                {
+                    if (m_whichWave % 2 == 0)
+                    {
+                        StartShoppingLevel();
+                    }
+                    else
+                    {
+                        m_waitingForPlayerToMoveDownAMap = true;
+                        m_map[8][15] = MAP_DESERT;
+                        m_map[7][15] = MAP_DESERT;
+                        m_map[9][15] = MAP_DESERT;
+                        GetMap(m_whichWave, m_nextMap);
+                    }
+                }
             }
-            m_monsters.clear();
-            std::cout << "All monsters cleared after 3 seconds!" << std::endl;
-
-            m_monsterClearTimer = -1.0f;
-
-            // Advance to the next phase
-            m_waveTimer = GameConstants::WAVE_DURATION;
-            m_betweenWaveTimer = 3333; // 3.33 seconds between waves
-            m_whichWave++;
-
-            // Update monster chances for the next wave
-            UpdateMonsterChancesForWave();
-
-            // Handle wave progression
-            if (m_whichWave > 0)
+            else
             {
-                if (m_whichWave % 2 == 0)
-                {
-                    StartShoppingLevel();
-                }
-                else
-                {
-                    m_waitingForPlayerToMoveDownAMap = true;
-                    m_map[8][15] = MAP_DESERT;
-                    m_map[7][15] = MAP_DESERT;
-                    m_map[9][15] = MAP_DESERT;
-                    GetMap(m_whichWave, m_nextMap);
-                }
+                // If there are still monsters, reset the clear timer
+                m_monsterClearTimer = 3000.0f;
             }
         }
     }
 
-
-    else
-    {
-        if (m_waveTimer > 0)
-            std::cout << "Wave timer not finished: " << m_waveTimer << std::endl;
-        if (!m_monsters.empty())
-            std::cout << "Monsters still present: " << m_monsters.size() << std::endl;
-        if (!IsSpawnQueueEmpty())
-            std::cout << "Spawn queue not empty." << std::endl;
-    }
-
-
-    // Manejar el scroll del mapa
-    if (m_scrollingMap)
-    {
-        m_newMapPosition -= GetTileSize() / 8;
-        m_playerPosition.y -= GetTileSize() / 8;
-        m_playerPosition.y += 3.0f;
-
-        m_playerBoundingBox.x = m_playerPosition.x + GetTileSize() / 4;
-        m_playerBoundingBox.y = m_playerPosition.y + GetTileSize() / 4;
-        m_playerBoundingBox.width = GetTileSize() / 2;
-        m_playerBoundingBox.height = GetTileSize() / 2;
-
-        if (m_playerMovementDirections.empty())
-        {
-            m_playerMovementDirections.push_back(2);
-        }
-
-        m_playerMotionAnimationTimer += deltaTime * 1000.0f;
-        m_playerMotionAnimationTimer = fmodf(m_playerMotionAnimationTimer, 400.0f);
-
-        if (m_newMapPosition <= 0)
-        {
-            m_scrollingMap = false;
-            memcpy(m_map, m_nextMap, sizeof(m_map)); // Copiar el nuevo mapa
-            m_newMapPosition = 16 * GetTileSize();
-            m_shopping = false;
-            m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
-            m_waitingForPlayerToMoveDownAMap = false;
-            m_playerMovementDirections.clear();
-            ApplyLevelSpecificStates();
-        }
-    }
-
-    // Update bullets
-    UpdateBullets(deltaTime);
-
-    // Update monsters
+    // Update game elements
     for (auto monster : m_monsters)
     {
         monster->Move(m_playerPosition, deltaTime);
@@ -1967,24 +1869,6 @@ void PrairieKing::Update(float deltaTime)
 
             delete m_monsters[i];
             m_monsters.erase(m_monsters.begin() + i);
-        }
-    }
-
-    // Verificar si la lista de monstruos está vacía después de la limpieza
-    if (m_monsters.empty())
-    {
-        std::cout << "All monsters cleared!" << std::endl;
-    }
-
-    // Update player
-    UpdatePlayer(deltaTime);
-
-    // Update temporary sprites
-    for (int i = m_temporarySprites.size() - 1; i >= 0; i--)
-    {
-        if (m_temporarySprites[i].Update(deltaTime))
-        {
-            m_temporarySprites.erase(m_temporarySprites.begin() + i);
         }
     }
 
