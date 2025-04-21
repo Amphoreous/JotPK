@@ -2015,105 +2015,6 @@ void PrairieKing::Draw()
             monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
         }
 
-        // Draw player if not dead or invincible
-        if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
-        {
-            if (m_holdItemTimer > 0)
-            {
-                // Draw player holding item
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{ 256.0f, 112.0f, 16.0f, 16.0f },
-                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f },
-                    Vector2{ 0, 0 },
-                    0.0f,
-                    WHITE);
-
-                // Draw held item above player
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{ 192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f },
-                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
-                              48.0f, 48.0f },
-                    Vector2{ 0, 0 },
-                    0.0f,
-                    WHITE);
-            }
-            else if (m_zombieModeTimer > 0)
-            {
-                // Draw zombie player
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{ 224.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 112.0f, 16.0f, 16.0f },
-                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f },
-                    Vector2{ 0, 0 },
-                    0.0f,
-                    WHITE);
-            }
-            else if (m_playerMovementDirections.empty() && m_playerShootingDirections.empty())
-            {
-                // Draw idle player
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{ 368.0f, 112.0f, 16.0f, 16.0f },
-                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f },
-                    Vector2{ 0, 0 },
-                    0.0f,
-                    WHITE);
-            }
-            else
-            {
-                // Get facing direction from movement or shooting
-                int facingDirection = m_playerShootingDirections.empty() ? (!m_playerMovementDirections.empty() ? m_playerMovementDirections[0] : 0) : m_playerShootingDirections.back();
-
-                // Draw player feet - different animation when shooting
-                int footFrame;
-                if (!m_playerShootingDirections.empty() && m_playerMovementDirections.empty())
-                {
-                    // Solo usa el frame fijo cuando dispara y NO está caminando
-                    footFrame = 0;
-                }
-                else if (!m_playerMovementDirections.empty())
-                {
-                    // Usa la animación de caminar si se está moviendo
-                    footFrame = static_cast<int>(m_playerMotionAnimationTimer / 100.0f) % 4;
-                }
-                else
-                {
-                    // Frame por defecto cuando está quieto
-                    footFrame = 0;
-                }
-
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{ 355.0f, 112.0f + footFrame * 3.0f, 10.0f, 3.0f },
-                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y + 39.0f,
-                              30.0f, 9.0f },
-                    Vector2{ 0, 0 },
-                    0.0f,
-                    WHITE);
-
-                // Draw player body
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{ 336.0f + facingDirection * 16.0f, 96.0f, 16.0f, 16.0f },
-                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
-                              48.0f, 48.0f },
-                    Vector2{ 0, 0 },
-                    0.0f,
-                    WHITE);
-            }
-        }
-
         // Draw scrolling map if needed - now drawing both maps for proper scrolling effect
         if (m_scrollingMap)
         {
@@ -2381,7 +2282,104 @@ void PrairieKing::Draw()
                 0.0f,
                 WHITE);
         }
+        // Draw player if not dead or invincible
+        if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
+        {
+            if (m_holdItemTimer > 0)
+            {
+                // Draw player holding item
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{ 256.0f, 112.0f, 16.0f, 16.0f },
+                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                              48.0f, 48.0f },
+                    Vector2{ 0, 0 },
+                    0.0f,
+                    WHITE);
 
+                // Draw held item above player
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{ 192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f },
+                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
+                              48.0f, 48.0f },
+                    Vector2{ 0, 0 },
+                    0.0f,
+                    WHITE);
+            }
+            else if (m_zombieModeTimer > 0)
+            {
+                // Draw zombie player
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{ 224.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 112.0f, 16.0f, 16.0f },
+                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                              48.0f, 48.0f },
+                    Vector2{ 0, 0 },
+                    0.0f,
+                    WHITE);
+            }
+            else if (m_playerMovementDirections.empty() && m_playerShootingDirections.empty())
+            {
+                // Draw idle player
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{ 368.0f, 112.0f, 16.0f, 16.0f },
+                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                              48.0f, 48.0f },
+                    Vector2{ 0, 0 },
+                    0.0f,
+                    WHITE);
+            }
+            else
+            {
+                // Get facing direction from movement or shooting
+                int facingDirection = m_playerShootingDirections.empty() ? (!m_playerMovementDirections.empty() ? m_playerMovementDirections[0] : 0) : m_playerShootingDirections.back();
+
+                // Draw player feet - different animation when shooting
+                int footFrame;
+                if (!m_playerShootingDirections.empty() && m_playerMovementDirections.empty())
+                {
+                    // Solo usa el frame fijo cuando dispara y NO está caminando
+                    footFrame = 0;
+                }
+                else if (!m_playerMovementDirections.empty())
+                {
+                    // Usa la animación de caminar si se está moviendo
+                    footFrame = static_cast<int>(m_playerMotionAnimationTimer / 100.0f) % 4;
+                }
+                else
+                {
+                    // Frame por defecto cuando está quieto
+                    footFrame = 0;
+                }
+
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{ 355.0f, 112.0f + footFrame * 3.0f, 10.0f, 3.0f },
+                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x + 9.0f,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y + 39.0f,
+                              30.0f, 9.0f },
+                    Vector2{ 0, 0 },
+                    0.0f,
+                    WHITE);
+
+                // Draw player body
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{ 336.0f + facingDirection * 16.0f, 96.0f, 16.0f, 16.0f },
+                    Rectangle{ m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                              m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                              48.0f, 48.0f },
+                    Vector2{ 0, 0 },
+                    0.0f,
+                    WHITE);
+            }
+        }
     }
 }
 
