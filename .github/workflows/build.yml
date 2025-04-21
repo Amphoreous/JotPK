@@ -4,14 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number'
+        description: 'Version number (use 0.5 for prototype)'
         required: true
         type: string
+        default: '0.5'
       isPrerelease:
         description: 'Is this a pre-release?'
         required: true
         type: boolean
-        default: false
+        default: true
 
 jobs:
   build:
@@ -30,17 +31,47 @@ jobs:
         ./build-VisualStudio2022.bat
         msbuild JotPK.sln /p:Configuration=Release /p:Platform=x64
 
-    - name: Create Release ZIP
+    - name: Prepare Release Structure
       run: |
-        Compress-Archive -Path "bin/Release/*" -DestinationPath "JotPK-${{ github.event.inputs.version }}.zip"
+        # Create release folder structure
+        $releaseName = "Amphoreous_JourneyOfThePrairieKing_v${{ github.event.inputs.version }}"
+        $gameFolder = "$releaseName/JourneyOfThePrairieKing"
+        
+        # Create directories
+        New-Item -ItemType Directory -Path $gameFolder
+        
+        # Copy executable and DLLs
+        Copy-Item "bin/Release/*.exe" -Destination $gameFolder
+        Copy-Item "bin/Release/*.dll" -Destination $gameFolder
+        
+        # Copy resources
+        Copy-Item "resources" -Destination $gameFolder -Recurse
+        
+        # Copy documentation
+        Copy-Item "LICENSE" -Destination $releaseName
+        Copy-Item "misc/README.md" -Destination $releaseName
+        Copy-Item "misc/TasksList.pdf" -Destination $releaseName
+        
+        # Create final ZIP
+        Compress-Archive -Path $releaseName -DestinationPath "$releaseName.zip"
       shell: pwsh
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: JotPK-${{ github.event.inputs.version }}.zip
+        files: Amphoreous_JourneyOfThePrairieKing_v${{ github.event.inputs.version }}.zip
         tag_name: v${{ github.event.inputs.version }}
-        name: Release v${{ github.event.inputs.version }}
+        name: Prototype Release v${{ github.event.inputs.version }}
+        body: |
+          Game Prototype Release for Assignment 2
+          
+          This release includes:
+          - Executable compiled in Release mode with required DLLs
+          - Resources folder with media files
+          - README.md with game information and video link
+          - TasksList.pdf with team contributions
+          - LICENSE file
+          
         prerelease: ${{ github.event.inputs.isPrerelease }}
         generate_release_notes: true
       env:
