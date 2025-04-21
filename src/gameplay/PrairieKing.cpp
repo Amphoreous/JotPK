@@ -785,9 +785,11 @@ void PrairieKing::PlayerDie()
 
     // Add death animation
     m_temporarySprites.push_back(TemporaryAnimatedSprite(
-        {336, 160, 16, 16},
+        Rectangle{336, 160, 16, 16},
         120.0f, 5, 0,
-        {m_playerPosition.x + m_topLeftScreenCoordinate.x, m_playerPosition.y + m_topLeftScreenCoordinate.y},
+        Vector2{
+            m_topLeftScreenCoordinate.x + m_playerPosition.x + GetTileSize(),
+            m_topLeftScreenCoordinate.y + m_playerPosition.y + GetTileSize()},
         0.0f, 3.0f, false,
         1.0f, WHITE));
 
@@ -1751,21 +1753,21 @@ void PrairieKing::Update(float deltaTime)
     for (int i = m_powerups.size() - 1; i >= 0; i--)
     {
         // Move powerups toward player if close enough
-        if (CheckCollisionRecs(m_playerBoundingBox, 
-            Rectangle{m_powerups[i].position.x, m_powerups[i].position.y,
-                     static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}))
+        if (CheckCollisionRecs(m_playerBoundingBox,
+                               Rectangle{m_powerups[i].position.x, m_powerups[i].position.y,
+                                         static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}))
         {
             // Movement logic for powerup attraction
             Vector2 direction = Vector2Subtract(m_playerPosition, m_powerups[i].position);
             float length = Vector2Length(direction);
             if (length > 0)
             {
-                direction = Vector2Scale(direction, 1.0f/length);
-                m_powerups[i].position = Vector2Add(m_powerups[i].position, 
-                    Vector2Scale(direction, 5.0f * deltaTime));
+                direction = Vector2Scale(direction, 1.0f / length);
+                m_powerups[i].position = Vector2Add(m_powerups[i].position,
+                                                    Vector2Scale(direction, 5.0f * deltaTime));
             }
         }
-        
+
         // Update duration
         m_powerups[i].duration -= deltaTime * 1000.0f;
         if (m_powerups[i].duration <= 0)
@@ -1793,7 +1795,7 @@ void PrairieKing::Update(float deltaTime)
     {
         m_betweenWaveTimer -= deltaTime * 1000.0f;
         if (m_betweenWaveTimer <= 0)
-        { 
+        {
             // Remove the death check to allow wave to start after respawning
             m_waveTimer = GameConstants::WAVE_DURATION;
             m_waveCompleted = false;
@@ -1812,7 +1814,7 @@ void PrairieKing::Update(float deltaTime)
             m_waveTimer -= deltaTime * 1000.0f;
 
             // Only spawn monsters if not in special states and player is alive
-            if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving && 
+            if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
                 !m_waitingForPlayerToMoveDownAMap && m_deathTimer <= 0)
             {
                 float spawnChance = 0.02f;
@@ -3151,7 +3153,7 @@ int PrairieKing::CowboyMonster::GetLootDrop()
 
         // Random powerup between 2-9
         int loot = GetRandomInt(2, 9);
-        
+
         // 40% chance to reroll if got powerup 5
         if (loot == 5 && GetRandomFloat(0.0f, 1.0f) < 0.4f)
         {
