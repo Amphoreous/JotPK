@@ -1,5 +1,6 @@
 #include "GameApplication.hpp"
 #include "resource_dir.h"
+#include "discord/DiscordManager.hpp"
 
 GameApplication::GameApplication() : m_isRunning(false) {}
 
@@ -70,18 +71,25 @@ void GameApplication::Initialize() {
     
     m_game = std::make_unique<Game>(m_assets, m_pixelScale);
     m_isRunning = true;
+
+    // Initialize Discord integration
+    DiscordManager::Initialize();
 }
 
 void GameApplication::Run() {
     while (m_isRunning && !WindowShouldClose()) {
+        // Update Discord Rich Presence
+        DiscordManager::Update();
+        
         m_game->Update(GetFrameTime());
         m_game->Draw();
     }
     
-    // Realizar la limpieza aquí, antes de que termine el programa
-    m_game.reset();  // Primero liberamos el juego
-    m_assets.UnloadAssets();  // Luego los assets
-    CloseWindow();  // Finalmente cerramos la ventana
+    // Cleanup order is important
+    DiscordManager::Shutdown();
+    m_game.reset();
+    m_assets.UnloadAssets();
+    CloseWindow();
 }
 
 void GameApplication::Shutdown() {
