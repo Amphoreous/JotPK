@@ -29,8 +29,8 @@ namespace GameConstants {
     constexpr int DEVIL = 4;
     constexpr int MUSHROOM = 5;
     constexpr int SPIKEY = 6;
-    constexpr int ORC_SPEED = 2;
-    constexpr int OGRE_SPEED = 1;
+    constexpr int ORC_SPEED = 7;
+    constexpr int OGRE_SPEED = 5;
     constexpr int GHOST_SPEED = 3;
     constexpr int SPIKEY_SPEED = 3;
     constexpr int ORC_HEALTH = 0;
@@ -120,10 +120,10 @@ public:
     static constexpr double COIN_CHANCE = 0.05;
     static constexpr int LOOT_DURATION = 7500;
     static constexpr int POWERUP_DURATION = 10000;
-    static constexpr float PLAYER_SPEED = 2.0f;
+    static constexpr float PLAYER_SPEED = 3.2f;
     static constexpr int BASE_TILE_SIZE = 16;
-    static constexpr int ORC_SPEED = 2;
-    static constexpr int OGRE_SPEED = 1;
+    static constexpr int ORC_SPEED = 7;
+    static constexpr int OGRE_SPEED = 2;
     static constexpr int GHOST_SPEED = 3;
     static constexpr int SPIKEY_SPEED = 3;
     static constexpr int ORC_HEALTH = 1;
