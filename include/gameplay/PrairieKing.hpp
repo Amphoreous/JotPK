@@ -108,6 +108,20 @@ public:
         UsePowerup,
         SelectOption,
         Exit,
+        DebugToggle,
+        DebugSpawn1,
+        DebugSpawn2,
+        DebugSpawn3,
+        DebugSpawn4,
+        DebugSpawn5,
+        DebugSpawn6,
+        DebugSpawn7,
+        DebugSpawn8,
+        DebugSpawn9,
+        DebugAddLife,
+        DebugAddCoins,
+        DebugIncDamage,
+        DebugClearMonsters,
         MAX
     };
 
@@ -430,9 +444,14 @@ public:
     static PrairieKing *GetGameInstance();
 
     // Helper functions for input
-    bool IsKeyPressed(GameKeys key);
-    bool IsKeyDown(GameKeys key);
-    bool IsKeyReleased(GameKeys key);
+    bool IsKeyPressed(GameKeys key) const {
+        auto it = m_buttonHeldFrames.find(key);
+        return it != m_buttonHeldFrames.end() && it->second == 1;
+    }
+
+    bool IsKeyDown(GameKeys key) const {
+        return m_buttonHeldState.find(key) != m_buttonHeldState.end();
+    }
 
     // Helper functions for monster spawning
     std::vector<Vector2> GetMonsterChancesForWave(int wave);
@@ -474,6 +493,7 @@ private:
     bool m_spreadPistol;
 
     Music m_overworldSong;
+    Music m_zombieSong;
 
     // Game variables
     int m_runSpeedLevel;
@@ -488,15 +508,15 @@ private:
     int m_score;
     int m_shootingDelay;
     int m_shotTimer;
-    int m_motionPause;
+    float m_motionPause;
+    float m_holdItemTimer;
+    float m_zombieModeTimer;
     int m_gameOverOption;
     int m_gameRestartTimer;
     int m_fadeThenQuitTimer;
     int m_whichWave;
     int m_monsterConfusionTimer;
-    int m_zombieModeTimer;
     int m_shoppingTimer;
-    int m_holdItemTimer;
     int m_itemToHold;
     int m_newMapPosition;
     int m_playerInvincibleTimer;
@@ -549,4 +569,12 @@ private:
     std::unordered_map<GameKeys, int> m_buttonHeldFrames;
 
     int GetTileSize() const { return BASE_TILE_SIZE * PIXEL_ZOOM; }
+
+    // Debug mode variables and functions
+    bool m_debugMode = false;
+    void DrawDebugInfo();
+    void HandleDebugInputs();
+    void SpawnDebugMonster(int type);
+    void SpawnDebugPowerup(int type);
+    void DrawDebugGrid();
 };

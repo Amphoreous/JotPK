@@ -179,7 +179,8 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_playerMotionAnimationTimer(0),
       m_playerFootstepSoundTimer(200.0f),
       m_spawnQueue(4),
-      m_overworldSong({0})
+      m_overworldSong({0}),
+      m_debugMode(false)
 {
     // Store the instance pointer for static access
     s_instance = this;
@@ -442,20 +443,28 @@ void PrairieKing::UsePowerup(int which)
         break;
 
     case POWERUP_ZOMBIE:
+        // Stop current music
+        StopMusicStream(m_overworldSong);
+
+        // Play zombie music
         PlaySound(GetSound("Cowboy_undead"));
-        m_motionPause = 1800;
-        m_zombieModeTimer = 10000;
+
+        // Set timers
+        m_motionPause = 1800.0f;
+        m_zombieModeTimer = 10000.0f;
         break;
 
     case POWERUP_TELEPORT:
     {
         Vector2 teleportSpot = {0, 0};
         int tries = 0;
-
         while ((fabsf(teleportSpot.x - m_playerPosition.x) < 8.0f ||
                 fabsf(teleportSpot.y - m_playerPosition.y) < 8.0f ||
-                IsCollidingWithMap(Rectangle{teleportSpot.x, teleportSpot.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}) ||
-                IsCollidingWithMonster(Rectangle{teleportSpot.x, teleportSpot.y, static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}, nullptr)) &&
+                IsCollidingWithMap(teleportSpot) ||
+                IsCollidingWithMonster(Rectangle{teleportSpot.x, teleportSpot.y,
+                                                 static_cast<float>(GetTileSize()),
+                                                 static_cast<float>(GetTileSize())},
+                                       nullptr)) &&
                tries < 10)
         {
             teleportSpot = {
@@ -466,22 +475,46 @@ void PrairieKing::UsePowerup(int which)
 
         if (tries < 10)
         {
-            // Efectos de teletransporte
-            for (int i = 0; i < 5; i++)
-            {
-                m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                    {336, 144, 16, 16},
-                    120.0f, 5, 0,
-                    {teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
-                     teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
-                    0.0f, 3.0f, false,
-                    1.0f, WHITE));
-                m_temporarySprites.back().delayBeforeAnimationStart = i * 200;
-            }
+            // Add teleport visual effects at start and end positions
+            // At player position
+            m_temporarySprites.push_back(TemporaryAnimatedSprite(
+                Rectangle{336, 144, 16, 16}, 120.0f, 5, 0,
+                Vector2{m_playerPosition.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
+                        m_playerPosition.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
+                0.0f, 3.0f, false, 1.0f, WHITE));
 
+            // At teleport destination
+            m_temporarySprites.push_back(TemporaryAnimatedSprite(
+                Rectangle{336, 144, 16, 16}, 120.0f, 5, 0,
+                Vector2{teleportSpot.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
+                        teleportSpot.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
+                0.0f, 3.0f, false, 1.0f, WHITE));
+
+            // Additional effects around destination
+            auto addDelayedEffect = [this](Vector2 pos, int delay)
+            {
+                TemporaryAnimatedSprite sprite(
+                    Rectangle{336, 144, 16, 16}, 120.0f, 5, 0,
+                    Vector2{pos.x + m_topLeftScreenCoordinate.x + GetTileSize() / 2,
+                            pos.y + m_topLeftScreenCoordinate.y + GetTileSize() / 2},
+                    0.0f, 3.0f, false, 1.0f, WHITE);
+                sprite.delayBeforeAnimationStart = delay;
+                m_temporarySprites.push_back(sprite);
+            };
+
+            // Left
+            addDelayedEffect(Vector2{teleportSpot.x - GetTileSize() / 2, teleportSpot.y}, 200);
+            // Right
+            addDelayedEffect(Vector2{teleportSpot.x + GetTileSize() / 2, teleportSpot.y}, 400);
+            // Top
+            addDelayedEffect(Vector2{teleportSpot.x, teleportSpot.y - GetTileSize() / 2}, 600);
+            // Bottom
+            addDelayedEffect(Vector2{teleportSpot.x, teleportSpot.y + GetTileSize() / 2}, 800);
+
+            // Teleport player and apply effects
             m_playerPosition = teleportSpot;
-            m_monsterConfusionTimer = 4000;
-            m_playerInvincibleTimer = 4000;
+            m_monsterConfusionTimer = 2000; // Reduced from 4000 to 2000
+            m_playerInvincibleTimer = 2000; // Reduced from 4000 to 2000
             PlaySound(GetSound("cowboy_powerup"));
         }
         break;
@@ -828,7 +861,8 @@ void PrairieKing::PlayerDie()
             1.0f, WHITE));
 
         m_temporarySprites.back().alpha = 0.001f;
-        m_temporarySprites.back().endFunction = [this](int extra) { AfterPlayerDeathFunction(extra); };
+        m_temporarySprites.back().endFunction = [this](int extra)
+        { AfterPlayerDeathFunction(extra); };
 
         m_deathTimer *= 3.0f;
         // Save game progress reset
@@ -844,10 +878,10 @@ void PrairieKing::AfterPlayerDeathFunction(int extra)
     if (m_lives < 0)
     {
         m_gameOver = true;
-        
+
         // Stop music
         StopMusicStream(m_overworldSong);
-        
+
         // Clear game objects
         for (auto monster : m_monsters)
         {
@@ -856,7 +890,7 @@ void PrairieKing::AfterPlayerDeathFunction(int extra)
         m_monsters.clear();
         m_powerups.clear();
         m_died = false;
-        
+
         PlaySound(GetSound("Cowboy_monsterDie"));
     }
 }
@@ -880,10 +914,10 @@ void PrairieKing::ProcessInputs()
         }
         if (IsKeyDown(GameKeys::ShootDown))
         {
-            m_gameOverOption = std::min(1, m_gameOverOption + 1); 
+            m_gameOverOption = std::min(1, m_gameOverOption + 1);
             PlaySound(GetSound("Cowboy_gunshot"));
         }
-        
+
         if (IsKeyDown(GameKeys::SelectOption))
         {
             if (m_gameOverOption == 1)
@@ -900,7 +934,7 @@ void PrairieKing::ProcessInputs()
         }
         return;
     }
-    
+
     // Clear previous movement and shooting directions
     m_playerMovementDirections.clear();
     m_playerShootingDirections.clear();
@@ -1682,40 +1716,57 @@ std::vector<Vector2> PrairieKing::GetBorderPoints(const Rectangle &rect)
     return points;
 }
 
-bool PrairieKing::IsKeyDown(GameKeys key)
-{
-    // Una tecla está "down" mientras se mantenga presionada
-    return m_buttonHeldState.find(key) != m_buttonHeldState.end();
-}
-
-bool PrairieKing::IsKeyPressed(GameKeys key)
-{
-    // Una tecla está "pressed" solo en el primer frame que se mantiene presionada
-    return m_buttonHeldFrames[key] == 1;
-}
-
-void PrairieKing::SetButtonState(GameKeys key, bool pressed)
-{
-    if (pressed)
-    {
-        // Si la tecla no estaba presionada antes, inicializar el contador de frames
-        if (m_buttonHeldState.find(key) == m_buttonHeldState.end())
-        {
+void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
+    // Special handling for debug keys
+    if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugSpawn9) {
+        if (pressed && m_buttonHeldState.find(key) == m_buttonHeldState.end()) {
             m_buttonHeldState.insert(key);
             m_buttonHeldFrames[key] = 1;
+            
+            // Handle each debug key
+            if (key == GameKeys::DebugToggle) {
+                m_debugMode = !m_debugMode;
+                std::cout << "Debug mode: " << (m_debugMode ? "ON" : "OFF") << std::endl;
+            } 
+            else if (m_debugMode) {  // Only process other debug keys if debug mode is on
+                switch (key) {
+                    case GameKeys::DebugSpawn1: SpawnDebugMonster(ORC); break;
+                    case GameKeys::DebugSpawn2: SpawnDebugMonster(GHOST); break;
+                    case GameKeys::DebugSpawn3: SpawnDebugMonster(OGRE); break;
+                    case GameKeys::DebugSpawn4: SpawnDebugMonster(MUMMY); break;
+                    case GameKeys::DebugSpawn5: SpawnDebugMonster(DEVIL); break;
+                    case GameKeys::DebugSpawn6: SpawnDebugMonster(MUSHROOM); break;
+                    case GameKeys::DebugSpawn7: SpawnDebugMonster(SPIKEY); break;
+                    case GameKeys::DebugSpawn8: SpawnDebugPowerup(GetRandomInt(0, 5)); break;
+                    case GameKeys::DebugSpawn9: SpawnDebugPowerup(GetRandomInt(6, 10)); break;
+                    case GameKeys::DebugAddLife: m_lives++; break;
+                    case GameKeys::DebugAddCoins: m_coins += 10; break;
+                    case GameKeys::DebugIncDamage: m_bulletDamage++; break;
+                    case GameKeys::DebugClearMonsters:
+                        for (auto monster : m_monsters) delete monster;
+                        m_monsters.clear();
+                        break;
+                }
+            }
+        } else if (!pressed) {
+            m_buttonHeldState.erase(key);
+            m_buttonHeldFrames.erase(key);
         }
+        return;
     }
-    else
-    {
-        // Si la tecla se suelta, eliminarla del estado y resetear el contador
-        m_buttonHeldState.erase(key);
-        m_buttonHeldFrames[key] = 0;
-    }
-}
 
-bool PrairieKing::IsKeyReleased(GameKeys key)
-{
-    return !IsKeyDown(key) && m_buttonHeldFrames[key] == 0;
+    // Normal handling for non-debug keys
+    if (pressed) {
+        if (m_buttonHeldState.find(key) == m_buttonHeldState.end()) {
+            m_buttonHeldState.insert(key);
+            m_buttonHeldFrames[key] = 1;
+        } else {
+            m_buttonHeldFrames[key]++;
+        }
+    } else {
+        m_buttonHeldState.erase(key);
+        m_buttonHeldFrames.erase(key);
+    }
 }
 
 void PrairieKing::Update(float deltaTime)
@@ -1787,9 +1838,26 @@ void PrairieKing::Update(float deltaTime)
 
     // Update cactus dance timer
     m_cactusDanceTimer += deltaTime * 1000.0f;
-    if (m_cactusDanceTimer >= 1600.0f)  // Full dance cycle is 1.6 seconds
+    if (m_cactusDanceTimer >= 1600.0f) // Full dance cycle is 1.6 seconds
     {
         m_cactusDanceTimer = 0.0f;
+    }
+
+    if (m_motionPause > 0)
+    {
+        m_motionPause -= deltaTime * 1000.0f;
+        // Behavior after pause would be handled by callbacks if needed
+    }
+
+    if (m_zombieModeTimer > 0.0f)
+    {
+        m_zombieModeTimer -= deltaTime * 1000.0f;
+    }
+
+    if (m_holdItemTimer > 0.0f)
+    {
+        m_holdItemTimer -= deltaTime * 1000.0f;
+        return;
     }
 
     // Update game elements that should always run
@@ -2053,37 +2121,36 @@ void PrairieKing::Draw()
             BLACK);
 
         // Draw "GAME OVER" text and shadows
-        const char* gameOverText = "Game Over";
+        const char *gameOverText = "Game Over";
         Vector2 textPos = {
             m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-            m_topLeftScreenCoordinate.y + 7.0f * GetTileSize()
-        };
+            m_topLeftScreenCoordinate.y + 7.0f * GetTileSize()};
 
         // Draw shadows
         DrawTextEx(m_assets.GetFont("title"), gameOverText,
-            Vector2{textPos.x - 1, textPos.y}, 48, 1, WHITE);
+                   Vector2{textPos.x - 1, textPos.y}, 48, 1, WHITE);
         DrawTextEx(m_assets.GetFont("title"), gameOverText,
-            Vector2{textPos.x + 1, textPos.y}, 48, 1, WHITE);
+                   Vector2{textPos.x + 1, textPos.y}, 48, 1, WHITE);
         DrawTextEx(m_assets.GetFont("title"), gameOverText,
-            textPos, 48, 1, WHITE);
+                   textPos, 48, 1, WHITE);
 
         // Draw options
-        const char* retryText = TextFormat("%sRetry", m_gameOverOption == 0 ? "> " : "  ");
-        const char* quitText = TextFormat("%sQuit", m_gameOverOption == 1 ? "> " : "  ");
+        const char *retryText = TextFormat("%sRetry", m_gameOverOption == 0 ? "> " : "  ");
+        const char *quitText = TextFormat("%sQuit", m_gameOverOption == 1 ? "> " : "  ");
 
         // Only draw retry if not restarting or during blink
         if (m_gameRestartTimer <= 0 || m_gameRestartTimer / 500 % 2 == 0)
         {
             DrawTextEx(m_assets.GetFont("text"), retryText,
-                Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                       m_topLeftScreenCoordinate.y + 9.0f * GetTileSize()},
-                32, 1, WHITE);
+                       Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
+                               m_topLeftScreenCoordinate.y + 9.0f * GetTileSize()},
+                       32, 1, WHITE);
         }
 
         DrawTextEx(m_assets.GetFont("text"), quitText,
-            Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                   m_topLeftScreenCoordinate.y + 9.0f * GetTileSize() + GetTileSize() * 2/3.0f},
-            32, 1, WHITE);
+                   Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
+                           m_topLeftScreenCoordinate.y + 9.0f * GetTileSize() + GetTileSize() * 2 / 3.0f},
+                   32, 1, WHITE);
 
         return;
     }
@@ -2219,14 +2286,45 @@ void PrairieKing::Draw()
                 0.0f,
                 WHITE);
         }
-        else if (m_zombieModeTimer > 0)
+        else if (m_zombieModeTimer > 8200)
         {
-            // Draw zombie player
+            // Draw flashing player sprite during transformation
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{224.0f + ((m_zombieModeTimer / 50 % 2) * 16.0f), 112.0f, 16.0f, 16.0f},
+                Rectangle{256.0f + ((static_cast<int>(m_zombieModeTimer / 200) % 2 == 0) ? 16.0f : 0.0f),
+                          112.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                           m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                          48.0f, 48.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+
+            // Draw rising effect
+            for (float y = m_playerPosition.y - GetTileSize(); y > -GetTileSize(); y -= GetTileSize())
+            {
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{240.0f + ((static_cast<int>(y / GetTileSize()) % 3 == 0) ? 16.0f : 0.0f),
+                              96.0f, 16.0f, 16.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                              m_topLeftScreenCoordinate.y + y,
+                              48.0f, 48.0f},
+                    Vector2{0, 0},
+                    0.0f,
+                    WHITE);
+            }
+            return;
+        }
+        else if (m_zombieModeTimer > 0)
+        {
+            // Draw zombie player during active mode
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{224.0f + ((static_cast<int>(m_zombieModeTimer / 50) % 2 == 0) ? 16.0f : 0.0f),
+                          112.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4,
                           48.0f, 48.0f},
                 Vector2{0, 0},
                 0.0f,
@@ -2284,6 +2382,36 @@ void PrairieKing::Draw()
                 Rectangle{336.0f + facingDirection * 16.0f, 96.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                           m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                          48.0f, 48.0f},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+        }
+    }
+
+    // Draw zombie mode effects
+    if (m_zombieModeTimer > 8200)
+    {
+        // Draw zombie player sprite
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{256.0f + ((static_cast<int>(m_zombieModeTimer) / 200 % 2 == 0) ? 16.0f : 0.0f), 112.0f, 16.0f, 16.0f},
+            Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                      m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                      48.0f, 48.0f},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+
+        // Draw rising effects
+        for (float y = m_playerPosition.y - GetTileSize(); y > -GetTileSize(); y -= GetTileSize())
+        {
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{240.0f + ((static_cast<int>(y / GetTileSize()) % 3 == 0) ? 16.0f : 0.0f),
+                          64.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + y,
                           48.0f, 48.0f},
                 Vector2{0, 0},
                 0.0f,
@@ -2497,6 +2625,8 @@ void PrairieKing::Draw()
             0.0f,
             WHITE);
     }
+
+    DrawDebugInfo();
 }
 
 Rectangle PrairieKing::GetRectForShopItem(int itemID)
@@ -2794,8 +2924,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
         // Calcular velocidad base
         float speed = GetMovementSpeed(PLAYER_SPEED, effectiveDirections);
 
-        // Aplicar velocidad de power-ups
-        if (m_activePowerups.find(POWERUP_SPEED) != m_activePowerups.end())
+        if (m_activePowerups.find(6) != m_activePowerups.end())
         {
             speed *= 1.5f;
         }
@@ -3249,20 +3378,10 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         return false;
     }
 
-    // Si hay confusión de monstruos, no se mueve
+    // Instead, just update the timer and continue with movement
     if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
     {
-        return false;
-    }
-
-    // Si estamos en la tienda, actualizar el temporizador de compra
-    if (PrairieKing::GetGameInstance()->m_shopping)
-    {
-        PrairieKing::GetGameInstance()->m_shoppingTimer -= deltaTime * 1000.0f;
-        if (PrairieKing::GetGameInstance()->m_shoppingTimer <= 0)
-        {
-            PrairieKing::GetGameInstance()->m_shoppingTimer = 100;
-        }
+        PrairieKing::GetGameInstance()->m_monsterConfusionTimer -= deltaTime * 1000.0f;
     }
 
     // Incrementar el contador de ticks desde el último movimiento
@@ -3638,4 +3757,211 @@ int PrairieKing::ChooseMonsterType(const std::vector<Vector2> &chances)
 int PrairieKing::GetRandomInt(int min, int max)
 {
     return min + (std::rand() % (max - min + 1));
+}
+
+void PrairieKing::HandleDebugInputs()
+{
+    // Toggle debug mode with F3
+    if (IsKeyPressed(GameKeys::DebugToggle))
+    {
+        m_debugMode = !m_debugMode;
+        std::cout << "Debug mode: " << (m_debugMode ? "ON" : "OFF") << std::endl;
+        return;
+    }
+
+    // Only process other debug inputs if debug mode is enabled
+    if (!m_debugMode)
+        return;
+
+    // Debug spawn monsters (Numpad 1-7)
+    if (IsKeyPressed(GameKeys::DebugSpawn1))
+        SpawnDebugMonster(ORC);
+    if (IsKeyPressed(GameKeys::DebugSpawn2))
+        SpawnDebugMonster(GHOST);
+    if (IsKeyPressed(GameKeys::DebugSpawn3))
+        SpawnDebugMonster(OGRE);
+    if (IsKeyPressed(GameKeys::DebugSpawn4))
+        SpawnDebugMonster(MUMMY);
+    if (IsKeyPressed(GameKeys::DebugSpawn5))
+        SpawnDebugMonster(DEVIL);
+    if (IsKeyPressed(GameKeys::DebugSpawn6))
+        SpawnDebugMonster(MUSHROOM);
+    if (IsKeyPressed(GameKeys::DebugSpawn7))
+        SpawnDebugMonster(SPIKEY);
+
+    // Debug spawn powerups (Numpad 8-9)
+    if (IsKeyPressed(GameKeys::DebugSpawn8))
+        SpawnDebugPowerup(GetRandomInt(0, 5));
+    if (IsKeyPressed(GameKeys::DebugSpawn9))
+        SpawnDebugPowerup(GetRandomInt(6, 10));
+
+    // Other debug controls
+    if (IsKeyDown(GameKeys::DebugAddLife))
+    {
+        m_lives++;
+        std::cout << "Lives increased to: " << m_lives << std::endl;
+    }
+    if (IsKeyDown(GameKeys::DebugAddCoins))
+    {
+        m_coins += 10;
+        std::cout << "Added 10 coins. Total: " << m_coins << std::endl;
+    }
+    if (IsKeyDown(GameKeys::DebugIncDamage))
+    {
+        m_bulletDamage++;
+        std::cout << "Bullet damage increased to: " << m_bulletDamage << std::endl;
+    }
+    if (IsKeyDown(GameKeys::DebugClearMonsters))
+    {
+        int count = m_monsters.size();
+        for (auto monster : m_monsters)
+        {
+            delete monster;
+        }
+        m_monsters.clear();
+        std::cout << "Cleared " << count << " monsters" << std::endl;
+    }
+}
+
+void PrairieKing::SpawnDebugMonster(int type)
+{
+    Vector2 spawnPos = {
+        m_playerPosition.x + GetRandomFloat(-100, 100),
+        m_playerPosition.y + GetRandomFloat(-100, 100)};
+
+    CowboyMonster *monster = new CowboyMonster(m_assets, type, spawnPos);
+    AddMonster(monster);
+}
+
+void PrairieKing::SpawnDebugPowerup(int type)
+{
+    Vector2 spawnPos = {
+        m_playerPosition.x + GetRandomFloat(-50, 50),
+        m_playerPosition.y + GetRandomFloat(-50, 50)};
+
+    m_powerups.push_back(CowboyPowerup(type, spawnPos, 10000));
+}
+
+void PrairieKing::DrawDebugGrid()
+{
+    const int tileSize = GetTileSize();
+
+    // Draw grid
+    for (int x = 0; x <= MAP_WIDTH; x++)
+    {
+        DrawLineV(
+            Vector2{m_topLeftScreenCoordinate.x + x * tileSize, m_topLeftScreenCoordinate.y},
+            Vector2{m_topLeftScreenCoordinate.x + x * tileSize, m_topLeftScreenCoordinate.y + MAP_HEIGHT * tileSize},
+            ColorAlpha(GRAY, 0.3f));
+    }
+
+    for (int y = 0; y <= MAP_HEIGHT; y++)
+    {
+        DrawLineV(
+            Vector2{m_topLeftScreenCoordinate.x, m_topLeftScreenCoordinate.y + y * tileSize},
+            Vector2{m_topLeftScreenCoordinate.x + MAP_WIDTH * tileSize, m_topLeftScreenCoordinate.y + y * tileSize},
+            ColorAlpha(GRAY, 0.3f));
+    }
+}
+
+void PrairieKing::DrawDebugInfo()
+{
+    if (!m_debugMode)
+        return;
+
+    // Draw debug mode indicator
+    DrawText("DEBUG MODE", 10, 10, 20, RED);
+
+    // Draw debug grid
+    DrawDebugGrid();
+
+    const float startY = 40; // Moved down to not overlap with debug indicator
+    float currentY = startY;
+    const float lineHeight = 20;
+    const Color debugColor = YELLOW;
+
+    // Draw FPS
+    DrawText(TextFormat("FPS: %d", GetFPS()), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    // Game State Info
+    DrawText(TextFormat("Wave: %d/%d", m_whichWave + 1, 12), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    DrawText(TextFormat("Wave Timer: %.1f", m_waveTimer / 1000.0f), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    DrawText(TextFormat("Player Pos: (%.1f, %.1f)", m_playerPosition.x, m_playerPosition.y),
+             10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    // Entities count
+    DrawText(TextFormat("Monsters: %d", m_monsters.size()), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    DrawText(TextFormat("Bullets: %d", m_bullets.size()), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    DrawText(TextFormat("Powerups: %d", m_powerups.size()), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    // Player Stats
+    DrawText(TextFormat("Lives: %d", m_lives), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    DrawText(TextFormat("Damage: %d", m_bulletDamage), 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+
+    // Active powerups
+    currentY += lineHeight;
+    DrawText("Active Powerups:", 10, currentY, 20, debugColor);
+    currentY += lineHeight;
+    for (const auto &powerup : m_activePowerups)
+    {
+        DrawText(TextFormat("Type %d: %.1fs", powerup.first, powerup.second / 1000.0f),
+                 10, currentY, 20, debugColor);
+        currentY += lineHeight;
+    }
+
+    // Debug Controls Help
+    const float rightCol = GetScreenWidth() - 200;
+    currentY = startY;
+    DrawText("Debug Controls:", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F3: Toggle Debug", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F5: Add Life", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F6: Add Coins", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F7: Inc Damage", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F8: Clear Monsters", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("Num1-7: Spawn Monster", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("Num8-9: Spawn Powerup", rightCol, currentY, 20, debugColor);
+
+    // Draw monster hitboxes
+    for (const auto &monster : m_monsters)
+    {
+        DrawRectangleLinesEx(
+            Rectangle{
+                m_topLeftScreenCoordinate.x + monster->position.x,
+                m_topLeftScreenCoordinate.y + monster->position.y,
+                monster->position.width,
+                monster->position.height},
+            1,
+            RED);
+    }
+
+    // Draw player hitbox
+    DrawRectangleLinesEx(
+        Rectangle{
+            m_topLeftScreenCoordinate.x + m_playerBoundingBox.x,
+            m_topLeftScreenCoordinate.y + m_playerBoundingBox.y,
+            m_playerBoundingBox.width,
+            m_playerBoundingBox.height},
+        1,
+        GREEN);
 }
