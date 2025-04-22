@@ -450,6 +450,9 @@ private:
     // Asset references
     AssetManager &m_assets;
 
+    // Add m_progress as a member variable
+    JOTPKProgress m_progress;
+
     // Game state
     bool m_isGameOver;
     bool m_gameOver;
