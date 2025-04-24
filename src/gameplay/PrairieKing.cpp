@@ -1718,17 +1718,17 @@ std::vector<Vector2> PrairieKing::GetBorderPoints(const Rectangle &rect)
 
 void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
     // Special handling for debug keys
-    if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugSpawn9) {
-        if (pressed && m_buttonHeldState.find(key) == m_buttonHeldState.end()) {
-            m_buttonHeldState.insert(key);
-            m_buttonHeldFrames[key] = 1;
-            
-            // Handle each debug key
+    if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugClearMonsters) {
+        if (pressed && !IsKeyDown(key)) {  // Only trigger on initial press
+            // Handle debug toggle separately
             if (key == GameKeys::DebugToggle) {
                 m_debugMode = !m_debugMode;
                 std::cout << "Debug mode: " << (m_debugMode ? "ON" : "OFF") << std::endl;
-            } 
-            else if (m_debugMode) {  // Only process other debug keys if debug mode is on
+                return;
+            }
+            
+            // Only process other debug commands if debug mode is on
+            if (m_debugMode) {
                 switch (key) {
                     case GameKeys::DebugSpawn1: SpawnDebugMonster(ORC); break;
                     case GameKeys::DebugSpawn2: SpawnDebugMonster(GHOST); break;
@@ -1739,30 +1739,37 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
                     case GameKeys::DebugSpawn7: SpawnDebugMonster(SPIKEY); break;
                     case GameKeys::DebugSpawn8: SpawnDebugPowerup(GetRandomInt(0, 5)); break;
                     case GameKeys::DebugSpawn9: SpawnDebugPowerup(GetRandomInt(6, 10)); break;
-                    case GameKeys::DebugAddLife: m_lives++; break;
-                    case GameKeys::DebugAddCoins: m_coins += 10; break;
-                    case GameKeys::DebugIncDamage: m_bulletDamage++; break;
-                    case GameKeys::DebugClearMonsters:
-                        for (auto monster : m_monsters) delete monster;
-                        m_monsters.clear();
+                    case GameKeys::DebugAddLife: 
+                        m_lives++;
+                        std::cout << "Added life. Total: " << m_lives << std::endl;
                         break;
+                    case GameKeys::DebugAddCoins:
+                        m_coins += 10;
+                        std::cout << "Added 10 coins. Total: " << m_coins << std::endl;
+                        break;
+                    case GameKeys::DebugIncDamage:
+                        m_bulletDamage++;
+                        std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
+                        break;
+                    case GameKeys::DebugClearMonsters:
+                        {
+                            int count = m_monsters.size();
+                            for (auto monster : m_monsters) delete monster;
+                            m_monsters.clear();
+                            std::cout << "Cleared " << count << " monsters" << std::endl;
+                        }
+                        break;
+                    default: break;
                 }
             }
-        } else if (!pressed) {
-            m_buttonHeldState.erase(key);
-            m_buttonHeldFrames.erase(key);
         }
         return;
     }
 
-    // Normal handling for non-debug keys
+    // Normal key handling
     if (pressed) {
-        if (m_buttonHeldState.find(key) == m_buttonHeldState.end()) {
-            m_buttonHeldState.insert(key);
-            m_buttonHeldFrames[key] = 1;
-        } else {
-            m_buttonHeldFrames[key]++;
-        }
+        m_buttonHeldState.insert(key);
+        m_buttonHeldFrames[key] = 1;
     } else {
         m_buttonHeldState.erase(key);
         m_buttonHeldFrames.erase(key);
@@ -2720,11 +2727,9 @@ void PrairieKing::AddMonster(CowboyMonster *monster)
 
         m_monsters.push_back(monster);
         PlaySound(GetSound("cowboy_monsterhit"));
-        std::cout << "Monster added at position: (" << monster->position.x << ", " << monster->position.y << ")" << std::endl;
     }
     else
     {
-        std::cout << "Failed to add monster due to collision or invalid position." << std::endl;
         delete monster;
     }
 }
@@ -3721,12 +3726,10 @@ Vector2 PrairieKing::GetRandomSpawnPosition()
         if (IsMapTilePassable(m_map[static_cast<int>(pos.x / tileSize)][static_cast<int>(pos.y / tileSize)]) &&
             !IsCollidingWithMap(pos))
         {
-            std::cout << "Valid spawn position: (" << pos.x << ", " << pos.y << ")" << std::endl;
             return pos;
         }
     }
 
-    std::cout << "Fallback spawn position used" << std::endl;
     return sideSpawnPositions[GetRandomInt(0, sideSpawnPositions.size() - 1)];
 }
 
@@ -3746,12 +3749,10 @@ int PrairieKing::ChooseMonsterType(const std::vector<Vector2> &chances)
         current += chance.y;
         if (roll <= current)
         {
-            std::cout << "Monster type chosen: " << static_cast<int>(chance.x) << std::endl;
             return static_cast<int>(chance.x);
         }
     }
 
-    std::cout << "Defaulting to ORC" << std::endl;
     return ORC; // Default to orc if something goes wrong
 }
 int PrairieKing::GetRandomInt(int min, int max)
@@ -3823,14 +3824,38 @@ void PrairieKing::HandleDebugInputs()
     }
 }
 
-void PrairieKing::SpawnDebugMonster(int type)
-{
+void PrairieKing::SpawnDebugMonster(int type) {
+    // Calculate spawn position relative to player in game world coordinates
+    Vector2 offset = {
+        GetRandomFloat(-100, 100),
+        GetRandomFloat(-100, 100)
+    };
+    
+    // Ensure spawn position is within valid game bounds
     Vector2 spawnPos = {
-        m_playerPosition.x + GetRandomFloat(-100, 100),
-        m_playerPosition.y + GetRandomFloat(-100, 100)};
+        std::clamp(m_playerPosition.x + offset.x, 
+            static_cast<float>(GetTileSize()), 
+            static_cast<float>((MAP_WIDTH-2) * GetTileSize())),
+        std::clamp(m_playerPosition.y + offset.y, 
+            static_cast<float>(GetTileSize()), 
+            static_cast<float>((MAP_HEIGHT-2) * GetTileSize()))
+    };
 
-    CowboyMonster *monster = new CowboyMonster(m_assets, type, spawnPos);
-    AddMonster(monster);
+    // Create monster with valid position
+    CowboyMonster* monster = new CowboyMonster(m_assets, type, spawnPos);
+    
+    // Only add if spawn position is valid
+    if (!IsCollidingWithMap(Rectangle{
+            spawnPos.x, 
+            spawnPos.y, 
+            static_cast<float>(GetTileSize()), 
+            static_cast<float>(GetTileSize())})) {
+        std::cout << "Spawning monster type " << type << " at (" 
+                  << spawnPos.x << ", " << spawnPos.y << ")" << std::endl;
+        AddMonster(monster);
+    } else {
+        delete monster;
+    }
 }
 
 void PrairieKing::SpawnDebugPowerup(int type)
