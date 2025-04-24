@@ -9,6 +9,24 @@ GameplayScreen::GameplayScreen(AssetManager& assets, const Vector2& pixelScale)
 
 void GameplayScreen::Update(float deltaTime) {
 
+    // Handle debug keys first
+    if (IsKeyPressed(KEY_F3)) m_game->SetButtonState(PrairieKing::GameKeys::DebugToggle, true);
+    if (IsKeyPressed(KEY_F5)) m_game->SetButtonState(PrairieKing::GameKeys::DebugAddLife, true);
+    if (IsKeyPressed(KEY_F6)) m_game->SetButtonState(PrairieKing::GameKeys::DebugAddCoins, true);
+    if (IsKeyPressed(KEY_F7)) m_game->SetButtonState(PrairieKing::GameKeys::DebugIncDamage, true);
+    if (IsKeyPressed(KEY_F8)) m_game->SetButtonState(PrairieKing::GameKeys::DebugClearMonsters, true);
+
+    // Handle numpad monster spawn keys
+    if (IsKeyPressed(KEY_KP_1)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn1, true);
+    if (IsKeyPressed(KEY_KP_2)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn2, true);
+    if (IsKeyPressed(KEY_KP_3)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn3, true);
+    if (IsKeyPressed(KEY_KP_4)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn4, true);
+    if (IsKeyPressed(KEY_KP_5)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn5, true);
+    if (IsKeyPressed(KEY_KP_6)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn6, true);
+    if (IsKeyPressed(KEY_KP_7)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn7, true);
+    if (IsKeyPressed(KEY_KP_8)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn8, true);
+    if (IsKeyPressed(KEY_KP_9)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn9, true);
+
     // Update input states for game
     if (IsKeyDown(KEY_W))
         m_game->SetButtonState(PrairieKing::GameKeys::MoveUp, true);
@@ -64,53 +82,6 @@ void GameplayScreen::Update(float deltaTime) {
         m_game->SetButtonState(PrairieKing::GameKeys::Exit, true);
     else
         m_game->SetButtonState(PrairieKing::GameKeys::Exit, false);
-
-    // Debug toggle (on press only)
-    if (IsKeyPressed(KEY_F3))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugToggle, true);
-    else
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugToggle, false);
-
-    // Debug actions (allow hold)
-    if (IsKeyDown(KEY_F5))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugAddLife, true);
-    else
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugAddLife, false);
-
-    if (IsKeyDown(KEY_F6))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugAddCoins, true);
-    else
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugAddCoins, false);
-
-    if (IsKeyDown(KEY_F7))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugIncDamage, true);
-    else
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugIncDamage, false);
-
-    if (IsKeyDown(KEY_F8))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugClearMonsters, true);
-    else
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugClearMonsters, false);
-
-    // Monster spawn keys (on press only)
-    if (IsKeyPressed(KEY_KP_1))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn1, true);
-    if (IsKeyPressed(KEY_KP_2))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn2, true);
-    if (IsKeyPressed(KEY_KP_3))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn3, true);
-    if (IsKeyPressed(KEY_KP_4))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn4, true);
-    if (IsKeyPressed(KEY_KP_5))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn5, true);
-    if (IsKeyPressed(KEY_KP_6))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn6, true);
-    if (IsKeyPressed(KEY_KP_7))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn7, true);
-    if (IsKeyPressed(KEY_KP_8))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn8, true);
-    if (IsKeyPressed(KEY_KP_9))
-        m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn9, true);
 
     m_game->Update(deltaTime);
 }
