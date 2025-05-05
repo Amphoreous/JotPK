@@ -9,7 +9,8 @@ GameApplication::~GameApplication() {
 }
 
 void GameApplication::Initialize() {
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MAXIMIZED | FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+
     SearchAndSetResourceDir("resources");
     
     // Load and prepare the icon before creating the window
@@ -37,7 +38,8 @@ void GameApplication::Initialize() {
     // Get the monitor's refresh rate for proper vsync
     SetTargetFPS(60);
     
-    InitWindow(GetScreenWidth(), GetScreenHeight(), "Journey of the Prairie King");
+    InitWindow(1920, 1080, "Journey of the Prairie King");
+    ToggleFullscreen();
     
     // Set window icons from smallest to largest size
     SetWindowIcon(icon16);

@@ -38,6 +38,12 @@ void SettingsScreen::Update(float deltaTime) {
         SetMasterVolume(m_volume / 100.0f);
     }
 
+    if (m_selectedOption == 1)
+    {
+        if (IsKeyPressed(KEY_ENTER)) ToggleFullscreen;
+
+    }
+
     if (IsKeyPressed(KEY_ESCAPE)) m_isFinished = true;
 }
 

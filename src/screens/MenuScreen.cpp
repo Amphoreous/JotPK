@@ -20,7 +20,7 @@ void MenuScreen::Update(float deltaTime) {
         Rectangle hitbox = { bounds.x, bounds.y, bounds.width, bounds.height };
         if (CheckCollisionPointRec(mousePos, hitbox)) {
             m_selectedOption = i;
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 if (i == 3) CloseWindow();
                 else m_isFinished = true;
             }
