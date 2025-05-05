@@ -834,7 +834,7 @@ void PrairieKing::PlayerDie()
     m_playerInvincibleTimer = 5000;
     if (m_shootoutLevel)
     {
-        m_playerPosition = {static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())};
+        m_playerPosition = { static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize()) };
         PlaySound(PrairieKing::GetSoundStatic("Cowboy_monsterDie"));
     }
     else
