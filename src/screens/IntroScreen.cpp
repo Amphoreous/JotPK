@@ -56,6 +56,11 @@ void IntroScreen::Update(float deltaTime) {
 void IntroScreen::UpdateFade(float deltaTime) {
     m_timer += deltaTime;
     
+    if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER))
+    {
+        m_phase = IntroPhase::WaitForInput;
+    }
+
     if (m_timer < FADE_IN_TIME) {
         m_alpha = m_timer / FADE_IN_TIME;
     }
