@@ -2025,8 +2025,8 @@ void PrairieKing::Update(float deltaTime)
                       << m_monsters[i]->position.x << ", "
                       << m_monsters[i]->position.y << ")" << std::endl;
 
-            delete m_monsters[i];
-            m_monsters.erase(m_monsters.begin() + i);
+            //delete m_monsters[i];
+            //m_monsters.erase(m_monsters.begin() + i);
         }
     }
 
