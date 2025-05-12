@@ -122,6 +122,7 @@ public:
         DebugAddCoins,
         DebugIncDamage,
         DebugClearMonsters,
+        Pause,
         MAX
     };
 
@@ -572,9 +573,11 @@ private:
 
     // Debug mode variables and functions
     bool m_debugMode = false;
+    bool m_isPaused = false;
     void DrawDebugInfo();
     void HandleDebugInputs();
     void SpawnDebugMonster(int type);
     void SpawnDebugPowerup(int type);
     void DrawDebugGrid();
+    void PauseScreen();
 };

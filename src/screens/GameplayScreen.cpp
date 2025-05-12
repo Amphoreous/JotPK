@@ -27,6 +27,9 @@ void GameplayScreen::Update(float deltaTime) {
     if (IsKeyPressed(KEY_KP_8)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn8, true);
     if (IsKeyPressed(KEY_KP_9)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn9, true);
 
+    if (IsKeyPressed(KEY_P)) m_game->SetButtonState(PrairieKing::GameKeys::Pause, true);
+
+
     // Update input states for game
     if (IsKeyDown(KEY_W))
         m_game->SetButtonState(PrairieKing::GameKeys::MoveUp, true);

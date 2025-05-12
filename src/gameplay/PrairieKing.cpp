@@ -180,7 +180,8 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_playerFootstepSoundTimer(200.0f),
       m_spawnQueue(4),
       m_overworldSong({0}),
-      m_debugMode(false)
+      m_debugMode(false),
+      m_isPaused(false)
 {
     // Store the instance pointer for static access
     s_instance = this;
@@ -1002,6 +1003,11 @@ void PrairieKing::ProcessInputs()
         }
     }
 
+    if (IsKeyPressed(GameKeys::Pause))
+    {
+        m_isPaused = true;
+    }
+
     if (IsKeyPressed(GameKeys::Exit))
     {
         m_quit = true;
@@ -1717,6 +1723,11 @@ std::vector<Vector2> PrairieKing::GetBorderPoints(const Rectangle &rect)
 }
 
 void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
+    if (key == GameKeys::Pause) {
+        m_isPaused = !m_isPaused;
+        std::cout << "Pause screen: " << (m_isPaused ? "ON" : "OFF") << std::endl;
+        return;
+    }
     // Special handling for debug keys
     if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugClearMonsters) {
         if (pressed && !IsKeyDown(key)) {  // Only trigger on initial press
@@ -1726,7 +1737,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
                 std::cout << "Debug mode: " << (m_debugMode ? "ON" : "OFF") << std::endl;
                 return;
             }
-            
+
             // Only process other debug commands if debug mode is on
             if (m_debugMode) {
                 switch (key) {
@@ -1778,6 +1789,10 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
 
 void PrairieKing::Update(float deltaTime)
 {
+    if (!m_isPaused) {
+        m_waveTimer -= deltaTime * 1000.0f;
+    }
+
     UpdateMusicStream(m_overworldSong);
 
     // Update button held state
@@ -1791,6 +1806,12 @@ void PrairieKing::Update(float deltaTime)
 
     if (m_quit)
         return;
+
+    if (m_isPaused) 
+    {
+        PauseScreen();
+        return;
+    }
 
     // Handle game over state
     if (m_gameOver)
@@ -2432,6 +2453,18 @@ void PrairieKing::Draw()
         monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
+    if (m_isPaused) {
+        // Draw semi-transparent black background
+        Color semiTransparentBlack = { 0, 0, 0, 128 }; // Last value (128) is alpha: 0-255
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x),
+            static_cast<int>(m_topLeftScreenCoordinate.y),
+            16 * GetTileSize(),
+            16 * GetTileSize(),
+            semiTransparentBlack);
+        return;
+    }
+
     // 4. UI Elements (layerDepth: 0.25 - 0.5)
     // Draw UI background elements
     DrawTexturePro(
@@ -2631,6 +2664,18 @@ void PrairieKing::Draw()
             Vector2{0, 0},
             0.0f,
             WHITE);
+    }
+
+    if (m_isPaused) {
+        // Draw semi-transparent black background
+        Color semiTransparentBlack = { 0, 0, 0, 128 }; // Last value (128) is alpha: 0-255
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x),
+            static_cast<int>(m_topLeftScreenCoordinate.y),
+            16 * GetTileSize(),
+            16 * GetTileSize(),
+            semiTransparentBlack);
+        return;
     }
 
     DrawDebugInfo();
@@ -3989,4 +4034,12 @@ void PrairieKing::DrawDebugInfo()
             m_playerBoundingBox.height},
         1,
         GREEN);
+}
+
+void PrairieKing::PauseScreen() 
+{
+
+
+    
+
 }
