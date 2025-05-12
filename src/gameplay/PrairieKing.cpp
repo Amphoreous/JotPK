@@ -834,12 +834,12 @@ void PrairieKing::PlayerDie()
     m_playerInvincibleTimer = 5000;
     if (m_shootoutLevel)
     {
-        m_playerPosition = { static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize()) };
+        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
         PlaySound(PrairieKing::GetSoundStatic("Cowboy_monsterDie"));
     }
     else
     {
-        m_playerPosition = {static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())};
+        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
         m_playerBoundingBox = {
             m_playerPosition.x,                        // Sin offset en X
             m_playerPosition.y - GetTileSize() / 4.0f, // Offset negativo en Y para incluir la gorra
