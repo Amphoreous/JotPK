@@ -144,7 +144,7 @@ public:
     static constexpr double COIN_CHANCE = 0.05;
     static constexpr int LOOT_DURATION = 7500;
     static constexpr int POWERUP_DURATION = 10000;
-    static constexpr float PLAYER_SPEED = 2.0f;
+    static constexpr float PLAYER_SPEED = 2.5f;
     static constexpr int BASE_TILE_SIZE = 16;
     static constexpr int ORC_SPEED = 7;
     static constexpr int OGRE_SPEED = 2;
