@@ -1291,72 +1291,87 @@ void PrairieKing::AddPlayerShootingDirection(int direction)
 
 void PrairieKing::StartShoppingLevel()
 {
-    // Stop any music
+    // Reset merchant position off screen
+    m_merchantBox.y = -GetTileSize();
 
-    // Choose store items based on round and world
-    m_storeItems.clear();
-
-    if (m_world == WOODS)
-    {
-        m_storeItems[Rectangle{static_cast<float>(3 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_FIRESPEED2;
-        m_storeItems[Rectangle{static_cast<float>(5 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_RUNSPEED2;
-        m_storeItems[Rectangle{static_cast<float>(7 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_AMMO2;
-        m_storeItems[Rectangle{static_cast<float>(9 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_SPREADPISTOL;
-        m_storeItems[Rectangle{static_cast<float>(11 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_LIFE;
-    }
-    else
-    {
-        m_storeItems[Rectangle{static_cast<float>(3 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_FIRESPEED1;
-        m_storeItems[Rectangle{static_cast<float>(5 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_RUNSPEED1;
-        m_storeItems[Rectangle{static_cast<float>(7 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_AMMO1;
-        m_storeItems[Rectangle{static_cast<float>(9 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_LIFE;
-        m_storeItems[Rectangle{static_cast<float>(11 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = ITEM_STAR;
-    }
-
-    if (m_whichRound > 0)
-    {
-        // In new gameplus, adjust store items
-        m_storeItems[Rectangle{static_cast<float>(11 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}] = (m_world == WOODS) ? ITEM_SKULL : ITEM_LOG;
-    }
-
+    // Set shopping state flags
     m_shopping = true;
     m_merchantArriving = true;
     m_merchantLeaving = false;
     m_merchantShopOpen = false;
-    m_shoppingTimer = 0;
+
+    // Stop music
+    StopMusicStream(m_overworldSong);
+
+    // Clear enemies
+    for (auto monster : m_monsters)
+    {
+        delete monster;
+    }
+    m_monsters.clear();
+
+    // Enable player movement down to next map
+    m_waitingForPlayerToMoveDownAMap = true;
+
+    // Clear previous store items
+    m_storeItems.clear();
+
+    // Add items based on wave
+    if (m_whichWave == 2)
+    {
+        // Wave 2 shop items
+        m_storeItems[Rectangle{static_cast<float>(7 * GetTileSize() + 12),
+                               static_cast<float>(8 * GetTileSize() - GetTileSize() * 2),
+                               static_cast<float>(GetTileSize()),
+                               static_cast<float>(GetTileSize())}] = ITEM_RUNSPEED1;
+
+        m_storeItems[Rectangle{static_cast<float>(8 * GetTileSize() + 24),
+                               static_cast<float>(8 * GetTileSize() - GetTileSize() * 2),
+                               static_cast<float>(GetTileSize()),
+                               static_cast<float>(GetTileSize())}] = ITEM_FIRESPEED1;
+
+        m_storeItems[Rectangle{static_cast<float>(9 * GetTileSize() + 36),
+                               static_cast<float>(8 * GetTileSize() - GetTileSize() * 2),
+                               static_cast<float>(GetTileSize()),
+                               static_cast<float>(GetTileSize())}] = ITEM_AMMO1;
+    }
+    else
+    {
+        // Regular shop items based on player levels
+        m_storeItems[Rectangle{static_cast<float>(7 * GetTileSize() + 12),
+                               static_cast<float>(8 * GetTileSize() - GetTileSize() * 2),
+                               static_cast<float>(GetTileSize()),
+                               static_cast<float>(GetTileSize())}] =
+            (m_runSpeedLevel >= 2) ? ITEM_LIFE : (ITEM_RUNSPEED1 + m_runSpeedLevel);
+
+        m_storeItems[Rectangle{static_cast<float>(8 * GetTileSize() + 24),
+                               static_cast<float>(8 * GetTileSize() - GetTileSize() * 2),
+                               static_cast<float>(GetTileSize()),
+                               static_cast<float>(GetTileSize())}] =
+            (m_fireSpeedLevel < 3) ? ITEM_FIRESPEED1 + m_fireSpeedLevel : ((m_ammoLevel >= 3 && !m_spreadPistol) ? ITEM_SPREADPISTOL : ITEM_STAR);
+
+        m_storeItems[Rectangle{static_cast<float>(9 * GetTileSize() + 36),
+                               static_cast<float>(8 * GetTileSize() - GetTileSize() * 2),
+                               static_cast<float>(GetTileSize()),
+                               static_cast<float>(GetTileSize())}] =
+            (m_ammoLevel < 3) ? (ITEM_AMMO1 + m_ammoLevel) : ITEM_STAR;
+    }
 }
 
-int PrairieKing::GetPriceForItem(int whichItem)
-{
-    switch (whichItem)
-    {
-    case ITEM_AMMO1:
-        return 7;
-    case ITEM_AMMO2:
-        return 15;
-    case ITEM_AMMO3:
-        return 25;
-    case ITEM_FIRESPEED1:
-        return 10;
-    case ITEM_FIRESPEED2:
-        return 25;
-    case ITEM_FIRESPEED3:
-        return 50;
-    case ITEM_LIFE:
-        return 30;
-    case ITEM_RUNSPEED1:
-        return 12;
-    case ITEM_RUNSPEED2:
-        return 30;
-    case ITEM_SPREADPISTOL:
-        return 45;
-    case ITEM_STAR:
-        return 20;
-    case ITEM_SKULL:
-    case ITEM_LOG:
-        return 666;
-    default:
-        return 999;
+int PrairieKing::GetPriceForItem(int whichItem) const {
+    switch (whichItem) {
+        case ITEM_AMMO1: return 15;
+        case ITEM_AMMO2: return 30;  
+        case ITEM_AMMO3: return 45;
+        case ITEM_FIRESPEED1: return 10;
+        case ITEM_FIRESPEED2: return 20;
+        case ITEM_FIRESPEED3: return 30;
+        case ITEM_LIFE: return 10;
+        case ITEM_RUNSPEED1: return 8;
+        case ITEM_RUNSPEED2: return 20;
+        case ITEM_SPREADPISTOL: return 99;
+        case ITEM_STAR: return 10;
+        default: return 5;
     }
 }
 
@@ -1722,55 +1737,82 @@ std::vector<Vector2> PrairieKing::GetBorderPoints(const Rectangle &rect)
     return points;
 }
 
-void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
-    if (key == GameKeys::Pause) {
+void PrairieKing::SetButtonState(GameKeys key, bool pressed)
+{
+    if (key == GameKeys::Pause)
+    {
         m_isPaused = !m_isPaused;
         std::cout << "Pause screen: " << (m_isPaused ? "ON" : "OFF") << std::endl;
         return;
     }
     // Special handling for debug keys
-    if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugClearMonsters) {
-        if (pressed && !IsKeyDown(key)) {  // Only trigger on initial press
+    if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugClearMonsters)
+    {
+        if (pressed && !IsKeyDown(key))
+        { // Only trigger on initial press
             // Handle debug toggle separately
-            if (key == GameKeys::DebugToggle) {
+            if (key == GameKeys::DebugToggle)
+            {
                 m_debugMode = !m_debugMode;
                 std::cout << "Debug mode: " << (m_debugMode ? "ON" : "OFF") << std::endl;
                 return;
             }
 
             // Only process other debug commands if debug mode is on
-            if (m_debugMode) {
-                switch (key) {
-                    case GameKeys::DebugSpawn1: SpawnDebugMonster(ORC); break;
-                    case GameKeys::DebugSpawn2: SpawnDebugMonster(GHOST); break;
-                    case GameKeys::DebugSpawn3: SpawnDebugMonster(OGRE); break;
-                    case GameKeys::DebugSpawn4: SpawnDebugMonster(MUMMY); break;
-                    case GameKeys::DebugSpawn5: SpawnDebugMonster(DEVIL); break;
-                    case GameKeys::DebugSpawn6: SpawnDebugMonster(MUSHROOM); break;
-                    case GameKeys::DebugSpawn7: SpawnDebugMonster(SPIKEY); break;
-                    case GameKeys::DebugSpawn8: SpawnDebugPowerup(GetRandomInt(0, 5)); break;
-                    case GameKeys::DebugSpawn9: SpawnDebugPowerup(GetRandomInt(6, 10)); break;
-                    case GameKeys::DebugAddLife: 
-                        m_lives++;
-                        std::cout << "Added life. Total: " << m_lives << std::endl;
-                        break;
-                    case GameKeys::DebugAddCoins:
-                        m_coins += 10;
-                        std::cout << "Added 10 coins. Total: " << m_coins << std::endl;
-                        break;
-                    case GameKeys::DebugIncDamage:
-                        m_bulletDamage++;
-                        std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
-                        break;
-                    case GameKeys::DebugClearMonsters:
-                        {
-                            int count = m_monsters.size();
-                            for (auto monster : m_monsters) delete monster;
-                            m_monsters.clear();
-                            std::cout << "Cleared " << count << " monsters" << std::endl;
-                        }
-                        break;
-                    default: break;
+            if (m_debugMode)
+            {
+                switch (key)
+                {
+                case GameKeys::DebugSpawn1:
+                    SpawnDebugMonster(ORC);
+                    break;
+                case GameKeys::DebugSpawn2:
+                    SpawnDebugMonster(GHOST);
+                    break;
+                case GameKeys::DebugSpawn3:
+                    SpawnDebugMonster(OGRE);
+                    break;
+                case GameKeys::DebugSpawn4:
+                    SpawnDebugMonster(MUMMY);
+                    break;
+                case GameKeys::DebugSpawn5:
+                    SpawnDebugMonster(DEVIL);
+                    break;
+                case GameKeys::DebugSpawn6:
+                    SpawnDebugMonster(MUSHROOM);
+                    break;
+                case GameKeys::DebugSpawn7:
+                    SpawnDebugMonster(SPIKEY);
+                    break;
+                case GameKeys::DebugSpawn8:
+                    SpawnDebugPowerup(GetRandomInt(0, 5));
+                    break;
+                case GameKeys::DebugSpawn9:
+                    SpawnDebugPowerup(GetRandomInt(6, 10));
+                    break;
+                case GameKeys::DebugAddLife:
+                    m_lives++;
+                    std::cout << "Added life. Total: " << m_lives << std::endl;
+                    break;
+                case GameKeys::DebugAddCoins:
+                    m_coins += 10;
+                    std::cout << "Added 10 coins. Total: " << m_coins << std::endl;
+                    break;
+                case GameKeys::DebugIncDamage:
+                    m_bulletDamage++;
+                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
+                    break;
+                case GameKeys::DebugClearMonsters:
+                {
+                    int count = m_monsters.size();
+                    for (auto monster : m_monsters)
+                        delete monster;
+                    m_monsters.clear();
+                    std::cout << "Cleared " << count << " monsters" << std::endl;
+                }
+                break;
+                default:
+                    break;
                 }
             }
         }
@@ -1778,10 +1820,13 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
     }
 
     // Normal key handling
-    if (pressed) {
+    if (pressed)
+    {
         m_buttonHeldState.insert(key);
         m_buttonHeldFrames[key] = 1;
-    } else {
+    }
+    else
+    {
         m_buttonHeldState.erase(key);
         m_buttonHeldFrames.erase(key);
     }
@@ -1789,7 +1834,8 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed) {
 
 void PrairieKing::Update(float deltaTime)
 {
-    if (!m_isPaused) {
+    if (!m_isPaused)
+    {
         m_waveTimer -= deltaTime * 1000.0f;
     }
 
@@ -1807,7 +1853,7 @@ void PrairieKing::Update(float deltaTime)
     if (m_quit)
         return;
 
-    if (m_isPaused) 
+    if (m_isPaused)
     {
         PauseScreen();
         return;
@@ -2029,6 +2075,81 @@ void PrairieKing::Update(float deltaTime)
         }
     }
 
+    // In Update() function
+    if (m_shopping)
+    {
+        // Handle merchant animation
+        if (m_merchantBox.y < 8 * GetTileSize() - GetTileSize() * 3 && m_merchantArriving)
+        {
+            m_merchantBox.y += 2;
+            if (m_merchantBox.y >= 8 * GetTileSize() - GetTileSize() * 3)
+            {
+                m_merchantShopOpen = true;
+                PlaySound(GetSound("cowboy_monsterhit"));
+
+                // Clear path tiles
+                m_map[8][15] = MAP_DESERT;
+                m_map[7][15] = MAP_DESERT;
+                m_map[8][14] = MAP_DESERT;
+                m_map[7][14] = MAP_DESERT;
+
+                // Set no pickup area around merchant
+                m_shoppingCarpetNoPickup = Rectangle{
+                    m_merchantBox.x - GetTileSize(),
+                    m_merchantBox.y + GetTileSize(),
+                    static_cast<float>(GetTileSize() * 3),
+                    static_cast<float>(GetTileSize() * 2)};
+            }
+        }
+
+        // Handle purchases
+        if (m_merchantShopOpen)
+        {
+            for (auto it = m_storeItems.begin(); it != m_storeItems.end();)
+            {
+                if (!CheckCollisionRecs(m_playerBoundingBox, m_shoppingCarpetNoPickup) &&
+                    CheckCollisionRecs(m_playerBoundingBox, it->first) &&
+                    m_coins >= GetPriceForItem(it->second))
+                {
+
+                    PlaySound(GetSound("Cowboy_Secret"));
+                    m_holdItemTimer = 2500;
+                    m_motionPause = 2500;
+                    m_itemToHold = it->second;
+
+                    // Remove purchased item
+                    auto toErase = it;
+                    ++it;
+                    m_storeItems.erase(toErase);
+
+                    m_merchantLeaving = true;
+                    m_merchantArriving = false;
+                    m_merchantShopOpen = false;
+                    m_coins -= GetPriceForItem(m_itemToHold);
+
+                    // Apply upgrades
+                    ApplyPurchasedUpgrade(m_itemToHold);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+
+        // Handle merchant departure
+        if (m_merchantLeaving)
+        {
+            m_merchantBox.y -= 2;
+            if (m_merchantBox.y <= -GetTileSize())
+            {
+                m_shopping = false;
+                m_merchantLeaving = false;
+                m_merchantArriving = true;
+            }
+        }
+    }
+
     // Update game elements
     for (auto monster : m_monsters)
     {
@@ -2046,8 +2167,8 @@ void PrairieKing::Update(float deltaTime)
                       << m_monsters[i]->position.x << ", "
                       << m_monsters[i]->position.y << ")" << std::endl;
 
-            //delete m_monsters[i];
-            //m_monsters.erase(m_monsters.begin() + i);
+            // delete m_monsters[i];
+            // m_monsters.erase(m_monsters.begin() + i);
         }
     }
 
@@ -2453,9 +2574,10 @@ void PrairieKing::Draw()
         monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
-    if (m_isPaused) {
+    if (m_isPaused)
+    {
         // Draw semi-transparent black background
-        Color semiTransparentBlack = { 0, 0, 0, 128 }; // Last value (128) is alpha: 0-255
+        Color semiTransparentBlack = {0, 0, 0, 128}; // Last value (128) is alpha: 0-255
         DrawRectangle(
             static_cast<int>(m_topLeftScreenCoordinate.x),
             static_cast<int>(m_topLeftScreenCoordinate.y),
@@ -2463,12 +2585,16 @@ void PrairieKing::Draw()
             16 * GetTileSize(),
             semiTransparentBlack);
         DrawTextEx(m_assets.GetFont("text"), "GAME PAUSED",
-            Vector2{ GetScreenWidth() /2.0f-500, 100},
-            200, 10, WHITE);
+                   Vector2{GetScreenWidth() / 2.0f - 500, 100},
+                   200, 10, WHITE);
         DrawTextEx(m_assets.GetFont("text"), "Press P to resume the game",
-            Vector2{ GetScreenWidth() / 2.0f - 242, 400 },
-            50, 2, WHITE);
+                   Vector2{GetScreenWidth() / 2.0f - 242, 400},
+                   50, 2, WHITE);
         return;
+    }
+
+    if (m_shopping) {
+        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate); 
     }
 
     // 4. UI Elements (layerDepth: 0.25 - 0.5)
@@ -2637,7 +2763,7 @@ void PrairieKing::Draw()
     if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
     {
         Vector2 pos = {GetScreenWidth() / 2.5, GetScreenHeight() - 144 - 3};
-        Vector2 pos2 = { GetScreenWidth() / 1.89, GetScreenHeight() - 97 - 3 };
+        Vector2 pos2 = {GetScreenWidth() / 1.89, GetScreenHeight() - 97 - 3};
 
         // Drawing controls instruction box
 
@@ -2653,14 +2779,11 @@ void PrairieKing::Draw()
 
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{ 119, 0, 41, 17 },
-            Rectangle{ pos2.x, pos2.y, 150, 54 },
-            Vector2{ 0, 0 },
+            Rectangle{119, 0, 41, 17},
+            Rectangle{pos2.x, pos2.y, 150, 54},
+            Vector2{0, 0},
             0.0f,
             WHITE);
-
-
-
     }
 
     // Draw screen flash effect if active
@@ -2688,9 +2811,10 @@ void PrairieKing::Draw()
             WHITE);
     }
 
-    if (m_isPaused) {
+    if (m_isPaused)
+    {
         // Draw semi-transparent black background
-        Color semiTransparentBlack = { 0, 0, 0, 128 }; // Last value (128) is alpha: 0-255
+        Color semiTransparentBlack = {0, 0, 0, 128}; // Last value (128) is alpha: 0-255
         DrawRectangle(
             static_cast<int>(m_topLeftScreenCoordinate.x),
             static_cast<int>(m_topLeftScreenCoordinate.y),
@@ -3891,36 +4015,38 @@ void PrairieKing::HandleDebugInputs()
     }
 }
 
-void PrairieKing::SpawnDebugMonster(int type) {
+void PrairieKing::SpawnDebugMonster(int type)
+{
     // Calculate spawn position relative to player in game world coordinates
     Vector2 offset = {
         GetRandomFloat(-100, 100),
-        GetRandomFloat(-100, 100)
-    };
-    
+        GetRandomFloat(-100, 100)};
+
     // Ensure spawn position is within valid game bounds
     Vector2 spawnPos = {
-        std::clamp(m_playerPosition.x + offset.x, 
-            static_cast<float>(GetTileSize()), 
-            static_cast<float>((MAP_WIDTH-2) * GetTileSize())),
-        std::clamp(m_playerPosition.y + offset.y, 
-            static_cast<float>(GetTileSize()), 
-            static_cast<float>((MAP_HEIGHT-2) * GetTileSize()))
-    };
+        std::clamp(m_playerPosition.x + offset.x,
+                   static_cast<float>(GetTileSize()),
+                   static_cast<float>((MAP_WIDTH - 2) * GetTileSize())),
+        std::clamp(m_playerPosition.y + offset.y,
+                   static_cast<float>(GetTileSize()),
+                   static_cast<float>((MAP_HEIGHT - 2) * GetTileSize()))};
 
     // Create monster with valid position
-    CowboyMonster* monster = new CowboyMonster(m_assets, type, spawnPos);
-    
+    CowboyMonster *monster = new CowboyMonster(m_assets, type, spawnPos);
+
     // Only add if spawn position is valid
     if (!IsCollidingWithMap(Rectangle{
-            spawnPos.x, 
-            spawnPos.y, 
-            static_cast<float>(GetTileSize()), 
-            static_cast<float>(GetTileSize())})) {
-        std::cout << "Spawning monster type " << type << " at (" 
+            spawnPos.x,
+            spawnPos.y,
+            static_cast<float>(GetTileSize()),
+            static_cast<float>(GetTileSize())}))
+    {
+        std::cout << "Spawning monster type " << type << " at ("
                   << spawnPos.x << ", " << spawnPos.y << ")" << std::endl;
         AddMonster(monster);
-    } else {
+    }
+    else
+    {
         delete monster;
     }
 }
@@ -4058,10 +4184,141 @@ void PrairieKing::DrawDebugInfo()
         GREEN);
 }
 
-void PrairieKing::PauseScreen() 
+void PrairieKing::ApplyPurchasedUpgrade(int itemId) {
+    switch (itemId) {
+        case ITEM_AMMO1:
+        case ITEM_AMMO2:
+        case ITEM_AMMO3:
+            m_ammoLevel++;
+            m_bulletDamage++;
+            break;
+
+        case ITEM_FIRESPEED1:
+        case ITEM_FIRESPEED2:
+        case ITEM_FIRESPEED3:
+            m_fireSpeedLevel++;
+            break;
+
+        case ITEM_RUNSPEED1:
+        case ITEM_RUNSPEED2:
+            m_runSpeedLevel++;
+            break;
+
+        case ITEM_LIFE:
+            m_lives++;
+            break;
+
+        case ITEM_SPREADPISTOL:
+            m_spreadPistol = true;
+            break;
+
+        case ITEM_STAR:
+            if (!m_heldItem) {
+                m_heldItem = std::make_unique<CowboyPowerup>(POWERUP_SHERRIFF, 
+                    Vector2{0, 0}, 9999);
+            }
+            break;
+    }
+}
+
+void PrairieKing::DrawShopping(const Texture2D& texture, Vector2 topLeftScreenCoordinate) {
+    // Draw arriving/leaving merchant animation
+    if ((m_merchantArriving || m_merchantLeaving) && !m_merchantShopOpen) {
+        DrawTexturePro(texture, 
+            Rectangle{336.0f + ((m_shoppingTimer / 100 % 2 == 0) ? 16.0f : 0), 1728, 16, 16},
+            Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x, 
+                     topLeftScreenCoordinate.y + m_merchantBox.y, 
+                     48, 48},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+    else {
+        // Draw merchant facing direction based on player position
+        int whichFrame = (m_playerBoundingBox.x - m_merchantBox.x > GetTileSize()) ? 2 :
+                        (m_merchantBox.x - m_playerBoundingBox.x > GetTileSize()) ? 1 : 0;
+        
+        // Draw merchant
+        DrawTexturePro(texture,
+            Rectangle{368.0f + whichFrame * 16, 80, 16, 16},
+            Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x,
+                     topLeftScreenCoordinate.y + m_merchantBox.y,
+                     48, 48}, 
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+
+        // Draw merchant shop counter
+        DrawTexturePro(texture,
+            Rectangle{401, 96, 63, 32},
+            Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x - GetTileSize(),
+                     topLeftScreenCoordinate.y + m_merchantBox.y + GetTileSize(),
+                     189, 96},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+
+        // Draw store items
+        for (const auto& item : m_storeItems) {
+            // Draw item sprite
+            DrawTexturePro(texture,
+                Rectangle{192.0f + item.second * 16, 128, 16, 16},
+                Rectangle{topLeftScreenCoordinate.x + item.first.x,
+                         topLeftScreenCoordinate.y + item.first.y,
+                         48, 48},
+                Vector2{0, 0},
+                0.0f,
+                WHITE);
+
+            // Draw item price
+            std::string priceText = std::to_string(GetPriceForItem(item.second));
+            Vector2 textSize = MeasureTextEx(m_assets.GetFont("small"), priceText.c_str(), 16, 1);
+            
+            Color priceColor = {88, 29, 43, 255};
+            
+            // Draw price with outline effect
+            DrawTextEx(m_assets.GetFont("small"),
+                priceText.c_str(),
+                Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize()/2 - textSize.x/2,
+                       topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
+                16,
+                1,
+                priceColor);
+
+            DrawTextEx(m_assets.GetFont("small"), 
+                priceText.c_str(),
+                Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize()/2 - textSize.x/2 - 1,
+                       topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
+                16,
+                1,
+                priceColor);
+
+            DrawTextEx(m_assets.GetFont("small"),
+                priceText.c_str(), 
+                Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize()/2 - textSize.x/2 + 1,
+                       topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
+                16,
+                1,
+                priceColor);
+        }
+    }
+
+    // Draw down arrow when player can move to next level
+    if (m_waitingForPlayerToMoveDownAMap && 
+        (m_merchantShopOpen || m_merchantLeaving || !m_shopping) && 
+        m_shoppingTimer < 250) {
+            
+        DrawTexturePro(texture,
+            Rectangle{207, 102, 8, 8},
+            Rectangle{topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
+                     topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
+                     24, 24},
+            Vector2{0, 0},
+            0.0f,
+            WHITE);
+    }
+}
+
+void PrairieKing::PauseScreen()
 {
-
-
-    
-
 }

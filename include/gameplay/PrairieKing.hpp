@@ -425,7 +425,7 @@ public:
     void AddPlayerMovementDirection(int direction);
     void AddPlayerShootingDirection(int direction);
     void StartShoppingLevel();
-    int GetPriceForItem(int whichItem);
+    int GetPriceForItem(int whichItem) const;
     void GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT]);
     std::vector<Vector2> GetBorderPoints(const Rectangle &rect);
 
@@ -445,12 +445,14 @@ public:
     static PrairieKing *GetGameInstance();
 
     // Helper functions for input
-    bool IsKeyPressed(GameKeys key) const {
+    bool IsKeyPressed(GameKeys key) const
+    {
         auto it = m_buttonHeldFrames.find(key);
         return it != m_buttonHeldFrames.end() && it->second == 1;
     }
 
-    bool IsKeyDown(GameKeys key) const {
+    bool IsKeyDown(GameKeys key) const
+    {
         return m_buttonHeldState.find(key) != m_buttonHeldState.end();
     }
 
@@ -580,4 +582,7 @@ private:
     void SpawnDebugPowerup(int type);
     void DrawDebugGrid();
     void PauseScreen();
+
+    void ApplyPurchasedUpgrade(int itemId);
+    void DrawShopping(const Texture2D &texture, Vector2 topLeftScreenCoordinate);
 };
