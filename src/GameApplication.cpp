@@ -12,50 +12,13 @@ void GameApplication::Initialize() {
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
 
     SearchAndSetResourceDir("resources");
-    
-    // Load and prepare the icon before creating the window
-    Image icon = LoadImage("cursors/cursors.png");
-    ImageColorReplace(&icon, BLANK, BLANK);  // Ensure correct transparency
-    
-    // Crop and scale company icon
-    Rectangle iconRegion = { 432, 1808, 16, 16 };
-    Image iconCrop = ImageFromImage(icon, iconRegion);
-    UnloadImage(icon);
-    
-    // Create multiple sizes for better Windows compatibility
-    Image icon16 = ImageCopy(iconCrop);
-    Image icon32 = ImageCopy(iconCrop);
-    Image icon48 = ImageCopy(iconCrop);
-    Image icon64 = ImageCopy(iconCrop);
-    Image icon128 = ImageCopy(iconCrop);
-    
-    ImageResize(&icon16, 16, 16);
-    ImageResize(&icon32, 32, 32);
-    ImageResize(&icon48, 48, 48);
-    ImageResize(&icon64, 64, 64);
-    ImageResize(&icon128, 128, 128);
-
+        
     // Get the monitor's refresh rate for proper vsync
     SetTargetFPS(60);
     
     InitWindow(1920, 1080, "Journey of the Prairie King");
     ToggleFullscreen();
-    
-    // Set window icons from smallest to largest size
-    SetWindowIcon(icon16);
-    SetWindowIcon(icon32);
-    SetWindowIcon(icon48);
-    SetWindowIcon(icon64);
-    SetWindowIcon(icon128);
-    
-    // Clean up resources
-    UnloadImage(iconCrop);
-    UnloadImage(icon16);
-    UnloadImage(icon32);
-    UnloadImage(icon48);
-    UnloadImage(icon64);
-    UnloadImage(icon128);
-    
+        
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
     m_pixelScale.x = (float)(int)(screenWidth / 320);
