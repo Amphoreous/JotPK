@@ -2462,6 +2462,12 @@ void PrairieKing::Draw()
             16 * GetTileSize(),
             16 * GetTileSize(),
             semiTransparentBlack);
+        DrawTextEx(m_assets.GetFont("text"), "GAME PAUSED",
+            Vector2{ GetScreenWidth() /2.0f-500, 100},
+            200, 10, WHITE);
+        DrawTextEx(m_assets.GetFont("text"), "Press P to resume the game",
+            Vector2{ GetScreenWidth() / 2.0f - 242, 400 },
+            50, 2, WHITE);
         return;
     }
 

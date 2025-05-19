@@ -56,7 +56,7 @@ void SettingsScreen::Draw() {
 
     const char* options[] = {
         TextFormat("Volume: %d%%", m_volume),
-        TextFormat("Fullscreen: %s", m_isFullscreen ? "On" : "Off"),
+        TextFormat("Fullscreen: %s", m_isFullscreen ? "Off" : "On"),
         "Back"
     };
 
