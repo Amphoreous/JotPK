@@ -548,7 +548,7 @@ void PrairieKing::UsePowerup(int which)
         for (int i = 0; i < 30; i++)
         {
             m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {336, 147, 16, 16},
+                {336, 144, 16, 16},
                 80.0f, 5, 0,
                 {static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.x,
                  static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.y},
@@ -2633,11 +2633,14 @@ void PrairieKing::Draw()
     }
 
     // Draw control instructions at beginning of game
+
     if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
     {
-        Vector2 pos = {GetScreenWidth() / 2 - 120, GetScreenHeight() - 144 - 3};
+        Vector2 pos = {GetScreenWidth() / 2.5, GetScreenHeight() - 144 - 3};
+        Vector2 pos2 = { GetScreenWidth() / 1.89, GetScreenHeight() - 97 - 3 };
 
         // Drawing controls instruction box
+
         DrawTexturePro(
             GetTexture("cursors"),
             Rectangle{224, 0, 80, 48},
@@ -2645,6 +2648,19 @@ void PrairieKing::Draw()
             Vector2{0, 0},
             0.0f,
             WHITE);
+
+        // Drawing pause instruction box
+
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{ 119, 0, 41, 17 },
+            Rectangle{ pos2.x, pos2.y, 150, 54 },
+            Vector2{ 0, 0 },
+            0.0f,
+            WHITE);
+
+
+
     }
 
     // Draw screen flash effect if active
@@ -3233,7 +3249,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
     {
     case GameConstants::ORC:
         health = 1;   // Los orcos deben morir con un disparo
-        speed = 1.5f; // Velocidad base para los orcos
+        speed = 1.9f; // Velocidad base para los orcos
         break;
 
     case GameConstants::OGRE:
