@@ -1293,7 +1293,7 @@ void PrairieKing::StartShoppingLevel()
 {
     // Reset merchant position and dimensions off screen
     m_merchantBox = {
-        static_cast<float>(8 * GetTileSize() - GetTileSize()),  // Center the merchant
+        static_cast<float>(9 * GetTileSize() - GetTileSize()),  // Center the merchant
         static_cast<float>(-GetTileSize()),                     // Start above screen
         static_cast<float>(GetTileSize()),                      // Proper width
         static_cast<float>(GetTileSize())                       // Proper height
@@ -4405,7 +4405,7 @@ void PrairieKing::DrawShopping(const Texture2D& texture, Vector2 topLeftScreenCo
     // Draw arriving/leaving merchant animation
     if ((m_merchantArriving || m_merchantLeaving) && !m_merchantShopOpen) {
         DrawTexturePro(texture, 
-            Rectangle{336.0f + ((m_shoppingTimer / 100 % 2 == 0) ? 16.0f : 0), 1728, 16, 16},
+            Rectangle{336.0f + ((m_shoppingTimer / 100 % 2 == 0) ? 16.0f : 0), 80, 16, 16},
             Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x, 
                      topLeftScreenCoordinate.y + m_merchantBox.y, 
                      48, 48},
