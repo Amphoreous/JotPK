@@ -1291,8 +1291,13 @@ void PrairieKing::AddPlayerShootingDirection(int direction)
 
 void PrairieKing::StartShoppingLevel()
 {
-    // Reset merchant position off screen
-    m_merchantBox.y = -GetTileSize();
+    // Reset merchant position and dimensions off screen
+    m_merchantBox = {
+        static_cast<float>(8 * GetTileSize() - GetTileSize()),  // Center the merchant
+        static_cast<float>(-GetTileSize()),                     // Start above screen
+        static_cast<float>(GetTileSize()),                      // Proper width
+        static_cast<float>(GetTileSize())                       // Proper height
+    };
 
     // Set shopping state flags
     m_shopping = true;
@@ -1356,6 +1361,9 @@ void PrairieKing::StartShoppingLevel()
                                static_cast<float>(GetTileSize())}] =
             (m_ammoLevel < 3) ? (ITEM_AMMO1 + m_ammoLevel) : ITEM_STAR;
     }
+    
+    // Make sure we have the next map ready
+    GetMap(m_whichWave + 1, m_nextMap);
 }
 
 int PrairieKing::GetPriceForItem(int whichItem) const {
@@ -1382,23 +1390,23 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
     {
         for (int x = 0; x < MAP_WIDTH; x++)
         {
-            if ((x == 0 || x == 15 || y == 0 || y == 15) &&
+            if ((x == 0 || x == 15 || y == 0 || y == 15) && 
                 (x <= 6 || x >= 10) && (y <= 6 || y >= 10))
             {
-                newMap[x][y] = MAP_CACTUS;
+                newMap[x][y] = MAP_CACTUS; // 5
             }
             else if (x == 0 || x == 15 || y == 0 || y == 15)
             {
-                // Random barrier type for edges
+                // Random barrier type for edges (0 = barrier1, 1 = barrier2)
                 newMap[x][y] = (GetRandomFloat(0, 1) < 0.15f) ? MAP_BARRIER2 : MAP_BARRIER1;
             }
             else if (x == 1 || x == 14 || y == 1 || y == 14)
             {
-                newMap[x][y] = MAP_ROCKY1;
+                newMap[x][y] = MAP_ROCKY1; // 2
             }
             else
             {
-                // Random terrain for interior
+                // Random terrain for interior (3 = desert, 4 = grassy)
                 newMap[x][y] = (GetRandomFloat(0, 1) < 0.1f) ? MAP_GRASSY : MAP_DESERT;
             }
         }
@@ -1412,22 +1420,15 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         {
             for (int x = 0; x < MAP_WIDTH; x++)
             {
-                if (x == 0 || y == 0 || x == MAP_WIDTH - 1 || y == MAP_HEIGHT - 1)
+                if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2 || 
+                    newMap[x][y] == MAP_ROCKY1 || newMap[x][y] == MAP_CACTUS)
                 {
-                    newMap[x][y] = MAP_BARRIER1;
-                }
-                else if (y == MAP_HEIGHT - 1)
-                {
-                    newMap[x][y] = MAP_GRASSY;
-                }
-                else
-                {
-                    newMap[x][y] = MAP_DESERT;
+                    newMap[x][y] = MAP_DESERT; // 3
                 }
             }
         }
-
-        // Add some details
+        
+        // Add special features for endgame map
         newMap[3][1] = MAP_CACTUS;
         newMap[8][2] = MAP_CACTUS;
         newMap[13][1] = MAP_CACTUS;
@@ -1435,19 +1436,29 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[10][2] = MAP_ROCKY1;
         newMap[15][2] = MAP_BARRIER2;
         newMap[14][12] = MAP_CACTUS;
-
-        // Add fence
-        for (int i = 10; i <= 14; i++)
+        
+        // Add fence walls
+        newMap[10][6] = MAP_FENCE;
+        newMap[11][6] = MAP_FENCE;
+        newMap[12][6] = MAP_FENCE;
+        newMap[13][6] = MAP_FENCE;
+        newMap[14][6] = MAP_FENCE;
+        newMap[14][7] = MAP_FENCE;
+        newMap[14][8] = MAP_FENCE;
+        newMap[14][9] = MAP_FENCE;
+        newMap[14][10] = MAP_FENCE;
+        newMap[14][11] = MAP_FENCE;
+        newMap[14][12] = MAP_FENCE;
+        newMap[14][13] = MAP_FENCE;
+        
+        // Add trenches
+        for (int k = 0; k < 16; k++)
         {
-            newMap[i][6] = MAP_FENCE;
+            newMap[k][3] = ((k % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2);
         }
-        for (int i = 7; i <= 13; i++)
-        {
-            newMap[14][i] = MAP_FENCE;
-        }
-
-        // Add other details
-        newMap[3][3] = MAP_BRIDGE;
+        
+        // Add bridge and other features
+        newMap[3][3] = MAP_BRIDGE; // 10
         newMap[7][8] = MAP_ROCKY1;
         newMap[8][8] = MAP_ROCKY1;
         newMap[4][11] = MAP_ROCKY1;
@@ -1469,28 +1480,27 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[4][4] = MAP_FENCE;
         newMap[4][5] = MAP_FENCE;
         newMap[5][4] = MAP_FENCE;
-
+        
         newMap[12][4] = MAP_FENCE;
         newMap[11][4] = MAP_FENCE;
         newMap[12][5] = MAP_FENCE;
-
+        
         newMap[4][12] = MAP_FENCE;
         newMap[5][12] = MAP_FENCE;
         newMap[4][11] = MAP_FENCE;
-
+        
         newMap[12][12] = MAP_FENCE;
         newMap[11][12] = MAP_FENCE;
         newMap[12][11] = MAP_FENCE;
         break;
 
     case 2:
-        // Add central barriers
+        // Add central barriers and corner cacti
         newMap[8][4] = MAP_FENCE;
         newMap[12][8] = MAP_FENCE;
         newMap[8][12] = MAP_FENCE;
         newMap[4][8] = MAP_FENCE;
-
-        // Add corner cacti
+        
         newMap[1][1] = MAP_CACTUS;
         newMap[14][1] = MAP_CACTUS;
         newMap[14][14] = MAP_CACTUS;
@@ -1507,51 +1517,64 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 3:
         // Fence perimeters in the middle
-        for (int i = 5; i <= 11; i++)
-        {
-            if (i != 8)
-            {
-                newMap[i][5] = MAP_FENCE;
-                newMap[i][11] = MAP_FENCE;
-            }
-        }
-
-        for (int i = 6; i <= 10; i++)
-        {
-            if (i != 8)
-            {
-                newMap[5][i] = MAP_FENCE;
-                newMap[11][i] = MAP_FENCE;
-            }
-        }
+        newMap[5][5] = MAP_FENCE;
+        newMap[6][5] = MAP_FENCE;
+        newMap[7][5] = MAP_FENCE;
+        newMap[9][5] = MAP_FENCE;
+        newMap[10][5] = MAP_FENCE;
+        newMap[11][5] = MAP_FENCE;
+        
+        newMap[5][11] = MAP_FENCE;
+        newMap[6][11] = MAP_FENCE;
+        newMap[7][11] = MAP_FENCE;
+        newMap[9][11] = MAP_FENCE;
+        newMap[10][11] = MAP_FENCE;
+        newMap[11][11] = MAP_FENCE;
+        
+        newMap[5][6] = MAP_FENCE;
+        newMap[5][7] = MAP_FENCE;
+        newMap[5][9] = MAP_FENCE;
+        newMap[5][10] = MAP_FENCE;
+        
+        newMap[11][6] = MAP_FENCE;
+        newMap[11][7] = MAP_FENCE;
+        newMap[11][9] = MAP_FENCE;
+        newMap[11][10] = MAP_FENCE;
         break;
 
     case 4:
     case 8:
-        // Create a shootout alley
-        for (int i = 0; i < MAP_WIDTH; i++)
         {
-            newMap[i][6] = MAP_FENCE;
-            newMap[i][10] = MAP_FENCE;
+            // Replace cacti with random barriers
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                for (int x = 0; x < MAP_WIDTH; x++)
+                {
+                    if (newMap[x][y] == MAP_CACTUS)
+                    {
+                        newMap[x][y] = (GetRandomFloat(0, 1) < 0.5f) ? MAP_BARRIER2 : MAP_BARRIER1;
+                    }
+                }
+            }
+            
+            // Add trench through middle
+            for (int x = 0; x < MAP_WIDTH; x++)
+            {
+                newMap[x][8] = (GetRandomFloat(0, 1) < 0.5f) ? MAP_TRENCH1 : MAP_TRENCH2;
+            }
+            
+            // Add fences and cacti
+            newMap[8][4] = MAP_FENCE;
+            newMap[8][12] = MAP_FENCE;
+            newMap[9][12] = MAP_FENCE;
+            newMap[7][12] = MAP_FENCE;
+            newMap[5][6] = MAP_CACTUS;
+            newMap[10][6] = MAP_CACTUS;
         }
-
-        // Add gaps
-        newMap[8][6] = MAP_DESERT;
-        newMap[8][10] = MAP_DESERT;
-
-        // Add small openings in fence for the player
-        newMap[8][4] = MAP_FENCE;
-        newMap[8][12] = MAP_FENCE;
-        newMap[9][12] = MAP_FENCE;
-        newMap[7][12] = MAP_FENCE;
-
-        // Add cacti
-        newMap[5][6] = MAP_CACTUS;
-        newMap[10][6] = MAP_CACTUS;
         break;
 
     case 5:
-        // Add corner cacti
+        // Add lots of corner cacti
         newMap[1][1] = MAP_CACTUS;
         newMap[14][1] = MAP_CACTUS;
         newMap[14][14] = MAP_CACTUS;
@@ -1564,7 +1587,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[14][2] = MAP_CACTUS;
         newMap[14][13] = MAP_CACTUS;
         newMap[1][13] = MAP_CACTUS;
-
+        
         // Add more cacti
         newMap[3][1] = MAP_CACTUS;
         newMap[13][1] = MAP_CACTUS;
@@ -1581,7 +1604,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 6:
-        // Add rocks and cacti
+        // Add rocks, cacti, and fences
         newMap[4][5] = MAP_ROCKY1;
         newMap[12][10] = MAP_CACTUS;
         newMap[10][9] = MAP_CACTUS;
@@ -1592,7 +1615,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[2][3] = MAP_CACTUS;
         newMap[11][3] = MAP_CACTUS;
         newMap[10][6] = MAP_CACTUS;
-
+        
         // Add fences
         newMap[5][9] = MAP_FENCE;
         newMap[10][12] = MAP_FENCE;
@@ -1601,13 +1624,13 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 7:
-        // Add trenches
-        for (int i = 1; i < MAP_WIDTH - 1; i++)
+        // Add trenches through middle
+        for (int x = 0; x < MAP_WIDTH; x++)
         {
-            newMap[i][7] = MAP_TRENCH1;
-            newMap[i][8] = MAP_TRENCH2;
+            newMap[x][5] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+            newMap[x][10] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
         }
-
+        
         // Add bridges
         newMap[4][5] = MAP_BRIDGE;
         newMap[8][5] = MAP_BRIDGE;
@@ -1627,7 +1650,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[5][5] = MAP_CACTUS;
         newMap[10][5] = MAP_CACTUS;
         newMap[12][5] = MAP_CACTUS;
-
+        
         newMap[4][10] = MAP_CACTUS;
         newMap[5][10] = MAP_CACTUS;
         newMap[10][10] = MAP_CACTUS;
@@ -1639,22 +1662,21 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 10:
-        // Add trench river through the middle
-        for (int i = 1; i < MAP_WIDTH - 1; i++)
+        // Add trenches at top and bottom
+        for (int x = 0; x < MAP_WIDTH; x++)
         {
-            newMap[i][7] = MAP_TRENCH1;
-            newMap[i][8] = MAP_TRENCH2;
+            newMap[x][1] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+            newMap[x][14] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
         }
-
-        // Add bridges
+        
+        // Add bridges and cacti
         newMap[8][1] = MAP_BRIDGE;
         newMap[7][1] = MAP_BRIDGE;
         newMap[9][1] = MAP_BRIDGE;
         newMap[8][14] = MAP_BRIDGE;
         newMap[7][14] = MAP_BRIDGE;
         newMap[9][14] = MAP_BRIDGE;
-
-        // Add some cacti
+        
         newMap[6][8] = MAP_CACTUS;
         newMap[10][8] = MAP_CACTUS;
         newMap[8][6] = MAP_CACTUS;
@@ -1662,57 +1684,66 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 11:
-        // Alternating fence pattern
-        for (int i = 0; i < MAP_WIDTH; i++)
+        // Add fence borders
+        for (int x = 0; x < MAP_WIDTH; x++)
         {
-            if (i % 2 == 0)
+            newMap[x][0] = MAP_FENCE;
+            newMap[x][15] = MAP_FENCE;
+            if (x % 2 == 0)
             {
-                newMap[i][5] = MAP_FENCE;
-                newMap[i][11] = MAP_FENCE;
-            }
-            else
-            {
-                newMap[i][3] = MAP_FENCE;
-                newMap[i][13] = MAP_FENCE;
+                newMap[x][1] = MAP_CACTUS;
+                newMap[x][14] = MAP_CACTUS;
             }
         }
         break;
 
     case 12:
-        // Convert barriers to cactus
-        for (int y = 0; y < MAP_HEIGHT; y++)
         {
-            for (int x = 0; x < MAP_WIDTH; x++)
+            // Convert barriers to cactus
+            for (int y = 0; y < MAP_HEIGHT; y++)
             {
-                if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2)
+                for (int x = 0; x < MAP_WIDTH; x++)
                 {
-                    newMap[x][y] = MAP_CACTUS;
+                    if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2)
+                    {
+                        newMap[x][y] = MAP_CACTUS;
+                    }
                 }
             }
+            
+            // Add trench borders
+            for (int x = 0; x < MAP_WIDTH; x++)
+            {
+                newMap[x][0] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+                newMap[x][15] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+            }
+            
+            // Add bridge border
+            Rectangle r = {1, 1, 14, 14};
+            std::vector<Vector2> border = GetBorderPoints(r);
+            for (const auto &pt : border)
+            {
+                newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
+            }
+            
+            // Add rocky inner border
+            r = {2, 2, 12, 12};
+            border = GetBorderPoints(r);
+            for (const auto &pt : border)
+            {
+                newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_ROCKY1;
+            }
+            return; // Important: return early for wave 12
         }
+        break;
 
-        // Add trench borders
-        for (int i = 0; i < MAP_WIDTH; i++)
-        {
-            newMap[i][0] = (i % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
-            newMap[i][MAP_HEIGHT - 1] = (i % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
-        }
-
-        // Add bridge border
-        Rectangle r = {1, 1, 14, 14};
-        std::vector<Vector2> border = GetBorderPoints(r);
-        for (const auto &pt : border)
-        {
-            newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
-        }
-        // Add rocky inner border
-        r = {2, 2, 12, 12};
-        border = GetBorderPoints(r);
-        for (const auto &pt : border)
-        {
-            newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_ROCKY1;
-        }
-        return; // Important: return early for wave 12
+    default:
+        // Default map additions
+        newMap[4][4] = MAP_CACTUS;
+        newMap[12][4] = MAP_CACTUS;
+        newMap[4][12] = MAP_CACTUS;
+        newMap[12][12] = MAP_CACTUS;
+        break;
     }
 }
 
@@ -2075,7 +2106,29 @@ void PrairieKing::Update(float deltaTime)
         }
     }
 
-    // In Update() function
+    // Add this check to your monster update in the Update method
+    if (m_waveTimer <= 0 && !m_monsters.empty() && IsSpawnQueueEmpty())
+    {
+        bool onlySpikeys = true;
+        for (const auto& monster : m_monsters)
+        {
+            if (monster->type != GameConstants::SPIKEY)
+            {
+                onlySpikeys = false;
+                break;
+            }
+        }
+        
+        // If only Spikeys are left, make them easier to kill
+        if (onlySpikeys)
+        {
+            for (auto& monster : m_monsters)
+            {
+                monster->health = 1;
+            }
+        }
+    }
+
     if (m_shopping)
     {
         // Handle merchant animation
@@ -2146,6 +2199,16 @@ void PrairieKing::Update(float deltaTime)
                 m_shopping = false;
                 m_merchantLeaving = false;
                 m_merchantArriving = true;
+                
+                // Make sure to load the next wave map here
+                m_whichWave++; // Increment wave since we're moving to the next one
+                GetMap(m_whichWave, m_nextMap); // Load the next map
+                
+                // Set up for map transition
+                m_waitingForPlayerToMoveDownAMap = true;
+                m_map[8][15] = MAP_DESERT; // Clear path at the bottom
+                m_map[7][15] = MAP_DESERT;
+                m_map[9][15] = MAP_DESERT;
             }
         }
     }
@@ -2225,34 +2288,76 @@ void PrairieKing::UpdateMonsterChancesForWave()
     case 1:
     case 2:
     case 3:
-        m_monsterChances[0] = Vector2Add(m_monsterChances[0], Vector2{0.001f, 0.02f});
+        // Waves 1-3: Increase Orcs, Ogres, Spikey
+        m_monsterChances[0] = Vector2Add(m_monsterChances[0], Vector2{0.001f, 0.02f}); // Orcs
         if (m_whichWave > 1)
         {
-            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f, 0.01f});
+            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f, 0.01f}); // Ogres
         }
-        m_monsterChances[6] = Vector2Add(m_monsterChances[6], Vector2{0.001f, 0.01f});
+        m_monsterChances[6] = Vector2Add(m_monsterChances[6], Vector2{0.001f, 0.01f}); // Spikey
+        if (m_whichRound > 0)
+        {
+            m_monsterChances[4] = {0.002f, 0.1f}; // Devils in New Game Plus
+        }
         break;
 
     case 4:
     case 5:
     case 6:
     case 7:
-        m_monsterChances[0] = Vector2Zero();
-        m_monsterChances[6] = Vector2Zero();
-        m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.002f, 0.02f});
-        m_monsterChances[5] = Vector2Add(m_monsterChances[5], Vector2{0.001f, 0.02f});
-        m_monsterChances[1] = Vector2Add(m_monsterChances[1], Vector2{0.0018f, 0.08f});
+        // Waves 4-7: Remove Orcs/Spikey, add Mushrooms, increase Ghosts
+        if (Vector2Equals(m_monsterChances[5], Vector2Zero()))
+        {
+            m_monsterChances[5] = {0.01f, 0.15f}; // Initialize Mushrooms
+            if (m_whichRound > 0)
+            {
+                m_monsterChances[5] = {0.01f + static_cast<float>(m_whichRound) * 0.004f,
+                                      0.15f + static_cast<float>(m_whichRound) * 0.04f};
+            }
+        }
+        m_monsterChances[0] = Vector2Zero(); // Disable Orcs
+        m_monsterChances[6] = Vector2Zero(); // Disable Spikey
+        m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.002f, 0.02f}); // More Ogres
+        m_monsterChances[5] = Vector2Add(m_monsterChances[5], Vector2{0.001f, 0.02f}); // More Mushrooms
+        m_monsterChances[1] = Vector2Add(m_monsterChances[1], Vector2{0.0018f, 0.08f}); // More Ghosts
+        if (m_whichRound > 0)
+        {
+            m_monsterChances[4] = {0.001f, 0.1f}; // Devils in New Game Plus
+        }
         break;
 
     case 8:
     case 9:
     case 10:
     case 11:
-        m_monsterChances[5] = Vector2Zero();
-        m_monsterChances[1] = Vector2Zero();
-        m_monsterChances[2] = Vector2Zero();
-        m_monsterChances[3] = Vector2Add(m_monsterChances[3], Vector2{0.002f, 0.05f});
-        m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.0015f, 0.04f});
+        // Waves 8-11: Disable earlier monsters, add Mummies and Devils
+        m_monsterChances[5] = Vector2Zero(); // Disable Mushrooms
+        m_monsterChances[1] = Vector2Zero(); // Disable Ghosts
+        m_monsterChances[2] = Vector2Zero(); // Disable Ogres
+        
+        if (Vector2Equals(m_monsterChances[3], Vector2Zero()))
+        {
+            m_monsterChances[3] = {0.012f, 0.4f}; // Initialize Mummies
+            if (m_whichRound > 0)
+            {
+                m_monsterChances[3] = {0.012f + static_cast<float>(m_whichRound) * 0.005f,
+                                      0.4f + static_cast<float>(m_whichRound) * 0.075f};
+            }
+        }
+        
+        if (Vector2Equals(m_monsterChances[4], Vector2Zero()))
+        {
+            m_monsterChances[4] = {0.003f, 0.1f}; // Initialize Devils
+        }
+        
+        m_monsterChances[3] = Vector2Add(m_monsterChances[3], Vector2{0.002f, 0.05f}); // More Mummies
+        m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.0015f, 0.04f}); // More Devils
+        
+        if (m_whichWave == 11)
+        {
+            m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.01f, 0.04f}); // Even more Devils
+            m_monsterChances[3] = Vector2{m_monsterChances[3].x - 0.01f, m_monsterChances[3].y + 0.04f}; // Less Mummies, increase weight
+        }
         break;
     }
 }
@@ -2313,9 +2418,9 @@ void PrairieKing::Draw()
             DrawTexturePro(
                 GetTexture("cursors"),
                 Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                          32.0f - m_world * 16.0f,
-                          16.0f,
-                          16.0f},
+                           32.0f - m_world * 16.0f,
+                           16.0f,
+                           16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
                           m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0),
                           static_cast<float>(GetTileSize()),
@@ -3220,7 +3325,6 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             m_merchantArriving = false;
             m_merchantLeaving = false;
             m_merchantShopOpen = false;
-            m_merchantBox.y = -GetTileSize();
             m_scrollingMap = true;
 
             // Generar siguiente mapa al iniciar scroll
@@ -3427,8 +3531,8 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
 // Implementación de los métodos virtuales de CowboyMonster
 void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
 {
-    // No dibujar si el monstruo está invisible
-    if (invisible)
+    // Don't draw if the monster is invisible
+    if (invisible && type != GameConstants::SPIKEY)
         return;
 
     Rectangle destRect = {
@@ -3437,39 +3541,60 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         position.width,
         position.height};
 
-    // Determinar el rectángulo de la textura según el tipo de monstruo
+    // Determine the texture rectangle based on monster type
     Rectangle sourceRect;
 
-    if (type == 6 && special)
+    if (type == GameConstants::SPIKEY && special)
     {
+        // Special Spikey has different sprites
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {352, 48, 16, 16};
+            sourceRect = {480.0f, 112.0f, 16.0f, 16.0f};
         }
         else
         {
-            sourceRect = {448, 64, 16, 16};
+            sourceRect = {576.0f, 128.0f, 16.0f, 16.0f};
         }
     }
-    else
+    else if (!invisible)
     {
+        // Normal monsters
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {static_cast<float>(224 + type * 16), static_cast<float>(48), 16, 16};
+            // Hit animation
+            sourceRect = {static_cast<float>(224 + type * 16), 48.0f, 16.0f, 16.0f};
         }
         else
         {
-            sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), static_cast<float>(64), 16, 16};
+            // Walking animation
+            sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), 64.0f, 16.0f, 16.0f};
         }
-    }
-
-    // Dibujar el monstruo con su textura correspondiente
-    DrawTexturePro(texture, sourceRect, destRect, Vector2{0, 0}, 0.0f, WHITE);
-
-    // Dibujar el signo de interrogación si el monstruo está confundido
-    if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
-    {
-        // Implementación del signo de interrogación (se puede añadir más tarde)
+        
+        // Draw the monster
+        DrawTexturePro(texture, sourceRect, destRect, Vector2{0, 0}, 0.0f, WHITE);
+        
+        // Draw confusion indicator if monster is confused
+        if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
+        {
+            // Get font and text measurements from the asset manager
+            Font smallFont = PrairieKing::GetGameInstance()->m_assets.GetFont("small");
+            const char* text = "?";
+            Vector2 textSize = MeasureTextEx(smallFont, text, 16.0f, 1.0f);
+            
+            // Position for the question mark
+            Vector2 textPos = {
+                topLeftScreenCoordinate.x + position.x + position.width/2 - textSize.x/2,
+                topLeftScreenCoordinate.y + position.y - PrairieKing::GetGameInstance()->GetTileSize()/2
+            };
+            
+            // Draw with "drop shadow" effect
+            Color confusionColor = {88, 29, 43, 255}; // Dark red color
+            
+            // Draw question mark with slight offsets for outline effect
+            DrawTextEx(smallFont, text, Vector2{textPos.x, textPos.y}, 16.0f, 1.0f, confusionColor);
+            DrawTextEx(smallFont, text, Vector2{textPos.x + 1.0f, textPos.y}, 16.0f, 1.0f, confusionColor);
+            DrawTextEx(smallFont, text, Vector2{textPos.x - 1.0f, textPos.y}, 16.0f, 1.0f, confusionColor);
+        }
     }
 }
 
@@ -3560,30 +3685,38 @@ int PrairieKing::CowboyMonster::GetLootDrop()
 
 bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
 {
-    // Actualizar el temporizador de animación de movimiento
-    movementAnimationTimer -= deltaTime * 1000.0f; // Convertir a milisegundos
+    // Update the movement animation timer
+    movementAnimationTimer -= deltaTime * 1000.0f;
     if (movementAnimationTimer <= 0.0f)
     {
         movementAnimationTimer = std::max(100.0f, 500.0f - speed * 50.0f);
     }
 
-    // Si el monstruo está parpadeando, no se mueve
+    // If the monster is flashing, don't move
     if (flashColorTimer > 0.0f)
     {
-        flashColorTimer -= deltaTime * 1000.0f;
+        flashColorTimer -= deltaTime;
         return false;
     }
 
-    // Instead, just update the timer and continue with movement
+    // Important fix: Don't return here, just update the timer and continue
+    // This allows confused monsters to still move, but randomly
     if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
     {
+        // Update the timer but don't return
         PrairieKing::GetGameInstance()->m_monsterConfusionTimer -= deltaTime * 1000.0f;
+        
+        // For confused monsters, occasionally change direction
+        if (GetRandomFloat(0.0f, 1.0f) < 0.05f)
+        {
+            oppositeMotionGuy = !oppositeMotionGuy;
+        }
     }
 
-    // Incrementar el contador de ticks desde el último movimiento
+    // Increment the counter of ticks since last movement
     ticksSinceLastMovement++;
 
-    // Comportamiento específico según el tipo de monstruo
+    // Specific behavior based on monster type
     switch (type)
     {
     case GameConstants::ORC:
@@ -3592,7 +3725,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     case GameConstants::MUSHROOM:
     case GameConstants::SPIKEY:
     {
-        // Comportamiento especial para Spikey
+        // Special behavior for Spikey
         if (type == GameConstants::SPIKEY)
         {
             if (special || invisible)
@@ -3628,90 +3761,90 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
 
-        // Determinar el objetivo
+        // Determine the target
         Vector2 target = (targetPosition.x != 0.0f || targetPosition.y != 0.0f) ? targetPosition : playerPosition;
 
-        // Si el gopher está corriendo, perseguir al gopher
+        // If the gopher is running, chase the gopher instead
         if (PrairieKing::GetGameInstance()->m_gopherRunning)
         {
             target = {PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y};
         }
 
-        // Ocasionalmente cambiar la dirección del movimiento
+        // Occasionally change movement direction
         if (GetRandomFloat(0.0f, 1.0f) < 0.001f)
         {
             oppositeMotionGuy = !oppositeMotionGuy;
         }
 
-        // Determinar la dirección del movimiento
+        // Determine movement direction
         if ((type == GameConstants::SPIKEY && !oppositeMotionGuy) ||
             std::abs(target.x - position.x) > std::abs(target.y - position.y))
         {
             if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
             {
-                movementDirection = 3; // Izquierda
+                movementDirection = 3; // Left
             }
             else if (target.x > position.x + speed && (movedLastTurn || movementDirection != 1))
             {
-                movementDirection = 1; // Derecha
+                movementDirection = 1; // Right
             }
             else if (target.y > position.y + speed && (movedLastTurn || movementDirection != 2))
             {
-                movementDirection = 2; // Abajo
+                movementDirection = 2; // Down
             }
             else if (target.y + speed < position.y && (movedLastTurn || movementDirection != 0))
             {
-                movementDirection = 0; // Arriba
+                movementDirection = 0; // Up
             }
         }
         else
         {
             if (target.y > position.y + speed && (movedLastTurn || movementDirection != 2))
             {
-                movementDirection = 2; // Abajo
+                movementDirection = 2; // Down
             }
             else if (target.y + speed < position.y && (movedLastTurn || movementDirection != 0))
             {
-                movementDirection = 0; // Arriba
+                movementDirection = 0; // Up
             }
             else if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
             {
-                movementDirection = 3; // Izquierda
+                movementDirection = 3; // Left
             }
             else if (target.x > position.x + speed && (movedLastTurn || movementDirection != 1))
             {
-                movementDirection = 1; // Derecha
+                movementDirection = 1; // Right
             }
         }
 
         movedLastTurn = false;
         Rectangle attemptedPosition = position;
 
-        // Calcular la posición intentada según la dirección
+        // Apply movement based on direction
         switch (movementDirection)
         {
-        case 0: // Arriba
+        case 0: // Up
             attemptedPosition.y -= speed;
             break;
-        case 1: // Derecha
+        case 1: // Right
             attemptedPosition.x += speed;
             break;
-        case 2: // Abajo
+        case 2: // Down
             attemptedPosition.y += speed;
             break;
-        case 3: // Izquierda
+        case 3: // Left
             attemptedPosition.x -= speed;
             break;
         }
 
-        // Si estamos en modo zombie, invertir la dirección
+        // In zombie mode, invert the direction
         if (PrairieKing::GetGameInstance()->m_zombieModeTimer > 0)
         {
             attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
             attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
         }
 
-        // Comportamiento especial para Ogre (tipo 2)
+        // Special behavior for Ogre (type 2)
         if (type == GameConstants::OGRE)
         {
             for (int i = PrairieKing::GetGameInstance()->m_monsters.size() - 1; i >= 0; i--)
@@ -3729,7 +3862,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             }
         }
 
-        // Verificar colisiones
+        // Check for collisions
         if (PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) ||
             PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this) ||
             PrairieKing::GetGameInstance()->m_deathTimer > 0.0f)
@@ -3737,22 +3870,23 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             break;
         }
 
-        // Actualizar posición
+        // Update position if no collisions
         ticksSinceLastMovement = 0;
         position = attemptedPosition;
         movedLastTurn = true;
 
-        // Si llegamos al objetivo, resetear
+        // Check if we reached the target
         if (!CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                    position))
+                                    target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                   position))
         {
             break;
         }
 
+        // Reset target
         targetPosition = {0.0f, 0.0f};
 
-        // Comportamiento especial para Orc y Mummy
+        // Special behavior for Orc and Mummy
         if ((type == GameConstants::ORC || type == GameConstants::MUMMY) && uninterested)
         {
             targetPosition = {
@@ -3765,18 +3899,33 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             }
         }
 
-        // Comportamiento especial para Spikey
+        // Critical fix: Add Spikey invisibility behavior
         if (type == GameConstants::SPIKEY && !invisible)
         {
-            // Aquí se añadiría un sprite temporal (se implementará en otra tarea)
+            // Create temporary sprite animation for Spikey disappearing
+            PrairieKing::TemporaryAnimatedSprite sprite(
+                Rectangle{352, 144, 16, 16}, 60.0f, 3, 0,
+                Vector2{position.x + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x, 
+                       position.y + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y},
+                0.0f, 3.0f, false, 
+                position.y / 10000.0f, WHITE);
+            
+            // Add end function to restore Spikey behavior
+            sprite.endFunction = [](int extraData) {
+                // This would handle what happens when Spikey animation ends
+                // In the original, it would make Spikey "special"
+            };
+            
+            PrairieKing::GetGameInstance()->AddTemporarySprite(sprite);
             invisible = true;
         }
         break;
     }
+
     case GameConstants::GHOST:
     case GameConstants::DEVIL:
     {
-        // Comportamiento para monstruos voladores
+        // Behavior for flying monsters
         if (ticksSinceLastMovement > 20)
         {
             int tries = 0;
@@ -3794,17 +3943,17 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
 
-        // Determinar el objetivo
+        // Determine the target
         Vector2 target = (targetPosition.x != 0.0f || targetPosition.y != 0.0f) ? targetPosition : playerPosition;
 
-        // Calcular la velocidad hacia el objetivo
+        // Calculate velocity to target
         Vector2 targetToFly = GetVelocityTowardPoint(
             {position.x, position.y},
             {target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
              target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
             speed);
 
-        // Ajustar la aceleración
+        // Adjust acceleration
         float accelerationMultiplier = (targetToFly.x != 0.0f && targetToFly.y != 0.0f) ? 1.5f : 1.0f;
 
         if (targetToFly.x > acceleration.x)
@@ -3824,13 +3973,14 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             acceleration.y -= 0.1f * accelerationMultiplier;
         }
 
-        // Verificar colisiones y mover
+        // Calculate new position and check collisions
         Rectangle newPosition = {
             position.x + static_cast<int>(std::ceil(acceleration.x)),
             position.y + static_cast<int>(std::ceil(acceleration.y)),
             position.width,
             position.height};
 
+        // Update position if no collisions
         if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(newPosition, this) &&
             PrairieKing::GetGameInstance()->m_deathTimer <= 0.0f)
         {
@@ -3838,9 +3988,10 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             position.x += static_cast<int>(std::ceil(acceleration.x));
             position.y += static_cast<int>(std::ceil(acceleration.y));
 
+            // Check if reached target
             if (CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                        target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                       position))
+                                       target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                      position))
             {
                 targetPosition = {0.0f, 0.0f};
             }
