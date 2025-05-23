@@ -1870,6 +1870,11 @@ void PrairieKing::Update(float deltaTime)
         m_waveTimer -= deltaTime * 1000.0f;
     }
 
+    // Update shopping timer for merchant animation
+    if (m_merchantArriving || m_merchantLeaving) {
+        m_shoppingTimer += deltaTime * 1000.0f;
+    }
+
     UpdateMusicStream(m_overworldSong);
 
     // Update button held state
