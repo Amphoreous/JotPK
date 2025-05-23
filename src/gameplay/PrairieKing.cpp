@@ -639,8 +639,8 @@ void PrairieKing::AddGuts(Vector2 position, int whichGuts)
         break;
     }
 
-    case GHOST:
-    case DEVIL:
+    case EVIL_BUTTERFLY:
+    case IMP:
     {
         // Ghost/Devil specific death animation
         TemporaryAnimatedSprite ghostDeath(
@@ -1798,7 +1798,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     SpawnDebugMonster(ORC);
                     break;
                 case GameKeys::DebugSpawn2:
-                    SpawnDebugMonster(GHOST);
+                    SpawnDebugMonster(EVIL_BUTTERFLY);
                     break;
                 case GameKeys::DebugSpawn3:
                     SpawnDebugMonster(OGRE);
@@ -1807,7 +1807,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     SpawnDebugMonster(MUMMY);
                     break;
                 case GameKeys::DebugSpawn5:
-                    SpawnDebugMonster(DEVIL);
+                    SpawnDebugMonster(IMP);
                     break;
                 case GameKeys::DebugSpawn6:
                     SpawnDebugMonster(MUSHROOM);
@@ -2068,7 +2068,7 @@ void PrairieKing::Update(float deltaTime)
                         Vector2 spawnPoint = GetRandomSpawnPosition();
                         if (spawnPoint.x >= 0 && spawnPoint.y >= 0)
                         {
-                            int monsterType = ChooseMonsterType(m_monsterChances);
+                            int monsterType = ChooseMonsterType(GetMonsterChancesForWave(m_whichWave));
                             CowboyMonster *monster = new CowboyMonster(m_assets, monsterType, spawnPoint);
                             AddMonster(monster);
                         }
@@ -2219,22 +2219,6 @@ void PrairieKing::Update(float deltaTime)
         monster->Move(m_playerPosition, deltaTime);
     }
 
-    for (int i = m_monsters.size() - 1; i >= 0; i--)
-    {
-        if (m_monsters[i]->invisible ||
-            m_monsters[i]->position.x < 0 || m_monsters[i]->position.y < 0 ||
-            m_monsters[i]->position.x >= MAP_WIDTH * GetTileSize() ||
-            m_monsters[i]->position.y >= MAP_HEIGHT * GetTileSize())
-        {
-            std::cout << "Removing invalid monster at position: ("
-                      << m_monsters[i]->position.x << ", "
-                      << m_monsters[i]->position.y << ")" << std::endl;
-
-            // delete m_monsters[i];
-            // m_monsters.erase(m_monsters.begin() + i);
-        }
-    }
-
     // Handle map scrolling
     if (m_scrollingMap)
     {
@@ -2292,12 +2276,7 @@ void PrairieKing::UpdateMonsterChancesForWave()
         m_monsterChances[0] = Vector2Add(m_monsterChances[0], Vector2{0.001f, 0.02f}); // Orcs
         if (m_whichWave > 1)
         {
-            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f, 0.01f}); // Ogres
-        }
-        m_monsterChances[6] = Vector2Add(m_monsterChances[6], Vector2{0.001f, 0.01f}); // Spikey
-        if (m_whichRound > 0)
-        {
-            m_monsterChances[4] = {0.002f, 0.1f}; // Devils in New Game Plus
+            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f,0.01f});
         }
         break;
 
@@ -3089,7 +3068,7 @@ void PrairieKing::StartNewWave()
         m_monsterChances[0] = {0.01f + (m_whichWave - 1) * 0.005f, 0.1f + (m_whichWave - 1) * 0.05f}; // Orcs
         if (m_whichWave > 1)
         {
-            m_monsterChances[2] = {0.005f + (m_whichWave - 2) * 0.003f, 0.05f + (m_whichWave - 2) * 0.03f}; // Ogres
+            m_monsterChances[2] = {0.1,0.1}; // Ogres
         }
         m_monsterChances[6] = {0.005f + (m_whichWave - 1) * 0.003f, 0.05f + (m_whichWave - 1) * 0.03f}; // Spikeys
         if (m_whichRound > 0)
@@ -3485,7 +3464,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         speed = 1.0f; // Velocidad más lenta para los ogros
         break;
 
-    case GameConstants::GHOST:
+    case GameConstants::EVIL_BUTTERFLY:
         health = 2;   // Los fantasmas tienen salud moderada
         speed = 2.0f; // Los fantasmas son rápidos
         break;
@@ -3500,7 +3479,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         speed = 1.8f; // Velocidad ligeramente superior
         break;
 
-    case GameConstants::DEVIL:
+    case GameConstants::IMP:
         health = 5;   // Los demonios son muy resistentes
         speed = 2.5f; // Los demonios son muy rápidos
         break;
@@ -3921,9 +3900,8 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
         break;
     }
-
-    case GameConstants::GHOST:
-    case GameConstants::DEVIL:
+    case GameConstants::EVIL_BUTTERFLY:
+    case GameConstants::IMP:
     {
         // Behavior for flying monsters
         if (ticksSinceLastMovement > 20)
@@ -4035,23 +4013,74 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
 
     // Base chances for each monster type
     float orcChance = 0.4f;
-    float ghostChance = 0.3f;
-    float ogreChance = 0.2f;
-    float spikeyChance = 0.1f;
+    float ogreChance = 0.3f;
+    float spikeyChance = 0.3f;
+    float mushroomChance = 0.6f;
+    float evilButterflyChance = 0.4f;
+    float mummyChance = 0.6f;
+    float impChance = 0.4f;
+    
 
     // Adjust chances based on wave number
-    if (wave > 0)
+    //if (wave > 0)
+    //{
+    //    orcChance = std::max(0.1f, orcChance - wave * 0.05f);
+    //    evilButterflyChance = std::min(0.4f, evilButterflyChance + wave * 0.02f);
+    //    ogreChance = std::min(0.3f, ogreChance + wave * 0.03f);
+    //    spikeyChance = std::min(0.2f, spikeyChance + wave * 0.02f);
+    //}
+
+    switch (wave)
     {
+    case 0:
         orcChance = std::max(0.1f, orcChance - wave * 0.05f);
-        ghostChance = std::min(0.4f, ghostChance + wave * 0.02f);
-        ogreChance = std::min(0.3f, ogreChance + wave * 0.03f);
-        spikeyChance = std::min(0.2f, spikeyChance + wave * 0.02f);
+        chances.push_back({ ORC, orcChance });
+
+        break;
+    case 1:
+        orcChance = std::max(0.1f, orcChance - wave * 0.05f);
+        spikeyChance = std::min(0.9f, spikeyChance + wave * 0.02f);
+        chances.push_back({ ORC, orcChance });
+        chances.push_back({ SPIKEY, spikeyChance });
+ 
+        break;
+    case 2:
+    case 3:
+        orcChance = std::max(0.2f, orcChance - wave * 0.05f);
+        ogreChance = std::min(0.4f, ogreChance + wave * 0.03f);
+        spikeyChance = std::min(0.4f, spikeyChance + wave * 0.02f);
+        chances.push_back({ ORC, orcChance });
+        chances.push_back({ OGRE, ogreChance });
+        chances.push_back({ SPIKEY, spikeyChance });
+        break;
+    case 4: // BOSS
+        break;
+    case 5:
+    case 6:
+    case 7:
+        mushroomChance = std::max(0.6f, mushroomChance + wave * 0.1f);
+        evilButterflyChance = std::min(0.4f, evilButterflyChance + wave * 0.1f);
+        chances.push_back({ MUSHROOM, mushroomChance });
+        chances.push_back({ EVIL_BUTTERFLY, evilButterflyChance });
+        break;
+    case 8: //BOSS
+        break;
+    case 9:
+    case 10:
+    case 11:
+        mummyChance = std::max(0.6f, mummyChance + wave * 0.1f);
+        impChance = std::min(0.4f, impChance + wave * 0.1f);
+        chances.push_back({ MUMMY,  mummyChance });
+        chances.push_back({ IMP, impChance });
+        break;
+    case 12: //BOSS
+        break;
+    default:
+        break;
     }
 
-    chances.push_back({ORC, orcChance});
-    chances.push_back({GHOST, ghostChance});
-    chances.push_back({OGRE, ogreChance});
-    chances.push_back({SPIKEY, spikeyChance});
+
+
 
     return chances;
 }
@@ -4095,7 +4124,7 @@ int PrairieKing::ChooseMonsterType(const std::vector<Vector2> &chances)
         }
     }
 
-    return ORC; // Default to orc if something goes wrong
+    //return ORC; // Default to orc if something goes wrong
 }
 int PrairieKing::GetRandomInt(int min, int max)
 {
@@ -4120,13 +4149,13 @@ void PrairieKing::HandleDebugInputs()
     if (IsKeyPressed(GameKeys::DebugSpawn1))
         SpawnDebugMonster(ORC);
     if (IsKeyPressed(GameKeys::DebugSpawn2))
-        SpawnDebugMonster(GHOST);
+        SpawnDebugMonster(EVIL_BUTTERFLY);
     if (IsKeyPressed(GameKeys::DebugSpawn3))
         SpawnDebugMonster(OGRE);
     if (IsKeyPressed(GameKeys::DebugSpawn4))
         SpawnDebugMonster(MUMMY);
     if (IsKeyPressed(GameKeys::DebugSpawn5))
-        SpawnDebugMonster(DEVIL);
+        SpawnDebugMonster(IMP);
     if (IsKeyPressed(GameKeys::DebugSpawn6))
         SpawnDebugMonster(MUSHROOM);
     if (IsKeyPressed(GameKeys::DebugSpawn7))
