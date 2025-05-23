@@ -24,18 +24,18 @@ namespace GameConstants
     constexpr int BASE_TILE_SIZE = 16;
     constexpr int PIXEL_ZOOM = 3;
     constexpr int ORC = 0;
-    constexpr int GHOST = 1;
+    constexpr int EVIL_BUTTERFLY = 1;
     constexpr int OGRE = 2;
     constexpr int MUMMY = 3;
-    constexpr int DEVIL = 4;
+    constexpr int IMP = 4;
     constexpr int MUSHROOM = 5;
     constexpr int SPIKEY = 6;
     constexpr int ORC_SPEED = 7;
     constexpr int OGRE_SPEED = 5;
-    constexpr int GHOST_SPEED = 3;
+    constexpr int EVIL_BUTTERFLY_SPEED = 3;
     constexpr int SPIKEY_SPEED = 3;
     constexpr int ORC_HEALTH = 0;
-    constexpr int GHOST_HEALTH = 1;
+    constexpr int EVIL_BUTTERFLY_HEALTH = 1;
     constexpr int OGRE_HEALTH = 3;
     constexpr int SPIKEY_HEALTH = 2;
     constexpr int WAVE_DURATION = 80000;             // 80 seconds per wave
@@ -148,10 +148,10 @@ public:
     static constexpr int BASE_TILE_SIZE = 16;
     static constexpr int ORC_SPEED = 7;
     static constexpr int OGRE_SPEED = 2;
-    static constexpr int GHOST_SPEED = 3;
+    static constexpr int EVIL_BUTTERFLY_SPEED = 3;
     static constexpr int SPIKEY_SPEED = 3;
     static constexpr int ORC_HEALTH = 1;
-    static constexpr int GHOST_HEALTH = 1;
+    static constexpr int EVIL_BUTTERFLY_HEALTH = 1;
     static constexpr int OGRE_HEALTH = 3;
     static constexpr int SPIKEY_HEALTH = 2;
     static constexpr int CACTUS_DANCE_DELAY = 800;
@@ -173,10 +173,10 @@ public:
 
     // Monster types
     static constexpr int ORC = 0;
-    static constexpr int GHOST = 1;
+    static constexpr int EVIL_BUTTERFLY = 1;
     static constexpr int OGRE = 2;
     static constexpr int MUMMY = 3;
-    static constexpr int DEVIL = 4;
+    static constexpr int IMP = 4;
     static constexpr int MUSHROOM = 5;
     static constexpr int SPIKEY = 6;
     static constexpr int DRACULA = 7;
