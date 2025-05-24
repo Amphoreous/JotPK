@@ -1521,6 +1521,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 3:
         // Fence perimeters in the middle
+
         newMap[5][5] = MAP_FENCE;
         newMap[6][5] = MAP_FENCE;
         newMap[7][5] = MAP_FENCE;
@@ -1545,7 +1546,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[11][9] = MAP_FENCE;
         newMap[11][10] = MAP_FENCE;
         break;
-
     case 4:
     case 8:
         {
@@ -3633,7 +3633,7 @@ int PrairieKing::CowboyMonster::GetLootDrop()
         }
 
         // 1% chance for coin
-        if (GetRandomFloat(0.0f, 1.0f) < 0.04f)
+        if (GetRandomFloat(0.0f, 1.0f) < 0.06f)
         {
             return COIN1;
         }
