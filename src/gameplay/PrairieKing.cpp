@@ -254,7 +254,7 @@ void PrairieKing::Initialize()
     m_storeItems.clear();
     m_activePowerups.clear();
     m_spawnQueue.clear();
-    m_spawnQueue.resize(4);
+    m_spawnQueue.resize(8);
 
     // Initialize input state
     m_buttonHeldState.clear();
@@ -1476,6 +1476,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 0:
+        //Default map
         break;
 
     case 1:
@@ -2057,7 +2058,7 @@ void PrairieKing::Update(float deltaTime)
             if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
                 !m_waitingForPlayerToMoveDownAMap && m_deathTimer <= 0)
             {
-                float spawnChance = 0.02f;
+                float spawnChance = 0.04f;
                 if (m_monsters.empty())
                 {
                     spawnChance = 0.1f;
@@ -2065,10 +2066,10 @@ void PrairieKing::Update(float deltaTime)
 
                 if (GetRandomFloat(0.0f, 1.0f) < spawnChance)
                 {
-                    int numMonsters = 1;
+                    int numMonsters = 2;
                     if (m_whichWave > 5 && GetRandomFloat(0.0f, 1.0f) < 0.3f)
                     {
-                        numMonsters = 2;
+                        numMonsters = 4;
                     }
 
                     for (int i = 0; i < numMonsters; i++)
@@ -3632,7 +3633,7 @@ int PrairieKing::CowboyMonster::GetLootDrop()
         }
 
         // 1% chance for coin
-        if (GetRandomFloat(0.0f, 1.0f) < 0.01f)
+        if (GetRandomFloat(0.0f, 1.0f) < 0.04f)
         {
             return COIN1;
         }
