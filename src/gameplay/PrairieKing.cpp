@@ -3888,25 +3888,25 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
 
         // Critical fix: Add Spikey invisibility behavior
-        if (type == GameConstants::SPIKEY && !invisible)
-        {
-            // Create temporary sprite animation for Spikey disappearing
-            PrairieKing::TemporaryAnimatedSprite sprite(
-                Rectangle{352, 144, 16, 16}, 60.0f, 3, 0,
-                Vector2{position.x + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x, 
-                       position.y + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y},
-                0.0f, 3.0f, false, 
-                position.y / 10000.0f, WHITE);
-            
-            // Add end function to restore Spikey behavior
-            sprite.endFunction = [](int extraData) {
-                // This would handle what happens when Spikey animation ends
-                // In the original, it would make Spikey "special"
-            };
-            
-            PrairieKing::GetGameInstance()->AddTemporarySprite(sprite);
-            invisible = true;
-        }
+        //if (type == GameConstants::SPIKEY && !invisible)
+        //{
+        //    // Create temporary sprite animation for Spikey disappearing
+        //    PrairieKing::TemporaryAnimatedSprite sprite(
+        //        Rectangle{352, 144, 16, 16}, 60.0f, 3, 0,
+        //        Vector2{position.x + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x, 
+        //               position.y + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y},
+        //        0.0f, 3.0f, false, 
+        //        position.y / 10000.0f, WHITE);
+        //    
+        //    // Add end function to restore Spikey behavior
+        //    sprite.endFunction = [](int extraData) {
+        //        // This would handle what happens when Spikey animation ends
+        //        // In the original, it would make Spikey "special"
+        //    };
+        //    
+        //    PrairieKing::GetGameInstance()->AddTemporarySprite(sprite);
+        //    invisible = true;
+        //}
         break;
     }
     case GameConstants::EVIL_BUTTERFLY:
