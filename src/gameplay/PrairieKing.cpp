@@ -1475,6 +1475,9 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[7][15] = MAP_ROCKY1;
         break;
 
+    case 0:
+        break;
+
     case 1:
         // Add fence corners
         newMap[4][4] = MAP_FENCE;
