@@ -1363,7 +1363,7 @@ void PrairieKing::StartShoppingLevel()
     }
     
     // Make sure we have the next map ready
-    GetMap(m_whichWave + 1, m_nextMap);
+    GetMap(m_whichWave, m_nextMap);
 }
 
 int PrairieKing::GetPriceForItem(int whichItem) const {
@@ -1500,23 +1500,23 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 2:
         // Add central barriers and corner cacti
-        newMap[8][4] = MAP_FENCE;
-        newMap[12][8] = MAP_FENCE;
-        newMap[8][12] = MAP_FENCE;
-        newMap[4][8] = MAP_FENCE;
+        newMap[8][5] = MAP_FENCE;
+        newMap[11][8] = MAP_FENCE;
+        newMap[8][11] = MAP_FENCE;
+        newMap[5][8] = MAP_FENCE;
         
-        newMap[1][1] = MAP_CACTUS;
-        newMap[14][1] = MAP_CACTUS;
-        newMap[14][14] = MAP_CACTUS;
-        newMap[1][14] = MAP_CACTUS;
-        newMap[2][1] = MAP_CACTUS;
-        newMap[13][1] = MAP_CACTUS;
-        newMap[13][14] = MAP_CACTUS;
-        newMap[2][14] = MAP_CACTUS;
-        newMap[1][2] = MAP_CACTUS;
-        newMap[14][2] = MAP_CACTUS;
-        newMap[14][13] = MAP_CACTUS;
-        newMap[1][13] = MAP_CACTUS;
+        //newMap[1][1] = MAP_CACTUS;
+        //newMap[14][1] = MAP_CACTUS;
+        //newMap[14][14] = MAP_CACTUS;
+        //newMap[1][14] = MAP_CACTUS;
+        //newMap[2][1] = MAP_CACTUS;
+        //newMap[13][1] = MAP_CACTUS;
+        //newMap[13][14] = MAP_CACTUS;
+        //newMap[2][14] = MAP_CACTUS;
+        //newMap[1][2] = MAP_CACTUS;
+        //newMap[14][2] = MAP_CACTUS;
+        //newMap[14][13] = MAP_CACTUS;
+        //newMap[1][13] = MAP_CACTUS;
         break;
 
     case 3:
