@@ -2058,7 +2058,7 @@ void PrairieKing::Update(float deltaTime)
             if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
                 !m_waitingForPlayerToMoveDownAMap && m_deathTimer <= 0)
             {
-                float spawnChance = 0.04f;
+                float spawnChance = 0.03f;
                 if (m_monsters.empty())
                 {
                     spawnChance = 0.1f;
