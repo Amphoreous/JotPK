@@ -2013,12 +2013,6 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
 
 void PrairieKing::Update(float deltaTime)
 {
-    if (!m_isPaused)
-    {
-        m_waveTimer -= deltaTime * 1000.0f;
-    }
-
-    // Update shopping timer for merchant animation
     if (m_merchantArriving || m_merchantLeaving) {
         m_shoppingTimer += deltaTime * 1000.0f;
     }
@@ -2081,6 +2075,10 @@ void PrairieKing::Update(float deltaTime)
     if (m_deathTimer > 0)
     {
         m_deathTimer -= deltaTime * 1000.0f;
+        if (m_deathTimer <= 0)
+        {
+            AfterPlayerDeathFunction(0);
+        }
     }
 
     if (m_playerInvincibleTimer > 0)
@@ -2193,10 +2191,10 @@ void PrairieKing::Update(float deltaTime)
     // Handle wave state
     if (!m_waveCompleted)
     {
-
+        // ONLY UPDATE WAVE TIMER HERE - This is the single place where wave timer should be updated
         if (m_waveTimer > 0 && !m_shootoutLevel)
         {
-            m_waveTimer -= deltaTime * 1000.0f;
+            m_waveTimer -= deltaTime * 1000.0f;  // <-- KEEP ONLY THIS ONE
 
             // Only spawn monsters if not in special states and player is alive
             if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
@@ -2903,17 +2901,16 @@ void PrairieKing::Draw()
         0.0f,
         WHITE);
 
-    if (!m_shootoutLevel)
+    // Only draw the timer bar if we're in an active wave state
+    if (!m_shootoutLevel && m_betweenWaveTimer <= 0 && !m_shopping && 
+        !m_merchantArriving && !m_merchantLeaving && !m_waitingForPlayerToMoveDownAMap)
     {
         Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
-
-        // Constrain the timer bar width to prevent overflowing
+        
         int timerWidth = static_cast<int>((16 * GetTileSize() - 60) *
                                           (static_cast<float>(m_waveTimer) / WAVE_DURATION));
-
-        // Make sure it doesn't exceed the screen width
         timerWidth = std::min(timerWidth, 16 * GetTileSize() - 60);
-
+    
         DrawRectangle(
             static_cast<int>(m_topLeftScreenCoordinate.x + 30),
             static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
