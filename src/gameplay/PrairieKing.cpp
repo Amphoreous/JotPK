@@ -319,7 +319,7 @@ void PrairieKing::ApplyLevelSpecificStates()
     if (m_whichWave == 12)
     {
         m_shootoutLevel = true;
-        // m_monsters.push_back(new Dracula(m_assets));
+         //m_monsters.push_back(new Dracula(m_assets));
 
         if (m_whichRound > 0)
         {
@@ -329,7 +329,7 @@ void PrairieKing::ApplyLevelSpecificStates()
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
         m_shootoutLevel = true;
-        // m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
+        //m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
 
         // Play outlaw music
         PlaySound(GetSound("cowboy_outlawsong"));
@@ -3700,7 +3700,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     if (flashColorTimer > 0.0f)
     {
         flashColorTimer -= deltaTime;
-        return false;
+        //return false;
     }
 
     // Important fix: Don't return here, just update the timer and continue
