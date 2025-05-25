@@ -2855,8 +2855,9 @@ void PrairieKing::Draw()
 
     if (m_betweenWaveTimer > 0 && m_whichWave == 0 && !m_scrollingMap)
     {
-        Vector2 pos = {GetScreenWidth() / 2.5, GetScreenHeight() - 144 - 3};
-        Vector2 pos2 = {GetScreenWidth() / 1.89, GetScreenHeight() - 97 - 3};
+        Vector2 pos = {GetScreenWidth() / 2.6, GetScreenHeight() - 138 - 3};
+        Vector2 pos2 = {GetScreenWidth() / 1.89, GetScreenHeight() - 138 - 3};
+        Vector2 pos3 = { GetScreenWidth() / 1.89, GetScreenHeight() - 81 - 3 };
 
         // Drawing controls instruction box
 
@@ -2875,6 +2876,16 @@ void PrairieKing::Draw()
             Rectangle{119, 0, 41, 17},
             Rectangle{pos2.x, pos2.y, 150, 54},
             Vector2{0, 0},
+            0.0f,
+            WHITE);
+
+        // Drawing debug instruction box
+
+        DrawTexturePro(
+            GetTexture("cursors"),
+            Rectangle{ 74, 0, 45, 19 },
+            Rectangle{ pos3.x, pos3.y, 151, 55 },
+            Vector2{ 0, 0 },
             0.0f,
             WHITE);
     }
