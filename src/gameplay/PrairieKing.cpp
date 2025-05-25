@@ -569,12 +569,12 @@ void PrairieKing::UsePowerup(int which)
 
     case COIN1:
         m_coins++;
-        PlaySound(GetSound("Pickup_Coin15"));
+        PlaySound(GetSound("pickup_coin"));
         break;
 
     case COIN5:
         m_coins += 5;
-        PlaySound(GetSound("Pickup_Coin15"));
+        PlaySound(GetSound("pickup_coin"));
         break;
 
     default:
@@ -930,7 +930,7 @@ void PrairieKing::ProcessInputs()
                 m_gameRestartTimer = 1500;
                 m_gameOver = false;
                 m_gameOverOption = 0;
-                PlaySound(GetSound("Pickup_Coin15"));
+                PlaySound(GetSound("pickup_coin"));
             }
         }
         return;
@@ -3676,12 +3676,12 @@ int PrairieKing::CowboyMonster::GetLootDrop()
         }
 
         // Random powerup between 2-9
-        int loot = GetRandomInt(2, 9);
+        int loot = GetRandomInt(1, 9);
 
         // 40% chance to reroll if got powerup 5
         if (loot == 5 && GetRandomFloat(0.0f, 1.0f) < 0.4f)
         {
-            loot = GetRandomInt(2, 9);
+            loot = GetRandomInt(1, 9);
         }
 
         return loot;
