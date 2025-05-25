@@ -3600,6 +3600,9 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
     flashColorTimer = 0.3f;
     flashColor = RED;
 
+
+    PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
+
     if (health <= 0)
     {
         // Drop loot
