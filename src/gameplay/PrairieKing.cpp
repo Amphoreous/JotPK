@@ -1998,6 +1998,15 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     m_monsters.clear();
                     std::cout << "Cleared " << count << " monsters" << std::endl;
                 }
+                case GameKeys::DebugClearWave:
+                {
+                    m_waveTimer = 0;
+                    int count = m_monsters.size();
+                    for (auto monster : m_monsters)
+                        delete monster;
+                    m_monsters.clear();
+                    std::cout << "Cleared " << count << " monsters" << std::endl;
+                }
                 break;
                 default:
                     break;
@@ -4550,6 +4559,8 @@ void PrairieKing::DrawDebugInfo()
     DrawText("F7: Inc Damage", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
     DrawText("F8: Clear Monsters", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F9: Clear Wave", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
     DrawText("Num1-7: Spawn Monster", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;

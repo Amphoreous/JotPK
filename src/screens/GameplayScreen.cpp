@@ -15,6 +15,7 @@ void GameplayScreen::Update(float deltaTime) {
     if (IsKeyPressed(KEY_F6)) m_game->SetButtonState(PrairieKing::GameKeys::DebugAddCoins, true);
     if (IsKeyPressed(KEY_F7)) m_game->SetButtonState(PrairieKing::GameKeys::DebugIncDamage, true);
     if (IsKeyPressed(KEY_F8)) m_game->SetButtonState(PrairieKing::GameKeys::DebugClearMonsters, true);
+    if (IsKeyPressed(KEY_F9)) m_game->SetButtonState(PrairieKing::GameKeys::DebugClearWave, true);
 
     // Handle numpad monster spawn keys
     if (IsKeyPressed(KEY_KP_1)) m_game->SetButtonState(PrairieKing::GameKeys::DebugSpawn1, true);
