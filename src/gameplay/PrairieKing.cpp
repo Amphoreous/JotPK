@@ -2157,10 +2157,10 @@ void PrairieKing::Update(float deltaTime)
 
                 // Set no pickup area around merchant
                 m_shoppingCarpetNoPickup = Rectangle{
-                    m_merchantBox.x - GetTileSize(),
+                    m_merchantBox.x,
                     m_merchantBox.y + GetTileSize(),
-                    static_cast<float>(GetTileSize() * 3),
-                    static_cast<float>(GetTileSize() * 2)};
+                    static_cast<float>(GetTileSize()),
+                    static_cast<float>(GetTileSize() * 2) };
             }
         }
 
@@ -2169,8 +2169,7 @@ void PrairieKing::Update(float deltaTime)
         {
             for (auto it = m_storeItems.begin(); it != m_storeItems.end();)
             {
-                if (!CheckCollisionRecs(m_playerBoundingBox, m_shoppingCarpetNoPickup) &&
-                    CheckCollisionRecs(m_playerBoundingBox, it->first) &&
+                if (CheckCollisionRecs(m_playerBoundingBox, it->first) &&
                     m_coins >= GetPriceForItem(it->second))
                 {
 
@@ -2500,6 +2499,10 @@ void PrairieKing::Draw()
             WHITE);
     }
 
+    if (m_shopping) {
+        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate);
+    }
+
     // 3. Characters and Monsters (layerDepth: ~0.001 - 0.002 + position.Y/10000f)
     // Draw player
     if (m_deathTimer <= 0.0f && (m_playerInvincibleTimer <= 0 || m_playerInvincibleTimer / 100 % 2 == 0))
@@ -2686,9 +2689,6 @@ void PrairieKing::Draw()
         return;
     }
 
-    if (m_shopping) {
-        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate); 
-    }
 
     // 4. UI Elements (layerDepth: 0.25 - 0.5)
     // Draw UI background elements
