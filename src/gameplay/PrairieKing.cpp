@@ -451,11 +451,11 @@ void PrairieKing::UsePowerup(int which)
 
     case POWERUP_ZOMBIE:
         // Stop current music streams properly
-        if (m_overworldSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_overworldSong))
+        if (IsMusicStreamPlaying(m_overworldSong))
         {
             StopMusicStream(m_overworldSong);
         }
-        if (m_zombieSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_zombieSong))
+        if (IsMusicStreamPlaying(m_zombieSong))
         {
             StopMusicStream(m_zombieSong);
             UnloadMusicStream(m_zombieSong);
@@ -2204,19 +2204,19 @@ void PrairieKing::Update(float deltaTime)
     // Handle between wave timer
     if (m_betweenWaveTimer > 0)
     {
-        m_betweenWaveTimer -= deltaTime * 1000.0f;
-        if (m_betweenWaveTimer <= 0)
-        {
-            // Remove the death check to allow wave to start after respawning
-            m_waveTimer = GameConstants::WAVE_DURATION;
-            m_waveCompleted = false;
-            UpdateMonsterChancesForWave();
-            if (!IsMusicStreamPlaying(m_overworldSong))
-            {
-                PlayMusicStream(m_overworldSong);
-            }
-        }
-        return;
+      m_betweenWaveTimer -= deltaTime * 1000.0f;
+      if (m_betweenWaveTimer <= 0)
+      {
+          // DON'T reset the wave timer here - it should preserve the death penalty
+          // m_waveTimer = GameConstants::WAVE_DURATION;  // <-- REMOVE THIS LINE
+          m_waveCompleted = false;
+          UpdateMonsterChancesForWave();
+          if (!IsMusicStreamPlaying(m_overworldSong))
+          {
+              PlayMusicStream(m_overworldSong);
+          }
+      }
+      return;
     }
 
     // Handle wave state
@@ -2708,7 +2708,7 @@ void PrairieKing::Draw()
                 static_cast<int>(m_topLeftScreenCoordinate.y),
                 16 * GetTileSize(), 16 * GetTileSize(),
                 BLACK);
-                
+
             // Draw flashing player sprite during transformation
             DrawTexturePro(
                 GetTexture("cursors"),
