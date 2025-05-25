@@ -1933,12 +1933,14 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
         std::cout << "Pause screen: " << (m_isPaused ? "ON" : "OFF") << std::endl;
         return;
     }
-    // Special handling for debug keys
-    if (key >= GameKeys::DebugToggle && key <= GameKeys::DebugClearMonsters)
+
+    // Manejo especial para debug keys (incluye F3-F9 y Numpad 1-9)
+    if ((key >= GameKeys::DebugToggle && key <= GameKeys::DebugClearWave) ||
+        (key >= GameKeys::DebugSpawn1 && key <= GameKeys::DebugSpawn9))
     {
         if (pressed && !IsKeyDown(key))
-        { // Only trigger on initial press
-            // Handle debug toggle separately
+        {
+            // F3: Toggle debug mode
             if (key == GameKeys::DebugToggle)
             {
                 m_debugMode = !m_debugMode;
@@ -1946,38 +1948,10 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                 return;
             }
 
-            // Only process other debug commands if debug mode is on
             if (m_debugMode)
             {
                 switch (key)
                 {
-                case GameKeys::DebugSpawn1:
-                    SpawnDebugMonster(ORC);
-                    break;
-                case GameKeys::DebugSpawn2:
-                    SpawnDebugMonster(EVIL_BUTTERFLY);
-                    break;
-                case GameKeys::DebugSpawn3:
-                    SpawnDebugMonster(OGRE);
-                    break;
-                case GameKeys::DebugSpawn4:
-                    SpawnDebugMonster(MUMMY);
-                    break;
-                case GameKeys::DebugSpawn5:
-                    SpawnDebugMonster(IMP);
-                    break;
-                case GameKeys::DebugSpawn6:
-                    SpawnDebugMonster(MUSHROOM);
-                    break;
-                case GameKeys::DebugSpawn7:
-                    SpawnDebugMonster(SPIKEY);
-                    break;
-                case GameKeys::DebugSpawn8:
-                    SpawnDebugPowerup(GetRandomInt(0, 5));
-                    break;
-                case GameKeys::DebugSpawn9:
-                    SpawnDebugPowerup(GetRandomInt(6, 10));
-                    break;
                 case GameKeys::DebugAddLife:
                     m_lives++;
                     std::cout << "Added life. Total: " << m_lives << std::endl;
@@ -1994,20 +1968,34 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                 {
                     int count = m_monsters.size();
                     for (auto monster : m_monsters)
+                    {
                         delete monster;
+                    }
                     m_monsters.clear();
                     std::cout << "Cleared " << count << " monsters" << std::endl;
+                    break;
                 }
                 case GameKeys::DebugClearWave:
                 {
+                    std::cout << "F9 (DebugClearWave) pressed" << std::endl;
                     m_waveTimer = 0;
                     int count = m_monsters.size();
                     for (auto monster : m_monsters)
                         delete monster;
                     m_monsters.clear();
                     std::cout << "Cleared " << count << " monsters" << std::endl;
+                    break;
                 }
-                break;
+                // Numpad debug spawns:
+                case GameKeys::DebugSpawn1: SpawnDebugMonster(ORC); break;
+                case GameKeys::DebugSpawn2: SpawnDebugMonster(EVIL_BUTTERFLY); break;
+                case GameKeys::DebugSpawn3: SpawnDebugMonster(OGRE); break;
+                case GameKeys::DebugSpawn4: SpawnDebugMonster(MUMMY); break;
+                case GameKeys::DebugSpawn5: SpawnDebugMonster(IMP); break;
+                case GameKeys::DebugSpawn6: SpawnDebugMonster(MUSHROOM); break;
+                case GameKeys::DebugSpawn7: SpawnDebugMonster(SPIKEY); break;
+                case GameKeys::DebugSpawn8: SpawnDebugPowerup(GetRandomInt(0, 5)); break;
+                case GameKeys::DebugSpawn9: SpawnDebugPowerup(GetRandomInt(6, 10)); break;
                 default:
                     break;
                 }
@@ -4419,6 +4407,16 @@ void PrairieKing::HandleDebugInputs()
         {
             delete monster;
         }
+        m_monsters.clear();
+        std::cout << "Cleared " << count << " monsters" << std::endl;
+    }
+
+    if (IsKeyPressed(GameKeys::DebugClearWave))
+    {
+        m_waveTimer = 0;
+        int count = m_monsters.size();
+        for (auto monster : m_monsters)
+            delete monster;
         m_monsters.clear();
         std::cout << "Cleared " << count << " monsters" << std::endl;
     }
