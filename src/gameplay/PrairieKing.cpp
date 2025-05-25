@@ -3465,7 +3465,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
     {
     case GameConstants::ORC:
         health = 1;   // Los orcos deben morir con un disparo
-        speed = 1.9f; // Velocidad base para los orcos
+        speed = 2.0f; // Velocidad base para los orcos
         break;
 
     case GameConstants::OGRE:
