@@ -2213,19 +2213,24 @@ void PrairieKing::Update(float deltaTime)
     // Handle between wave timer
     if (m_betweenWaveTimer > 0)
     {
-      m_betweenWaveTimer -= deltaTime * 1000.0f;
-      if (m_betweenWaveTimer <= 0)
-      {
-          // DON'T reset the wave timer here - it should preserve the death penalty
-          // m_waveTimer = GameConstants::WAVE_DURATION;  // <-- REMOVE THIS LINE
-          m_waveCompleted = false;
-          UpdateMonsterChancesForWave();
-          if (!IsMusicStreamPlaying(m_overworldSong))
-          {
-              PlayMusicStream(m_overworldSong);
-          }
-      }
-      return;
+        m_betweenWaveTimer -= deltaTime * 1000.0f;
+        if (m_betweenWaveTimer <= 0)
+        {
+            // Only reset wave timer if we're starting a new wave (not respawning from death)
+            if (!m_died)
+            {
+                m_waveTimer = GameConstants::WAVE_DURATION;
+            }
+            // If m_died is true, we preserve the current m_waveTimer value (which includes death penalty)
+
+            m_waveCompleted = false;
+            UpdateMonsterChancesForWave();
+            if (!IsMusicStreamPlaying(m_overworldSong))
+            {
+                PlayMusicStream(m_overworldSong);
+            }
+        }
+        return;
     }
 
     // Handle wave state
