@@ -1602,6 +1602,12 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 5:
+        // Cambiar todo el suelo interior a césped
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = MAP_GRASSY;
+            }
+        }
         // Add lots of corner cacti
         newMap[1][1] = MAP_CACTUS;
         newMap[14][1] = MAP_CACTUS;
@@ -1632,6 +1638,12 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 6:
+        // Cambiar todo el suelo interior a césped
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = MAP_GRASSY;
+            }
+        }
         // Add rocks, cacti, and fences
         newMap[4][5] = MAP_ROCKY1;
         newMap[12][10] = MAP_CACTUS;
@@ -1652,6 +1664,12 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 7:
+        // Cambiar todo el suelo interior a césped
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = MAP_GRASSY;
+            }
+        }
         // Add trenches through middle
         for (int x = 0; x < MAP_WIDTH; x++)
         {
