@@ -1687,6 +1687,13 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 9:
+        // Cambiar todo el suelo interior a cementerio
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = GRAVEYARD;
+            }
+        }
+
         // Add cacti squares
         newMap[4][4] = MAP_CACTUS;
         newMap[5][4] = MAP_CACTUS;
@@ -1708,6 +1715,13 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 10:
+        // Cambiar todo el suelo interior a cementerio
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = GRAVEYARD;
+            }
+        }
+
         // Add trenches at top and bottom
         for (int x = 0; x < MAP_WIDTH; x++)
         {
@@ -1730,6 +1744,13 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 11:
+        // Cambiar todo el suelo interior a cementerio
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = GRAVEYARD;
+            }
+        }
+
         // Add fence borders
         for (int x = 0; x < MAP_WIDTH; x++)
         {
@@ -1744,6 +1765,13 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 12:
+        // Cambiar todo el suelo interior a cementerio
+        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
+            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+                newMap[x][y] = GRAVEYARD;
+            }
+        }
+
         {
             // Convert barriers to cactus
             for (int y = 0; y < MAP_HEIGHT; y++)
