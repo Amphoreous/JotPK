@@ -705,7 +705,41 @@ void PrairieKing::EndOfGopherAnimationBehavior(int extraInfo)
 
 void PrairieKing::KillOutlaw()
 {
-    PlaySound(GetSoundStatic("Cowboy_monsterDie"));
+    if (s_instance)
+    {
+        // Add special powerup when outlaw is killed
+        int powerupType = (s_instance->m_world == 0) ? POWERUP_LOG : POWERUP_SKULL;
+        Vector2 powerupPos = { 8.0f * s_instance->GetTileSize(), 10.0f * s_instance->GetTileSize() };
+        s_instance->m_powerups.push_back(CowboyPowerup(powerupType, powerupPos, 9999999));
+
+        // Stop outlaw music
+        // StopMusicStream(s_instance->m_outlawSong);
+
+        // Set bridge tile
+        s_instance->m_map[8][8] = MAP_BRIDGE;
+        s_instance->m_screenFlash = 200;
+
+        PlaySound(s_instance->GetSound("Cowboy_monsterDie"));
+
+        // Add explosion effects
+        for (int i = 0; i < 15; i++)
+        {
+            Vector2 effectPos = {
+                static_cast<float>(s_instance->m_monsters[0]->position.x + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize())),
+                static_cast<float>(s_instance->m_monsters[0]->position.y + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize()))
+            };
+
+            TemporaryAnimatedSprite explosion(
+                Rectangle{ 464, 192, 16, 16 }, 80.0f, 5, 0,
+                { s_instance->m_topLeftScreenCoordinate.x + effectPos.x,
+                 s_instance->m_topLeftScreenCoordinate.y + effectPos.y },
+                0.0f, 3.0f, false, effectPos.y / 10000.0f, WHITE);
+            explosion.delayBeforeAnimationStart = i * 75;
+            s_instance->AddTemporarySprite(explosion);
+        }
+
+        s_instance->m_monsters.clear();
+    }
 }
 
 void PrairieKing::UpdateBullets(float deltaTime)
@@ -4132,19 +4166,19 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     return false;
 }
 
-// Función auxiliar para calcular la velocidad hacia un punto
+// Add helper function to CowboyMonster base class
 Vector2 PrairieKing::CowboyMonster::GetVelocityTowardPoint(Vector2 start, Vector2 end, float speed)
 {
     Vector2 direction = {end.x - start.x, end.y - start.y};
-    float length = sqrt(direction.x * direction.x + direction.y * direction.y);
-
+    float length = sqrtf(direction.x * direction.x + direction.y * direction.y);
+    
     if (length > 0)
     {
-        direction.x /= length;
-        direction.y /= length;
+        direction.x = (direction.x / length) * speed;
+        direction.y = (direction.y / length) * speed;
     }
-
-    return {direction.x * speed, direction.y * speed};
+    
+    return direction;
 }
 
 // Función auxiliar para generar números aleatorios
@@ -4642,4 +4676,855 @@ void PrairieKing::DrawShopping(const Texture2D& texture, Vector2 topLeftScreenCo
 
 void PrairieKing::PauseScreen()
 {
+}
+
+// Add these implementations to your PrairieKing.cpp file
+
+// ====================
+// DRACULA IMPLEMENTATION
+// ====================
+
+void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
+{
+    // Draw health bar if not in gloating phase
+    if (phase != GLOATING_PHASE)
+    {
+        float healthPercentage = static_cast<float>(health) / static_cast<float>(fullHealth);
+        int healthBarWidth = static_cast<int>(16 * PrairieKing::GetGameInstance()->GetTileSize() * healthPercentage);
+        
+        Rectangle healthBar = {
+            static_cast<int>(topLeftScreenCoordinate.x),
+            static_cast<int>(topLeftScreenCoordinate.y) + 16 * PrairieKing::GetGameInstance()->GetTileSize() + 3,
+            healthBarWidth,
+            PrairieKing::GetGameInstance()->GetTileSize() / 3
+        };
+        DrawRectangleRec(healthBar, Color{188, 51, 74, 255});
+    }
+
+    // Draw Dracula sprite based on phase and flash state
+    Rectangle sourceRect;
+    Vector2 drawPos = {topLeftScreenCoordinate.x + position.x, topLeftScreenCoordinate.y + position.y};
+    
+    if (flashColorTimer > 0.0f)
+    {
+        // Flash sprite when taking damage
+        sourceRect = {464, 96, 16, 16}; // Flash sprite
+    }
+    else
+    {
+        switch (phase)
+        {
+        case GLOATING_PHASE:
+        case WALK_RANDOMLY_AND_SHOOT_PHASE:
+        case SPREAD_SHOT_PHASE:
+        case SUMMON_DEMON_PHASE:
+        case SUMMON_MUMMY_PHASE:
+            // Normal Dracula animation
+            sourceRect = {592.0f + (phaseInternalTimer / 100 % 3) * 16, 160, 16, 16};
+            break;
+        default:
+            sourceRect = {592, 112, 16, 16};
+            break;
+        }
+        
+        // Special effects for gloating phase
+        if (phase == GLOATING_PHASE)
+        {
+            // Draw cape animation
+            Vector2 capePos = {drawPos.x, drawPos.y + PrairieKing::GetGameInstance()->GetTileSize() + 
+                              sinf(static_cast<float>(phaseInternalTimer) / 1000.0f) * 3.0f};
+            Rectangle capeRect = {528, 176, 16, 16};
+            DrawTextureRec(texture, capeRect, capePos, WHITE);
+            
+            // Draw speech bubble
+            Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2, 
+                               drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
+            Rectangle bubbleRect = {608, 128, 32, 32};
+            DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
+        }
+    }
+    
+    DrawTextureRec(texture, sourceRect, drawPos, WHITE);
+}
+
+int PrairieKing::Dracula::GetLootDrop()
+{
+    return -1; // Dracula doesn't drop normal loot
+}
+
+bool PrairieKing::Dracula::TakeDamage(int damage)
+{
+    if (phase == GLOATING_PHASE)
+    {
+        return false; // Invulnerable during gloating
+    }
+    
+    health -= damage;
+    if (health < 0)
+    {
+        return true;
+    }
+    
+    flashColorTimer = 100.0f;
+    PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
+    return false;
+}
+
+bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
+{
+    // Update flash timer
+    if (flashColorTimer > 0.0f)
+    {
+        flashColorTimer -= deltaTime * 1000.0f;
+    }
+    
+    // Update phase timer
+    phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+    
+    switch (phase)
+    {
+    case GLOATING_PHASE:
+        if (phaseInternalTimer <= 0)
+        {
+            phaseInternalCounter = 0;
+            // Start boss music
+            PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_boss"));
+            phase = WALK_RANDOMLY_AND_SHOOT_PHASE;
+        }
+        break;
+        
+    case WALK_RANDOMLY_AND_SHOOT_PHASE:
+        {
+            if (phaseInternalCounter == 0)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = GetRandomInt(3000, 7000);
+            }
+            
+            if (phaseInternalTimer < 0)
+            {
+                phaseInternalCounter = 0;
+                phase = GetRandomInt(1, 4); // Random phase 1-3
+                phaseInternalTimer = 9999;
+            }
+            
+            Vector2 target = playerPosition;
+            if (PrairieKing::GetGameInstance()->m_deathTimer <= 0.0f)
+            {
+                int movementDirection = -1;
+                
+                // Determine movement direction (move away from player)
+                if (abs(target.x - position.x) > abs(target.y - position.y))
+                {
+                    if (target.x + speed < position.x)
+                        movementDirection = 3; // Left
+                    else if (target.x > position.x + speed)
+                        movementDirection = 1; // Right
+                    else if (target.y > position.y + speed)
+                        movementDirection = 2; // Down
+                    else if (target.y + speed < position.y)
+                        movementDirection = 0; // Up
+                }
+                else
+                {
+                    if (target.y > position.y + speed)
+                        movementDirection = 2; // Down
+                    else if (target.y + speed < position.y)
+                        movementDirection = 0; // Up
+                    else if (target.x + speed < position.x)
+                        movementDirection = 3; // Left
+                    else if (target.x > position.x + speed)
+                        movementDirection = 1; // Right
+                }
+                
+                Rectangle attemptedPosition = position;
+                switch (movementDirection)
+                {
+                case 0: attemptedPosition.y -= speed; break;
+                case 1: attemptedPosition.x += speed; break;
+                case 2: attemptedPosition.y += speed; break;
+                case 3: attemptedPosition.x -= speed; break;
+                }
+                
+                // Move away from player (invert movement)
+                attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
+                attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
+                
+                if (!PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) &&
+                    !PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this))
+                {
+                    position = attemptedPosition;
+                }
+                
+                // Shooting behavior
+                shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+                if (shootTimer < 0)
+                {
+                    Vector2 trajectory = GetVelocityTowardPoint(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
+                        {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, 
+                         playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        8.0f);
+                    
+                    // Predict player movement
+                    if (!PrairieKing::GetGameInstance()->m_playerMovementDirections.empty())
+                    {
+                        int lastDir = PrairieKing::GetGameInstance()->m_playerMovementDirections.back();
+                        Vector2 prediction = {0, 0};
+                        switch (lastDir)
+                        {
+                        case 0: prediction.y = -3.0f; break;
+                        case 1: prediction.x = 3.0f; break;
+                        case 2: prediction.y = 3.0f; break;
+                        case 3: prediction.x = -3.0f; break;
+                        }
+                        trajectory.x += prediction.x;
+                        trajectory.y += prediction.y;
+                    }
+                    
+                    PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                        PrairieKing::CowboyBullet(
+                            {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                             position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                            trajectory, 1));
+                    
+                    shootTimer = 250;
+                    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+                }
+            }
+        }
+        break;
+        
+    case SUMMON_DEMON_PHASE:
+    case SUMMON_MUMMY_PHASE:
+        if (phaseInternalCounter == 0)
+        {
+            // Move to home position
+            Vector2 oldPos = {position.x, position.y};
+            if (position.x > homePosition.x + 6)
+                position.x -= 6;
+            else if (position.x < homePosition.x - 6)
+                position.x += 6;
+                
+            if (position.y > homePosition.y + 6)
+                position.y -= 6;
+            else if (position.y < homePosition.y - 6)
+                position.y += 6;
+                
+            if (Vector2Distance({position.x, position.y}, oldPos) < 0.1f)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = 1500;
+            }
+        }
+        else if (phaseInternalCounter == 1 && phaseInternalTimer < 0)
+        {
+            // Summon enemies
+            Vector2 origin = {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                            position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f};
+            SummonEnemies(origin, GetRandomInt(0, 5));
+            
+            if (GetRandomFloat(0.0f, 1.0f) < 0.4f)
+            {
+                phase = WALK_RANDOMLY_AND_SHOOT_PHASE;
+                phaseInternalCounter = 0;
+            }
+            else
+            {
+                phaseInternalTimer = 2000;
+            }
+        }
+        break;
+        
+    case SPREAD_SHOT_PHASE:
+        if (phaseInternalCounter == 0)
+        {
+            // Move to home position
+            Vector2 oldPos = {position.x, position.y};
+            if (position.x > homePosition.x + 6)
+                position.x -= 6;
+            else if (position.x < homePosition.x - 6)
+                position.x += 6;
+                
+            if (position.y > homePosition.y + 6)
+                position.y -= 6;
+            else if (position.y < homePosition.y - 6)
+                position.y += 6;
+                
+            if (Vector2Distance({position.x, position.y}, oldPos) < 0.1f)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = 1500;
+            }
+        }
+        else if (phaseInternalCounter == 1)
+        {
+            if (phaseInternalTimer < 0)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = 2000;
+                shootTimer = 200;
+                FireSpread({position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                          position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f}, 0.0);
+            }
+        }
+        else if (phaseInternalCounter == 2)
+        {
+            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (shootTimer < 0)
+            {
+                FireSpread({position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                          position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f}, 0.0);
+                shootTimer = 200;
+            }
+            if (phaseInternalTimer < 0)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = 500;
+            }
+        }
+        else if (phaseInternalCounter == 3)
+        {
+            if (phaseInternalTimer < 0)
+            {
+                phaseInternalTimer = 2000;
+                shootTimer = 200;
+                phaseInternalCounter++;
+                
+                // Aimed shot at player
+                Vector2 trajectory = GetVelocityTowardPoint(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
+                    {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    8.0f);
+                
+                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                    PrairieKing::CowboyBullet(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                         position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        trajectory, 1));
+                
+                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+            }
+        }
+        else if (phaseInternalCounter == 4)
+        {
+            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (shootTimer < 0)
+            {
+                // Random spread shots
+                Vector2 trajectory = GetVelocityTowardPoint(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
+                    {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    8.0f);
+                
+                trajectory.x += GetRandomFloat(-1.0f, 1.0f);
+                trajectory.y += GetRandomFloat(-1.0f, 1.0f);
+                
+                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                    PrairieKing::CowboyBullet(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                         position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        trajectory, 1));
+                
+                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+                shootTimer = 200;
+            }
+            
+            if (phaseInternalTimer < 0)
+            {
+                if (GetRandomFloat(0.0f, 1.0f) < 0.4f)
+                {
+                    phase = WALK_RANDOMLY_AND_SHOOT_PHASE;
+                    phaseInternalCounter = 0;
+                }
+                else
+                {
+                    phaseInternalTimer = 500;
+                    phaseInternalCounter = 1;
+                }
+            }
+        }
+        break;
+    }
+    
+    return false;
+}
+
+void PrairieKing::Dracula::FireSpread(Vector2 origin, double offsetAngle)
+{
+    // Get surrounding tile positions (8 directions around Dracula)
+    std::vector<Vector2> directions = {
+        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize()}, // Up
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y - PrairieKing::GetGameInstance()->GetTileSize()}, // Up-Right
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y}, // Right
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y + PrairieKing::GetGameInstance()->GetTileSize()}, // Down-Right
+        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize()}, // Down
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y + PrairieKing::GetGameInstance()->GetTileSize()}, // Down-Left
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y}, // Left
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y - PrairieKing::GetGameInstance()->GetTileSize()}, // Up-Left
+    };
+    
+    for (const auto& direction : directions)
+    {
+        Vector2 trajectory = GetVelocityTowardPoint(origin, direction, 6.0f);
+        
+        if (offsetAngle > 0.0)
+        {
+            offsetAngle /= 2.0;
+            float cosAngle = cosf(offsetAngle);
+            float sinAngle = sinf(offsetAngle);
+            
+            float newX = cosAngle * (direction.x - origin.x) - sinAngle * (direction.y - origin.y) + origin.x;
+            float newY = sinAngle * (direction.x - origin.x) + cosAngle * (direction.y - origin.y) + origin.y;
+            
+            trajectory = GetVelocityTowardPoint(origin, {newX, newY}, 8.0f);
+        }
+        
+        PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+            PrairieKing::CowboyBullet(origin, trajectory, 1));
+    }
+    
+    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+}
+
+void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
+{
+    // Spawn positions around Dracula
+    std::vector<Vector2> spawnPositions = {
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
+        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2},
+        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() * 3 / 4}
+    };
+    
+    for (const auto& pos : spawnPositions)
+    {
+        Rectangle spawnRect = {pos.x, pos.y, 
+                             static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize()),
+                             static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize())};
+        
+        if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(spawnRect, nullptr))
+        {
+            auto* monster = new PrairieKing::CowboyMonster(
+                PrairieKing::GetGameInstance()->m_assets, which, pos);
+            PrairieKing::GetGameInstance()->AddMonster(monster);
+        }
+        
+        // Add summoning effect
+        PrairieKing::TemporaryAnimatedSprite summonEffect(
+            Rectangle{464, 192, 16, 16}, 80.0f, 5, 0, 
+            {PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x + pos.x,
+             PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y + pos.y},
+            0.0f, 3.0f, false, pos.y / 10000.0f, WHITE);
+        summonEffect.delayBeforeAnimationStart = GetRandomInt(0, 800);
+        PrairieKing::GetGameInstance()->AddTemporarySprite(summonEffect);
+    }
+    
+    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+}
+
+// ====================
+// OUTLAW IMPLEMENTATION
+// ====================
+
+void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
+{
+    // Draw health bar
+    float healthPercentage = static_cast<float>(health) / static_cast<float>(fullHealth);
+    int healthBarWidth = static_cast<int>(16 * PrairieKing::GetGameInstance()->GetTileSize() * healthPercentage);
+    
+    Rectangle healthBar = {
+        static_cast<int>(topLeftScreenCoordinate.x),
+        static_cast<int>(topLeftScreenCoordinate.y) + 16 * PrairieKing::GetGameInstance()->GetTileSize() + 3,
+        healthBarWidth,
+        PrairieKing::GetGameInstance()->GetTileSize() / 3
+    };
+    DrawRectangleRec(healthBar, Color{188, 51, 74, 255});
+    
+    Vector2 drawPos = {topLeftScreenCoordinate.x + position.x, topLeftScreenCoordinate.y + position.y};
+    Rectangle sourceRect;
+    
+    if (flashColorTimer > 0.0f)
+    {
+        // Flash sprite when taking damage
+        sourceRect = {496, 96, 16, 16};
+    }
+    else
+    {
+        switch (phase)
+        {
+        case TALKING_PHASE:
+        case HIDING_PHASE:
+            // Stationary sprite
+            sourceRect = {560.0f + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 176, 16, 16};
+            
+            // Draw speech bubble during talking phase
+            if (phase == TALKING_PHASE && phaseCountdown > 1000)
+            {
+                Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
+                                   drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
+                Rectangle bubbleRect = {576 + ((PrairieKing::GetGameInstance()->m_whichWave > 5) ? 32 : 0), 
+                                      192, 32, 32};
+                DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
+            }
+            break;
+            
+        case RUN_GUN_AND_PANT_PHASE:
+            if (phaseInternalCounter == 2)
+            {
+                // Panting sprite
+                sourceRect = {560.0f + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 176, 16, 16};
+            }
+            else
+            {
+                // Moving sprite
+                sourceRect = {592.0f + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 176, 16, 16};
+            }
+            break;
+            
+        default:
+            // Moving sprite for other phases
+            sourceRect = {592.0f + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 176, 16, 16};
+            break;
+        }
+    }
+    
+    DrawTextureRec(texture, sourceRect, drawPos, WHITE);
+}
+
+bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
+{
+    if (flashColorTimer > 0.0f)
+    {
+        flashColorTimer -= deltaTime * 1000.0f;
+    }
+    
+    phaseCountdown -= static_cast<int>(deltaTime * 1000.0f);
+    
+    // Wrap around screen boundaries
+    if (position.x > 17 * PrairieKing::GetGameInstance()->GetTileSize() || 
+        position.x < -PrairieKing::GetGameInstance()->GetTileSize())
+    {
+        position.x = 16 * PrairieKing::GetGameInstance()->GetTileSize() / 2.0f;
+    }
+    
+    switch (phase)
+    {
+    case TALKING_PHASE:
+    case HIDING_PHASE:
+        if (phaseCountdown < 0)
+        {
+            phase = GetRandomInt(1, 5);
+            dartLeft = (playerPosition.x < position.x);
+            
+            // Special logic for phase selection based on player position
+            if (playerPosition.x > 7 * PrairieKing::GetGameInstance()->GetTileSize() && 
+                playerPosition.x < 9 * PrairieKing::GetGameInstance()->GetTileSize())
+            {
+                if (GetRandomFloat(0.0f, 1.0f) < 0.66f || phase == RUN_AND_GUN_PHASE)
+                {
+                    phase = SHOOT_AT_PLAYER_PHASE;
+                }
+            }
+            else if (phase == SHOOT_AT_PLAYER_PHASE)
+            {
+                phase = RUN_GUN_AND_PANT_PHASE;
+            }
+            
+            phaseInternalCounter = 0;
+            phaseInternalTimer = 0;
+        }
+        break;
+        
+    case SHOOT_AT_PLAYER_PHASE:
+        {
+            int motion = dartLeft ? -3 : 3;
+            
+            if (phaseInternalCounter == 0 && 
+                !(playerPosition.x > 7 * PrairieKing::GetGameInstance()->GetTileSize() && 
+                  playerPosition.x < 9 * PrairieKing::GetGameInstance()->GetTileSize()))
+            {
+                phaseInternalCounter = 1;
+                phaseInternalTimer = GetRandomInt(500, 1500);
+                break;
+            }
+            
+            if (abs(position.x - homePosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f) < 
+                7 * PrairieKing::GetGameInstance()->GetTileSize() + 12 && phaseInternalCounter == 0)
+            {
+                position.x += motion;
+                break;
+            }
+            
+            if (phaseInternalCounter == 2)
+            {
+                motion = dartLeft ? -4 : 4;
+                position.x -= motion;
+                if (abs(position.x - homePosition.x) < 4)
+                {
+                    position.x = homePosition.x;
+                    phase = HIDING_PHASE;
+                    phaseCountdown = GetRandomInt(1000, 2000);
+                }
+                break;
+            }
+            
+            if (phaseInternalCounter == 0)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = GetRandomInt(1000, 2000);
+            }
+            
+            phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+            
+            if (shootTimer < 0)
+            {
+                Vector2 trajectory = GetVelocityTowardPoint(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
+                    {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    8.0f);
+                
+                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                    PrairieKing::CowboyBullet(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                         position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        trajectory, 1));
+                
+                shootTimer = 120;
+                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+            }
+            
+            if (phaseInternalTimer <= 0)
+            {
+                phaseInternalCounter++;
+            }
+        }
+        break;
+        
+    case DART_OUT_AND_SHOOT_PHASE:
+        {
+            int motion = dartLeft ? -3 : 3;
+            
+            if (abs(position.x - homePosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f) < 
+                2 * PrairieKing::GetGameInstance()->GetTileSize() + 12 && phaseInternalCounter == 0)
+            {
+                position.x += motion;
+                if (position.x > 256)
+                {
+                    phaseInternalCounter = 2;
+                }
+                break;
+            }
+            
+            if (phaseInternalCounter == 2)
+            {
+                position.x -= motion;
+                if (abs(position.x - homePosition.x) < 4)
+                {
+                    position.x = homePosition.x;
+                    phase = HIDING_PHASE;
+                    phaseCountdown = GetRandomInt(1000, 2000);
+                }
+                break;
+            }
+            
+            if (phaseInternalCounter == 0)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = GetRandomInt(1000, 2000);
+            }
+            
+            phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+            
+            if (shootTimer < 0)
+            {
+                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                    PrairieKing::CowboyBullet(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                         position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        {static_cast<float>(GetRandomInt(-2, 3)), -8.0f}, 1));
+                
+                shootTimer = 150;
+                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+            }
+            
+            if (phaseInternalTimer <= 0)
+            {
+                phaseInternalCounter++;
+            }
+        }
+        break;
+        
+    case RUN_AND_GUN_PHASE:
+        if (phaseInternalCounter == 2)
+        {
+            if (position.x < homePosition.x)
+                position.x += 4;
+            else
+                position.x -= 4;
+                
+            if (abs(position.x - homePosition.x) < 5)
+            {
+                position.x = homePosition.x;
+                phase = HIDING_PHASE;
+                phaseCountdown = GetRandomInt(1000, 2000);
+            }
+            return false;
+        }
+        
+        if (phaseInternalCounter == 0)
+        {
+            phaseInternalCounter++;
+            phaseInternalTimer = GetRandomInt(4000, 7000);
+        }
+        
+        phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+        
+        // Chase player horizontally
+        if (position.x > playerPosition.x && position.x - playerPosition.x > 3.0f)
+        {
+            position.x -= 2;
+        }
+        else if (position.x < playerPosition.x && playerPosition.x - position.x > 3.0f)
+        {
+            position.x += 2;
+        }
+        
+        shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (shootTimer < 0)
+        {
+            PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                PrairieKing::CowboyBullet(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    {static_cast<float>(GetRandomInt(-1, 2)), -8.0f}, 1));
+            
+            shootTimer = 250;
+            if (fullHealth > 50)
+            {
+                shootTimer -= 50;
+            }
+            if (GetRandomFloat(0.0f, 1.0f) < 0.2f)
+            {
+                shootTimer = 150;
+            }
+            PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+        }
+        
+        if (phaseInternalTimer <= 0)
+        {
+            phaseInternalCounter++;
+        }
+        break;
+        
+    case RUN_GUN_AND_PANT_PHASE:
+        {
+            if (phaseInternalCounter == 0)
+            {
+                phaseInternalCounter++;
+                phaseInternalTimer = GetRandomInt(3000, 6500);
+                break;
+            }
+            
+            if (phaseInternalCounter == 2)
+            {
+                phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+                if (phaseInternalTimer <= 0)
+                {
+                    phaseInternalCounter++;
+                }
+                break;
+            }
+            
+            if (phaseInternalCounter == 3)
+            {
+                if (position.x < homePosition.x)
+                    position.x += 4;
+                else
+                    position.x -= 4;
+                    
+                if (abs(position.x - homePosition.x) < 5)
+                {
+                    position.x = homePosition.x;
+                    phase = HIDING_PHASE;
+                    phaseCountdown = GetRandomInt(1000, 2000);
+                }
+                break;
+            }
+            
+            // Run back and forth while shooting
+            int motion = dartLeft ? -3 : 3;
+            position.x += motion;
+            
+            if (position.x < PrairieKing::GetGameInstance()->GetTileSize() || 
+                position.x > 15 * PrairieKing::GetGameInstance()->GetTileSize())
+            {
+                dartLeft = !dartLeft;
+            }
+            
+            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (shootTimer < 0)
+            {
+                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                    PrairieKing::CowboyBullet(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                         position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        {static_cast<float>(GetRandomInt(-1, 2)), -8.0f}, 1));
+                
+                shootTimer = 250;
+                if (fullHealth > 50)
+                {
+                    shootTimer -= 50;
+                }
+                if (GetRandomFloat(0.0f, 1.0f) < 0.2f)
+                {
+                    shootTimer = 150;
+                }
+                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+            }
+            
+            phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (phaseInternalTimer <= 0)
+            {
+                if (phase == RUN_AND_GUN_PHASE)
+                {
+                    phaseInternalCounter = 3;
+                    break;
+                }
+                phaseInternalTimer = 3000;
+                phaseInternalCounter++;
+            }
+        }
+        break;
+    }
+    
+    return false;
+}
+
+int PrairieKing::Outlaw::GetLootDrop()
+{
+    return 8; // Special loot for Outlaw
+}
+
+bool PrairieKing::Outlaw::TakeDamage(int damage)
+{
+    if (abs(position.x - homePosition.x) < 5)
+    {
+        return false; // Invulnerable when at home position
+    }
+    
+    health -= damage;
+    if (health < 0)
+    {
+        return true;
+    }
+    
+    flashColorTimer = 150.0f;
+    PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
+    return false;
 }
