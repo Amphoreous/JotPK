@@ -2446,7 +2446,7 @@ void PrairieKing::Draw()
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
                            32.0f - m_world * 16.0f,
                            16.0f,
                            16.0f},
@@ -2470,7 +2470,7 @@ void PrairieKing::Draw()
             {
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == 5 && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
+                    Rectangle{336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
                               32.0f - m_world * 16.0f,
                               16.0f,
                               16.0f},
@@ -2483,7 +2483,7 @@ void PrairieKing::Draw()
                     WHITE);
             }
         }
-
+        
         // Draw black borders above and below the visible map area
         DrawRectangle(
             static_cast<int>(m_topLeftScreenCoordinate.x),
@@ -2539,10 +2539,6 @@ void PrairieKing::Draw()
             Vector2{0, 0},
             0.0f,
             WHITE);
-    }
-
-    if (m_shopping) {
-        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
     // 3. Characters and Monsters (layerDepth: ~0.001 - 0.002 + position.Y/10000f)
@@ -2712,25 +2708,9 @@ void PrairieKing::Draw()
         monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
-    if (m_isPaused)
-    {
-        // Draw semi-transparent black background
-        Color semiTransparentBlack = {0, 0, 0, 128}; // Last value (128) is alpha: 0-255
-        DrawRectangle(
-            static_cast<int>(m_topLeftScreenCoordinate.x),
-            static_cast<int>(m_topLeftScreenCoordinate.y),
-            16 * GetTileSize(),
-            16 * GetTileSize(),
-            semiTransparentBlack);
-        DrawTextEx(m_assets.GetFont("text"), "GAME PAUSED",
-                   Vector2{GetScreenWidth() / 2.0f - 500, 100},
-                   200, 10, WHITE);
-        DrawTextEx(m_assets.GetFont("text"), "Press P to resume the game",
-                   Vector2{GetScreenWidth() / 2.0f - 242, 400},
-                   50, 2, WHITE);
-        return;
+    if (m_shopping) {
+        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
-
 
     // 4. UI Elements (layerDepth: 0.25 - 0.5)
     // Draw UI background elements
@@ -2957,20 +2937,22 @@ void PrairieKing::Draw()
             WHITE);
     }
 
+    DrawDebugInfo();
+
     if (m_isPaused)
     {
         // Draw semi-transparent black background
         Color semiTransparentBlack = {0, 0, 0, 128}; // Last value (128) is alpha: 0-255
-        DrawRectangle(
-            static_cast<int>(m_topLeftScreenCoordinate.x),
-            static_cast<int>(m_topLeftScreenCoordinate.y),
-            16 * GetTileSize(),
-            16 * GetTileSize(),
-            semiTransparentBlack);
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), semiTransparentBlack);
+
+        DrawTextEx(m_assets.GetFont("text"), "GAME PAUSED",
+                   Vector2{GetScreenWidth() / 2.0f - 500, 100},
+                   200, 10, WHITE);
+        DrawTextEx(m_assets.GetFont("text"), "Press P to resume the game",
+                   Vector2{GetScreenWidth() / 2.0f - 242, 400},
+                   50, 2, WHITE);
         return;
     }
-
-    DrawDebugInfo();
 }
 
 Rectangle PrairieKing::GetRectForShopItem(int itemID)
