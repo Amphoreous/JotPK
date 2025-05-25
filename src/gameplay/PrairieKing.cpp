@@ -319,17 +319,23 @@ void PrairieKing::ApplyLevelSpecificStates()
     if (m_whichWave == 12)
     {
         m_shootoutLevel = true;
-         //m_monsters.push_back(new Dracula(m_assets));
-
+        // Create Dracula boss
+        m_monsters.push_back(new Dracula(m_assets));
+        
         if (m_whichRound > 0)
         {
+            // Double health for subsequent rounds
             m_monsters.back()->health *= 2;
         }
     }
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
         m_shootoutLevel = true;
-        //m_monsters.push_back(new Outlaw(m_assets, Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())}, (m_world == 0) ? 50 : 100));
+        // Create Outlaw boss
+        Vector2 outlawPos = {static_cast<float>(8 * GetTileSize()), 
+                           static_cast<float>(13 * GetTileSize())};
+        int outlawHealth = (m_world == 0) ? 50 : 100;
+        m_monsters.push_back(new Outlaw(m_assets, outlawPos, outlawHealth));
 
         // Play outlaw music
         PlaySound(GetSound("cowboy_outlawsong"));
@@ -527,36 +533,33 @@ void PrairieKing::UsePowerup(int which)
         break;
 
     case POWERUP_NUKE:
+    {
         PlaySound(GetSound("cowboy_explosion"));
+        
         if (!m_shootoutLevel)
         {
-            for (auto monster : m_monsters)
+            // Normal behavior - clear all monsters
+            for (auto* monster : m_monsters)
             {
-                AddGuts({monster->position.x, monster->position.y}, monster->type);
+                AddGuts(Vector2{monster->position.x, monster->position.y}, monster->type);
                 delete monster;
             }
             m_monsters.clear();
         }
         else
         {
-            for (auto monster : m_monsters)
+            // Boss level behavior - damage bosses instead of killing them
+            for (auto* monster : m_monsters)
             {
                 monster->TakeDamage(30);
+                // Add visual bullet effect
+                Vector2 bulletPos = {monster->position.x + monster->position.width/2, 
+                                   monster->position.y + monster->position.height/2};
+                m_bullets.push_back(CowboyBullet(bulletPos, Vector2{2, 1}, 1));
             }
         }
-
-        for (int i = 0; i < 30; i++)
-        {
-            m_temporarySprites.push_back(TemporaryAnimatedSprite(
-                {336, 144, 16, 16},
-                80.0f, 5, 0,
-                {static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.x,
-                 static_cast<float>(GetRandomFloat(1, 16) * GetTileSize()) + m_topLeftScreenCoordinate.y},
-                0.0f, 3.0f, false,
-                1.0f, WHITE));
-            m_temporarySprites.back().delayBeforeAnimationStart = static_cast<int>(GetRandomFloat(0, 800));
-        }
         break;
+    }
 
     case POWERUP_SPREAD:
     case POWERUP_RAPIDFIRE:
@@ -715,8 +718,9 @@ void PrairieKing::UpdateBullets(float deltaTime)
 
         // Check collision with monsters
         bool hitMonster = false;
-        for (auto monster : m_monsters)
+        for (int monsterIndex = 0; monsterIndex < m_monsters.size(); monsterIndex++)
         {
+            auto monster = m_monsters[monsterIndex];
             if (monster->invisible)
                 continue;
 
@@ -730,9 +734,37 @@ void PrairieKing::UpdateBullets(float deltaTime)
             {
                 if (monster->TakeDamage(it->damage))
                 {
-                    // Monster died, remove it
+                    AddGuts(Vector2{monster->position.x, monster->position.y}, monster->type);
+                    int loot = monster->GetLootDrop();
+                    
+                    // Special boss logic
+                    if (m_shootoutLevel)
+                    {
+                        if (m_whichWave == 12 && monster->type == DRACULA)
+                        {
+                            PlaySound(GetSound("cowboy_explosion"));
+                            // Add heart powerup at specific location for Dracula
+                            Vector2 heartPos = {static_cast<float>(8 * GetTileSize()), 
+                                              static_cast<float>(10 * GetTileSize())};
+                            m_powerups.push_back(CowboyPowerup(POWERUP_HEART, heartPos, 9999999));
+                        }
+                    }
+                    
+                    // Normal loot logic
+                    if (m_whichRound > 0 && (loot == 5 || loot == 8) && GetRandomFloat(0, 1) < 0.4)
+                    {
+                        loot = -1; // No loot
+                    }
+                    
+                    if (loot != -1 && m_whichWave != 12)
+                    {
+                        Vector2 lootPos = {monster->position.x, monster->position.y};
+                        m_powerups.push_back(CowboyPowerup(loot, lootPos, LOOT_DURATION));
+                    }
+                    
+                    // Remove the monster
                     delete monster;
-                    m_monsters.erase(std::remove(m_monsters.begin(), m_monsters.end(), monster), m_monsters.end());
+                    m_monsters.erase(m_monsters.begin() + monsterIndex);
                 }
                 hitMonster = true;
                 break;
@@ -756,30 +788,38 @@ void PrairieKing::UpdateBullets(float deltaTime)
     }
 
     // Update enemy bullets
-    for (auto it = m_enemyBullets.begin(); it != m_enemyBullets.end();)
+    for (int i = m_enemyBullets.size() - 1; i >= 0; i--)
     {
-        it->position.x += it->motion.x * BULLET_SPEED * deltaTime;
-        it->position.y += it->motion.y * BULLET_SPEED * deltaTime;
-
+        m_enemyBullets[i].position.x += m_enemyBullets[i].motion.x;
+        m_enemyBullets[i].position.y += m_enemyBullets[i].motion.y;
+        
+        // Check bounds
+        if (m_enemyBullets[i].position.x <= 0 || 
+            m_enemyBullets[i].position.y <= 0 || 
+            m_enemyBullets[i].position.x >= 762 || 
+            m_enemyBullets[i].position.y >= 762)
+        {
+            m_enemyBullets.erase(m_enemyBullets.begin() + i);
+            continue;
+        }
+        
+        // Check collision with map
+        if (IsCollidingWithMapForBullets(m_enemyBullets[i].position))
+        {
+            m_enemyBullets.erase(m_enemyBullets.begin() + i);
+            continue;
+        }
+        
         // Check collision with player
-        Rectangle bulletRect = {
-            it->position.x,
-            it->position.y,
-            static_cast<float>(GetTileSize() / 4),
-            static_cast<float>(GetTileSize() / 4)};
-
-        if (CheckCollisionRecs(bulletRect, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
+        if (m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
         {
-            PlayerDie();
-            it = m_enemyBullets.erase(it);
-        }
-        else if (IsCollidingWithMapForBullets(it->position))
-        {
-            it = m_enemyBullets.erase(it);
-        }
-        else
-        {
-            ++it;
+            Rectangle bulletRect = {m_enemyBullets[i].position.x, m_enemyBullets[i].position.y, 15, 15};
+            if (CheckCollisionRecs(m_playerBoundingBox, bulletRect))
+            {
+                PlayerDie();
+                m_enemyBullets.erase(m_enemyBullets.begin() + i);
+                continue;
+            }
         }
     }
 }
@@ -3582,6 +3622,37 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
     ticksSinceLastMovement = 0;
     acceleration = {0, 0};
     targetPosition = position;
+}
+
+PrairieKing::Dracula::Dracula(AssetManager &assets)
+    : CowboyMonster(assets, DRACULA, Vector2{static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM), 
+                                           static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM)})
+{
+    homePosition = Vector2{position.x, position.y};
+    position.y += BASE_TILE_SIZE * PIXEL_ZOOM * 4; // Move down 4 tiles from home
+    health = 350;
+    fullHealth = health;
+    phase = GLOATING_PHASE;
+    phaseInternalTimer = 4000;
+    phaseInternalCounter = 0;
+    shootTimer = 0;
+    speed = 2;
+    type = DRACULA; // Ensure type is set to DRACULA constant
+}
+
+PrairieKing::Outlaw::Outlaw(AssetManager &assets, Vector2 position, int health)
+    : CowboyMonster(assets, -1, position)
+{
+    this->health = health;
+    fullHealth = health;
+    homePosition = position;
+    phase = TALKING_PHASE;
+    phaseCountdown = 4000;
+    shootTimer = 0;
+    phaseInternalTimer = 0;
+    phaseInternalCounter = 0;
+    dartLeft = true;
+    speed = 3;
 }
 
 // Implementación de los métodos virtuales de CowboyMonster
