@@ -3468,10 +3468,19 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         speed = 2.0f; // Velocidad base para los orcos
         break;
 
+    case GameConstants::SPIKEY:
+        health = 2;   // Los Spikey tienen salud moderada
+        speed = 1.8f; // Velocidad ligeramente superior
+        break;
+
     case GameConstants::OGRE:
         health = 3;   // Los ogros son más resistentes
         speed = 1.0f; // Velocidad más lenta para los ogros
         break;
+
+    case GameConstants::MUSHROOM:
+        health = 2;
+        speed = 2.1f;
 
     case GameConstants::EVIL_BUTTERFLY:
         health = 2;   // Los fantasmas tienen salud moderada
@@ -3483,15 +3492,11 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         speed = 0.8f; // Las momias son lentas
         break;
 
-    case GameConstants::SPIKEY:
-        health = 2;   // Los Spikey tienen salud moderada
-        speed = 1.8f; // Velocidad ligeramente superior
-        break;
-
     case GameConstants::IMP:
         health = 5;   // Los demonios son muy resistentes
         speed = 2.5f; // Los demonios son muy rápidos
         break;
+
 
     default:
         health = 100; // Valor por defecto para otros tipos
