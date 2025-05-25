@@ -740,7 +740,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
         }
 
         // Check collision with map
-        if (!hitMonster && IsCollidingWithMap(it->position))
+        if (!hitMonster && IsCollidingWithMapForBullets(it->position))
         {
             hitMonster = true;
         }
@@ -773,7 +773,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
             PlayerDie();
             it = m_enemyBullets.erase(it);
         }
-        else if (IsCollidingWithMap(it->position))
+        else if (IsCollidingWithMapForBullets(it->position))
         {
             it = m_enemyBullets.erase(it);
         }
@@ -1173,6 +1173,17 @@ bool PrairieKing::IsMapTilePassable(int tileType)
     return true;
 }
 
+bool PrairieKing::IsMapTilePassableForBullets(int tileType)
+{
+    // Solo las barreras sólidas y las vallas bloquean balas, las trench NO
+    if (tileType <= 1 || tileType == 5 || tileType == 7)
+    {
+        return false;
+    }
+    return true;
+}
+
+
 bool PrairieKing::IsMapTilePassableForMonsters(int tileType)
 {
     if (tileType == 5 || (tileType >= 7 && tileType <= 9))
@@ -1221,6 +1232,19 @@ bool PrairieKing::IsCollidingWithMapForMonsters(Rectangle positionToCheck)
     }
     return false;
 }
+
+bool PrairieKing::IsCollidingWithMapForBullets(Vector2 position)
+{
+    int tileX = static_cast<int>(position.x) / GetTileSize();
+    int tileY = static_cast<int>(position.y) / GetTileSize();
+
+    if (tileX >= 0 && tileX < MAP_WIDTH && tileY >= 0 && tileY < MAP_HEIGHT)
+    {
+        return !IsMapTilePassableForBullets(m_map[tileX][tileY]);
+    }
+    return true; // Off the map is considered collision
+}
+
 
 bool PrairieKing::IsCollidingWithMap(Rectangle positionToCheck)
 {

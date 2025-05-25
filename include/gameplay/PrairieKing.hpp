@@ -417,7 +417,9 @@ public:
     void SpawnBullets(const std::vector<int> &directions, Vector2 spawn);
     bool IsSpawnQueueEmpty();
     static bool IsMapTilePassable(int tileType);
+    static bool IsMapTilePassableForBullets(int tileType);
     static bool IsMapTilePassableForMonsters(int tileType);
+    bool IsCollidingWithMapForBullets(Vector2 position);
     bool IsCollidingWithMonster(Rectangle r, CowboyMonster *subject);
     bool IsCollidingWithMapForMonsters(Rectangle positionToCheck);
     bool IsCollidingWithMap(Rectangle positionToCheck);
