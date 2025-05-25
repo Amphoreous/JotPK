@@ -5249,7 +5249,7 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
         case TALKING_PHASE:
         case HIDING_PHASE:
             // Stationary sprite
-            sourceRect = {560.0f + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 176, 16, 16};
+            sourceRect = {432.0f + ((phaseCountdown / 128 % 2 == 0) ? 16 : 0), 176, 16, 16};
             
             // Draw speech bubble during talking phase
             if (phase == TALKING_PHASE && phaseCountdown > 1000)
