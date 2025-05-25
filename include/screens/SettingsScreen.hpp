@@ -1,6 +1,12 @@
 #pragma once
 #include "Screen.hpp"
 
+enum class DisplayMode {
+    FULLSCREEN,
+    BORDERLESS,
+    WINDOWED
+};
+
 class SettingsScreen : public Screen {
 public:
     SettingsScreen(AssetManager& assets, const Vector2& pixelScale);
@@ -8,7 +14,11 @@ public:
     void Draw() override;
 
 private:
-    bool m_isFullscreen;
+    void ToggleFullscreenMode();
+    DisplayMode GetDisplayMode();
+    void CycleDisplayMode();
+
+    DisplayMode m_displayMode;
     int m_selectedOption;
     int m_volume;
     float m_blinkTimer;

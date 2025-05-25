@@ -16,7 +16,18 @@ void GameApplication::Initialize() {
     // Get the monitor's refresh rate for proper vsync
     SetTargetFPS(60);
     
-    InitWindow(1920, 1080, "Journey of the Prairie King");
+    // Get current monitor dimensions for fullscreen mode
+    int display = GetCurrentMonitor();
+    int monitorWidth = GetMonitorWidth(display);
+    int monitorHeight = GetMonitorHeight(display);
+    
+    // Initialize window with monitor dimensions
+    InitWindow(monitorWidth, monitorHeight, "Journey of the Prairie King");
+    
+    // Set position to top-left corner before enabling fullscreen
+    SetWindowPosition(0, 0);
+    
+    // Enable fullscreen mode
     ToggleFullscreen();
         
     float screenWidth = GetScreenWidth();
