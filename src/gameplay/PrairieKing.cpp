@@ -3503,6 +3503,11 @@ void PrairieKing::UpdatePlayer(float deltaTime)
     {
         if (CheckCollisionRecs(m_monsters[i]->position, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
         {
+            if (m_monsters[i]->type == GameConstants::SPIKEY && m_monsters[i]->spikeyIsBlock) {
+                PlayerDie();
+                break;
+            }
+
             if (m_zombieModeTimer <= 0)
             {
                 // Normal mode - player dies
@@ -3646,8 +3651,10 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         break;
 
     case GameConstants::SPIKEY:
-        health = 2;   // Los Spikey tienen salud moderada
-        speed = 1.8f; // Velocidad ligeramente superior
+        health = 2;   // Vida normal
+        speed = 1.8f;
+        spikeyIsBlock = false;
+        spikeyWalkTimer = 0.0f;
         break;
 
     case GameConstants::OGRE:
@@ -3732,6 +3739,19 @@ PrairieKing::Outlaw::Outlaw(AssetManager &assets, Vector2 position, int health)
 // Implementación de los métodos virtuales de CowboyMonster
 void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
 {
+
+    if (type == GameConstants::SPIKEY && spikeyIsBlock) {
+        Rectangle blockSource = { 448, 64.0f, 16.0f, 16.0f };
+        Rectangle destRect = {
+            topLeftScreenCoordinate.x + position.x,
+            topLeftScreenCoordinate.y + position.y,
+            position.width,
+            position.height
+        };
+        DrawTexturePro(texture, blockSource, destRect, Vector2{ 0, 0 }, 0.0f, WHITE);
+        return;
+    }
+
     // Don't draw if the monster is invisible
     if (invisible && type != GameConstants::SPIKEY)
         return;
@@ -3929,6 +3949,23 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     case GameConstants::MUSHROOM:
     case GameConstants::SPIKEY:
     {
+        if (spikeyIsBlock) {
+            // No se mueve si es bloque
+            return false;
+        }
+        spikeyWalkTimer += deltaTime;
+        if (spikeyWalkTimer >= 7.0f) { // O usa GetRandomFloat(7.0f, 9.0f) si quieres aleatorio
+            spikeyIsBlock = true;
+            health = 7; // Ahora tiene 7 de vida
+            // Ajusta el tamaño a 1 tile
+            position.width = PrairieKing::GetGameInstance()->GetTileSize();
+            position.height = PrairieKing::GetGameInstance()->GetTileSize();
+            // Centra en la grilla
+            position.x = std::round(position.x / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
+            position.y = std::round(position.y / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
+            return false;
+        }
+
         // Special behavior for Spikey
         if (type == GameConstants::SPIKEY)
         {

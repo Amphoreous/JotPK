@@ -304,6 +304,9 @@ public:
         int health;
         int type;
         int speed;
+        //Spikey
+        bool spikeyIsBlock = false;
+        float spikeyWalkTimer = 0.0f;
         float movementAnimationTimer;
         Rectangle position;
         int movementDirection;
