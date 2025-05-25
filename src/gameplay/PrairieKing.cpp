@@ -450,15 +450,24 @@ void PrairieKing::UsePowerup(int which)
         break;
 
     case POWERUP_ZOMBIE:
-        // Stop current music
-        StopMusicStream(m_overworldSong);
+        // Stop current music streams properly
+        if (m_overworldSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+        if (m_zombieSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_zombieSong))
+        {
+            StopMusicStream(m_zombieSong);
+            UnloadMusicStream(m_zombieSong);
+        }
 
-        // Play zombie music
-        PlaySound(GetSound("Cowboy_undead"));
+        // Load and play zombie music stream
+        m_zombieSong = m_assets.GetMusic("zombie");
+        PlayMusicStream(m_zombieSong);
 
-        // Set timers
-        m_motionPause = 1800.0f;
-        m_zombieModeTimer = 10000.0f;
+        // Set motion pause and zombie timer (these are the key parts!)
+        m_motionPause = 1800.0f;  // 1.8 second pause for animation
+        m_zombieModeTimer = 10000.0f;  // 10 seconds of zombie mode
         break;
 
     case POWERUP_TELEPORT:
@@ -2102,12 +2111,34 @@ void PrairieKing::Update(float deltaTime)
     if (m_motionPause > 0)
     {
         m_motionPause -= deltaTime * 1000.0f;
-        // Behavior after pause would be handled by callbacks if needed
+        if (m_motionPause <= 0 && m_behaviorAfterPause)
+        {
+            m_behaviorAfterPause(0);
+            m_behaviorAfterPause = nullptr;
+        }
+        return; // Skip all other updates during motion pause!
     }
 
     if (m_zombieModeTimer > 0.0f)
     {
         m_zombieModeTimer -= deltaTime * 1000.0f;
+        
+        // When zombie mode ends, restart overworld music
+        if (m_zombieModeTimer <= 0.0f)
+        {
+            if (m_zombieSong.stream.buffer != nullptr)
+            {
+                StopMusicStream(m_zombieSong);
+                UnloadMusicStream(m_zombieSong);
+                m_zombieSong = {0};
+            }
+            
+            // Restart overworld music
+            if (m_overworldSong.stream.buffer != nullptr)
+            {
+                PlayMusicStream(m_overworldSong);
+            }
+        }
     }
 
     if (m_holdItemTimer > 0.0f)
@@ -2671,6 +2702,13 @@ void PrairieKing::Draw()
         }
         else if (m_zombieModeTimer > 8200)
         {
+        // Draw black background during transformation
+            DrawRectangle(
+                static_cast<int>(m_topLeftScreenCoordinate.x),
+                static_cast<int>(m_topLeftScreenCoordinate.y),
+                16 * GetTileSize(), 16 * GetTileSize(),
+                BLACK);
+                
             // Draw flashing player sprite during transformation
             DrawTexturePro(
                 GetTexture("cursors"),
@@ -2906,11 +2944,11 @@ void PrairieKing::Draw()
         !m_merchantArriving && !m_merchantLeaving && !m_waitingForPlayerToMoveDownAMap)
     {
         Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
-        
+
         int timerWidth = static_cast<int>((16 * GetTileSize() - 60) *
                                           (static_cast<float>(m_waveTimer) / WAVE_DURATION));
         timerWidth = std::min(timerWidth, 16 * GetTileSize() - 60);
-    
+
         DrawRectangle(
             static_cast<int>(m_topLeftScreenCoordinate.x + 30),
             static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
@@ -3334,30 +3372,32 @@ void PrairieKing::UpdatePlayer(float deltaTime)
     }
 
     // Manejar movimiento
-    if (!m_playerMovementDirections.empty() && !m_scrollingMap && m_deathTimer <= 0.0f)
+    if (m_deathTimer <= 0 && !m_playerMovementDirections.empty() && !m_scrollingMap)
     {
-        // Calcular direcciones efectivas para el movimiento
         int effectiveDirections = m_playerMovementDirections.size();
-        if (effectiveDirections >= 2 &&
+        
+        // Apply movement cancellation logic
+        if (effectiveDirections >= 2 && 
             m_playerMovementDirections.back() == (m_playerMovementDirections[m_playerMovementDirections.size() - 2] + 2) % 4)
         {
             effectiveDirections = 1;
         }
 
-        // Calcular velocidad base
         float speed = GetMovementSpeed(PLAYER_SPEED, effectiveDirections);
-
-        if (m_activePowerups.find(6) != m_activePowerups.end())
+        
+        // Apply speed powerup
+        if (m_activePowerups.find(POWERUP_SPEED) != m_activePowerups.end())
         {
             speed *= 1.5f;
         }
-
+        
+        // Apply zombie mode speed boost!
         if (m_zombieModeTimer > 0)
         {
             speed *= 1.5f;
         }
-
-        // Aplicar bonus de nivel de velocidad
+        
+        // Apply run speed upgrades
         for (int i = 0; i < m_runSpeedLevel; i++)
         {
             speed *= 1.25f;
@@ -3463,12 +3503,13 @@ void PrairieKing::UpdatePlayer(float deltaTime)
         {
             if (m_zombieModeTimer <= 0)
             {
+                // Normal mode - player dies
                 PlayerDie();
                 break;
             }
-            else if (m_monsters[i]->type != -2) // No es jefe
+            else if (m_monsters[i]->type != -2) // Not a boss
             {
-                // Matar monstruo en modo zombie
+                // Zombie mode - kill the monster!
                 AddGuts({m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
                 delete m_monsters[i];
                 m_monsters.erase(m_monsters.begin() + i);
@@ -3998,9 +4039,11 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             break;
         }
 
-        // In zombie mode, invert the direction
-        if (PrairieKing::GetGameInstance()->m_zombieModeTimer > 0)
+        // ZOMBIE MODE REVERSAL - This is the key missing piece!
+        PrairieKing* game = PrairieKing::GetGameInstance();
+        if (game && game->m_zombieModeTimer > 0)
         {
+            // Reverse the movement during zombie mode
             attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
             attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
         }
