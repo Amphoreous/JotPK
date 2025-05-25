@@ -469,6 +469,7 @@ public:
     void HandleWaveCompletion();
     void SpawnMonstersForWave();
     void UpdateMonsterChancesForWave();
+    float GetZombieModeTimer() const { return m_zombieModeTimer; }
 
 private:
     // Asset references
