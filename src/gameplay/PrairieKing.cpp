@@ -2209,7 +2209,7 @@ void PrairieKing::Update(float deltaTime)
                 m_merchantArriving = true;
                 
                 // Make sure to load the next wave map here
-                m_whichWave++; // Increment wave since we're moving to the next one
+                //m_whichWave++; // Increment wave since we're moving to the next one
                 GetMap(m_whichWave, m_nextMap); // Load the next map
                 
                 // Set up for map transition
@@ -4033,16 +4033,6 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
     float evilButterflyChance = 0.4f;
     float mummyChance = 0.6f;
     float impChance = 0.4f;
-    
-
-    // Adjust chances based on wave number
-    //if (wave > 0)
-    //{
-    //    orcChance = std::max(0.1f, orcChance - wave * 0.05f);
-    //    evilButterflyChance = std::min(0.4f, evilButterflyChance + wave * 0.02f);
-    //    ogreChance = std::min(0.3f, ogreChance + wave * 0.03f);
-    //    spikeyChance = std::min(0.2f, spikeyChance + wave * 0.02f);
-    //}
 
     switch (wave)
     {
