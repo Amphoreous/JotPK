@@ -122,6 +122,7 @@ public:
         DebugAddCoins,
         DebugIncDamage,
         DebugClearMonsters,
+        DebugClearWave,
         Pause,
         MAX
     };
