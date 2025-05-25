@@ -364,12 +364,12 @@ bool PrairieKing::GetPowerUp(CowboyPowerup c)
 
     case COIN1:
         m_coins++;
-        PlaySound(GetSound("Pickup_Coin15"));
+        PlaySound(GetSound("pickup_coin"));
         break;
 
     case COIN5:
         m_coins += 5;
-        PlaySound(GetSound("Pickup_Coin15"));
+        PlaySound(GetSound("pickup_coin"));
         break;
 
     case POWERUP_LIFE:
