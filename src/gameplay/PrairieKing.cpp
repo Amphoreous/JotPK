@@ -5421,7 +5421,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     if (flashColorTimer > 0.0f)
     {
         // Flash sprite when taking damage
-        sourceRect = {464, 96, 16, 16}; // Flash sprite
+        sourceRect = {336, 48, 16, 16}; // Flash sprite
     }
     else
     {
@@ -5433,10 +5433,10 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
         case SUMMON_DEMON_PHASE:
         case SUMMON_MUMMY_PHASE:
             // Normal Dracula animation
-            sourceRect = {592.0f + (phaseInternalTimer / 100 % 3) * 16, 160, 16, 16};
+            sourceRect = {464.0f + (phaseInternalTimer / 100 % 3) * 16, 64, 16, 16};
             break;
         default:
-            sourceRect = {592, 112, 16, 16};
+            sourceRect = {464, 112, 16, 16};
             break;
         }
 
@@ -5452,7 +5452,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
             // Draw speech bubble
             Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
                                  drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
-            Rectangle bubbleRect = {608, 128, 32, 32};
+            Rectangle bubbleRect = {480, 80, 32, 32};
             DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
         }
     }
