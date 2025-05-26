@@ -465,12 +465,10 @@ void PrairieKing::UsePowerup(int which)
             SetMusicVolume(m_zombieSong, 0.7f);
         }
 
-        // FIXED: Use only motion pause for the initial animation, then start zombie mode immediately
         m_motionPause = 1800.0f;      // 1.8 seconds for transformation animation
-        m_zombieModeTimer = 11800.0f; // 10 seconds active + 1.8 seconds animation = 11.8 total
+        m_zombieModeTimer = 10000.0f; // 10 seconds active mode (separate from motion pause)
 
         PlaySound(GetSound("cowboy_powerup"));
-        std::cout << "Zombie mode activated! Timer: " << m_zombieModeTimer << std::endl;
         break;
 
     case POWERUP_TELEPORT:
@@ -832,38 +830,41 @@ void PrairieKing::UpdateBullets(float deltaTime)
         }
     }
 
-    // Update enemy bullets
+    // In UpdateBullets method, add bounds checking for enemy bullets vs player
     for (int i = m_enemyBullets.size() - 1; i >= 0; i--)
     {
+        // Update bullet position
         m_enemyBullets[i].position.x += m_enemyBullets[i].motion.x;
         m_enemyBullets[i].position.y += m_enemyBullets[i].motion.y;
 
         // Check bounds
-        if (m_enemyBullets[i].position.x <= 0 ||
-            m_enemyBullets[i].position.y <= 0 ||
-            m_enemyBullets[i].position.x >= 762 ||
-            m_enemyBullets[i].position.y >= 762)
+        if (m_enemyBullets[i].position.x <= 0 || m_enemyBullets[i].position.y <= 0 ||
+            m_enemyBullets[i].position.x >= 768 || m_enemyBullets[i].position.y >= 768)
         {
             m_enemyBullets.erase(m_enemyBullets.begin() + i);
             continue;
         }
 
-        // Check collision with map
+        // Check map collision
         if (IsCollidingWithMapForBullets(m_enemyBullets[i].position))
         {
             m_enemyBullets.erase(m_enemyBullets.begin() + i);
             continue;
         }
 
-        // Check collision with player
+        // Check player collision - ADD PROPER BOUNDS CHECKING
         if (m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
         {
-            Rectangle bulletRect = {m_enemyBullets[i].position.x, m_enemyBullets[i].position.y, 15, 15};
+            Rectangle bulletRect = {
+                m_enemyBullets[i].position.x,
+                m_enemyBullets[i].position.y,
+                15, 15};
+
             if (CheckCollisionRecs(m_playerBoundingBox, bulletRect))
             {
-                PlayerDie();
                 m_enemyBullets.erase(m_enemyBullets.begin() + i);
-                continue;
+                PlayerDie();
+                break; // Important: break after PlayerDie to avoid further processing
             }
         }
     }
@@ -5292,7 +5293,7 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
     if (flashColorTimer > 0.0f)
     {
         // Flash sprite when taking damage
-        sourceRect = {496, 96, 16, 16};
+        sourceRect = {368, 48, 16, 16};
     }
     else
     {
@@ -5334,7 +5335,9 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
         }
     }
 
-    DrawTextureRec(texture, sourceRect, drawPos, WHITE);
+    DrawTexturePro(texture, sourceRect,
+                   Rectangle{drawPos.x, drawPos.y, 48, 48}, // 16 * 3 = 48 for proper scaling
+                   Vector2{0, 0}, 0.0f, WHITE);
 }
 
 bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
