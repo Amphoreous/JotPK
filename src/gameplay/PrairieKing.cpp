@@ -451,13 +451,23 @@ void PrairieKing::UsePowerup(int which)
         break;
 
     case POWERUP_ZOMBIE:
-        // Stop current music streams properly
+        // Properly stop and unload any existing zombie music first
+        if (m_zombieSong.stream.buffer != nullptr)
+        {
+            if (IsMusicStreamPlaying(m_zombieSong))
+            {
+                StopMusicStream(m_zombieSong);
+            }
+            m_zombieSong = {0}; // Reset to null state
+        }
+
+        // Stop current overworld music properly
         if (IsMusicStreamPlaying(m_overworldSong))
         {
             StopMusicStream(m_overworldSong);
         }
 
-        // Load and play zombie music stream
+        // Load and play zombie music stream (fresh each time)
         m_zombieSong = m_assets.GetMusic("zombie");
         if (m_zombieSong.stream.buffer != nullptr)
         {
@@ -1081,7 +1091,7 @@ void PrairieKing::ProcessInputs()
     if (IsKeyDown(GameKeys::UsePowerup) && !m_gameOver && m_heldItem != nullptr)
     {
         std::cout << "Attempting to use powerup..." << std::endl;
-        if (m_deathTimer <= 0.0f && m_zombieModeTimer <= 0)
+        if (m_deathTimer <= 0.0f)
         {
             std::cout << "Using powerup: " << m_heldItem->which << std::endl;
             UsePowerup(m_heldItem->which);
@@ -2152,20 +2162,23 @@ void PrairieKing::Update(float deltaTime)
     {
         m_zombieModeTimer -= deltaTime * 1000.0f;
 
-        // When zombie mode ends, restart overworld music
+        // When zombie mode ends, properly clean up zombie music
         if (m_zombieModeTimer <= 0.0f)
         {
             if (m_zombieSong.stream.buffer != nullptr)
             {
-                StopMusicStream(m_zombieSong);
-                UnloadMusicStream(m_zombieSong);
-                m_zombieSong = {0};
+                if (IsMusicStreamPlaying(m_zombieSong))
+                {
+                    StopMusicStream(m_zombieSong);
+                }
+                m_zombieSong = {0}; // Reset to null state
             }
 
             // Restart overworld music
-            if (m_overworldSong.stream.buffer != nullptr)
+            if (m_overworldSong.stream.buffer != nullptr && !IsMusicStreamPlaying(m_overworldSong))
             {
                 PlayMusicStream(m_overworldSong);
+                SetMusicVolume(m_overworldSong, 0.7f);
             }
         }
     }
