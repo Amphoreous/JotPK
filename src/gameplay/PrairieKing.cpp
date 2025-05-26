@@ -450,23 +450,22 @@ void PrairieKing::UsePowerup(int which)
         break;
 
     case POWERUP_ZOMBIE:
-        // Properly stop and unload any existing zombie music first
-        if (m_zombieSong.stream.buffer != nullptr)
-        {
-            if (IsMusicStreamPlaying(m_zombieSong))
-            {
-                StopMusicStream(m_zombieSong);
-            }
-            m_zombieSong = {0}; // Reset to null state
-        }
-
         // Stop current overworld music properly
         if (IsMusicStreamPlaying(m_overworldSong))
         {
             StopMusicStream(m_overworldSong);
         }
 
-        // Load and play zombie music stream (fresh each time)
+        // Stop any existing zombie music first
+        if (m_zombieSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_zombieSong))
+        {
+            StopMusicStream(m_zombieSong);
+        }
+
+        // Load fresh zombie music stream
+        m_zombieSong = m_assets.GetMusic("zombie");
+
+        // Play zombie music if successfully loaded
         if (m_zombieSong.stream.buffer != nullptr)
         {
             PlayMusicStream(m_zombieSong);
@@ -2296,7 +2295,109 @@ void PrairieKing::Update(float deltaTime)
     // Update powerups and their timers
     for (int i = m_powerups.size() - 1; i >= 0; i--)
     {
-        // Move powerups toward player if close enough
+        // Check if powerup is close to player and in boundary area - eject it inward
+        float distanceToPlayer = Vector2Distance(
+            Vector2{m_playerBoundingBox.x + m_playerBoundingBox.width / 2.0f,
+                    m_playerBoundingBox.y + m_playerBoundingBox.height / 2.0f},
+            Vector2{m_powerups[i].position.x + GetTileSize() / 2.0f,
+                    m_powerups[i].position.y + GetTileSize() / 2.0f});
+
+        // Check if powerup is in boundary area (within 1 tile of edges)
+        bool inBoundaryArea = (m_powerups[i].position.x < GetTileSize() ||
+                               m_powerups[i].position.x >= 15 * GetTileSize() ||
+                               m_powerups[i].position.y < GetTileSize() ||
+                               m_powerups[i].position.y >= 15 * GetTileSize());
+
+        // If powerup is close to player AND in boundary area, push it toward player/center
+        if (distanceToPlayer <= (GetTileSize() + 3) && inBoundaryArea)
+        {
+            Vector2 powerupCenter = {m_powerups[i].position.x + GetTileSize() / 2.0f,
+                                     m_powerups[i].position.y + GetTileSize() / 2.0f};
+            Vector2 playerCenter = {m_playerBoundingBox.x + m_playerBoundingBox.width / 2.0f,
+                                    m_playerBoundingBox.y + m_playerBoundingBox.height / 2.0f};
+
+            // Push powerup toward player center
+            if (powerupCenter.x < playerCenter.x)
+            {
+                m_powerups[i].position.x++;
+            }
+            if (powerupCenter.x > playerCenter.x)
+            {
+                m_powerups[i].position.x--;
+            }
+            if (powerupCenter.y < playerCenter.y)
+            {
+                m_powerups[i].position.y++;
+            }
+            if (powerupCenter.y > playerCenter.y)
+            {
+                m_powerups[i].position.y--;
+            }
+        }
+
+        // Additional boundary ejection system - check if powerup is on border tiles
+        Vector2 tilePosition = {
+            (m_powerups[i].position.x + GetTileSize() / 2.0f) / GetTileSize(),
+            (m_powerups[i].position.y + GetTileSize() / 2.0f) / GetTileSize()};
+
+        // Check corners of the powerup
+        Vector2 corner1 = {m_powerups[i].position.x / GetTileSize(),
+                           m_powerups[i].position.y / GetTileSize()};
+        Vector2 corner2 = {(m_powerups[i].position.x + GetTileSize()) / GetTileSize(),
+                           m_powerups[i].position.y / GetTileSize()};
+        Vector2 corner3 = {m_powerups[i].position.x / GetTileSize(),
+                           (m_powerups[i].position.y + GetTileSize()) / GetTileSize()};
+        Vector2 corner4 = {(m_powerups[i].position.x + GetTileSize()) / GetTileSize(),
+                           (m_powerups[i].position.y + GetTileSize()) / GetTileSize()};
+
+        // Check if any corner is on a border tile (edge of map or impassable)
+        bool onBorderTile = false;
+
+        // Check if on map edges or impassable tiles
+        if (tilePosition.x <= 0 || tilePosition.x >= 15 || tilePosition.y <= 0 || tilePosition.y >= 15 ||
+            corner1.x <= 0 || corner1.x >= 15 || corner1.y <= 0 || corner1.y >= 15 ||
+            corner2.x <= 0 || corner2.x >= 15 || corner2.y <= 0 || corner2.y >= 15 ||
+            corner3.x <= 0 || corner3.x >= 15 || corner3.y <= 0 || corner3.y >= 15 ||
+            corner4.x <= 0 || corner4.x >= 15 || corner4.y <= 0 || corner4.y >= 15)
+        {
+            onBorderTile = true;
+        }
+
+        // Also check if on impassable map tiles
+        if (!onBorderTile && tilePosition.x >= 0 && tilePosition.x < MAP_WIDTH &&
+            tilePosition.y >= 0 && tilePosition.y < MAP_HEIGHT)
+        {
+            int tileType = m_map[static_cast<int>(tilePosition.x)][static_cast<int>(tilePosition.y)];
+            if (!IsMapTilePassable(tileType))
+            {
+                onBorderTile = true;
+            }
+        }
+
+        if (onBorderTile)
+        {
+            // Calculate push direction toward center of map (8, 8)
+            Vector2 pushDirection = {0, 0};
+            float centerX = 8.0f;
+            float centerY = 8.0f;
+
+            if (fabsf(tilePosition.x - centerX) > fabsf(tilePosition.y - centerY))
+            {
+                // Push horizontally toward center
+                pushDirection.x = (tilePosition.x > centerX) ? -1.0f : 1.0f;
+            }
+            else
+            {
+                // Push vertically toward center
+                pushDirection.y = (tilePosition.y > centerY) ? -1.0f : 1.0f;
+            }
+
+            // Apply the push
+            m_powerups[i].position.x -= pushDirection.x;
+            m_powerups[i].position.y -= pushDirection.y;
+        }
+
+        // Move powerups toward player if close enough (existing attraction logic)
         if (CheckCollisionRecs(m_playerBoundingBox,
                                Rectangle{m_powerups[i].position.x, m_powerups[i].position.y,
                                          static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())}))
