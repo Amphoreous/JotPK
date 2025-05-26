@@ -16,7 +16,7 @@ void AssetManager::LoadAssets() {
     m_sounds["cowboy_powerup"] = LoadSound("sounds/cowboy_powerup.wav");
     m_sounds["cowboy_explosion"] = LoadSound("sounds/cowboy_explosion.wav");
     m_sounds["cowboy_footstep"] = LoadSound("sounds/cowboy_footstep.wav");
-    m_sounds["cowboy_monsterhit"] = LoadSound("sounds/died.wav");
+    m_sounds["cowboy_monsterhit"] = LoadSound("cowboy_monsterhit.wav");
     m_sounds["cowboy_gopher"] = LoadSound("sounds/cowboy_gopher.wav");
     m_sounds["cowboy_singing"] = LoadSound("sounds/cowboy_singing.wav");
     m_sounds["cowboy_secret"] = LoadSound("sounds/cowboy_secret.wav");
@@ -25,6 +25,8 @@ void AssetManager::LoadAssets() {
     LoadMusic("overworld", "music/Cowboy_OVERWORLD.wav");
     LoadMusic("outlaw", "music/cowboy_outlawsong.wav"); 
     LoadMusic("zombie", "music/Cowboy_undead.wav");
+    LoadMusic("dracula", "music/cowboy_boss.wav");
+    LoadMusic("ending", "music/Cowboy_singing.wav");
     
     // Set default volumes
     for (auto& [name, music] : m_music) {

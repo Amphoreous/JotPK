@@ -507,6 +507,8 @@ private:
     Music m_overworldSong;
     Music m_outlawSong;
     Music m_zombieSong;
+    Music m_draculaSong;
+    Music m_endingSong;
 
     // Game variables
     int m_runSpeedLevel;
