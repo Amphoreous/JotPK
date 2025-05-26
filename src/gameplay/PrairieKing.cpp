@@ -354,7 +354,6 @@ void PrairieKing::ApplyLevelSpecificStates()
             PlayMusicStream(m_draculaSong);
             SetMusicVolume(m_draculaSong, 0.7f);
         }
-
     }
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
@@ -475,7 +474,8 @@ void PrairieKing::UsePowerup(int which)
             StopMusicStream(m_outlawSong);
         }
 
-        if (IsMusicStreamPlaying(m_draculaSong)) {
+        if (IsMusicStreamPlaying(m_draculaSong))
+        {
             StopMusicStream(m_draculaSong);
         }
 
@@ -830,7 +830,6 @@ void PrairieKing::KillOutlaw()
             explosion.delayBeforeAnimationStart = i * 75;
             s_instance->AddTemporarySprite(explosion);
         }
-
 
         // Clear monsters
         for (auto *monster : s_instance->m_monsters)
@@ -2158,7 +2157,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     std::cout << "Added 10 coins. Total: " << m_coins << std::endl;
                     break;
                 case GameKeys::DebugIncDamage:
-                    m_bulletDamage+=100;
+                    m_bulletDamage += 100;
                     std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
                     break;
                 case GameKeys::DebugClearMonsters:
@@ -2254,7 +2253,8 @@ void PrairieKing::Update(float deltaTime)
         UpdateMusicStream(m_zombieSong);
     }
 
-    if (m_outlawSong.stream.buffer != nullptr) {
+    if (m_outlawSong.stream.buffer != nullptr)
+    {
         UpdateMusicStream(m_outlawSong);
     }
     if (m_endingSong.stream.buffer != nullptr)
@@ -2268,7 +2268,8 @@ void PrairieKing::Update(float deltaTime)
         m_buttonHeldFrames[key]++;
     }
 
-    if (m_draculaSong.stream.buffer != nullptr) {
+    if (m_draculaSong.stream.buffer != nullptr)
+    {
         UpdateMusicStream(m_draculaSong);
     }
 
@@ -2843,10 +2844,14 @@ void PrairieKing::Update(float deltaTime)
             {
             case 1:
                 m_endCutsceneTimer = 15500;
-                if (IsMusicStreamPlaying(m_overworldSong)) StopMusicStream(m_overworldSong);
-                if (IsMusicStreamPlaying(m_outlawSong)) StopMusicStream(m_outlawSong);
-                if (IsMusicStreamPlaying(m_zombieSong)) StopMusicStream(m_zombieSong);
-                if (IsMusicStreamPlaying(m_draculaSong)) StopMusicStream(m_draculaSong);
+                if (IsMusicStreamPlaying(m_overworldSong))
+                    StopMusicStream(m_overworldSong);
+                if (IsMusicStreamPlaying(m_outlawSong))
+                    StopMusicStream(m_outlawSong);
+                if (IsMusicStreamPlaying(m_zombieSong))
+                    StopMusicStream(m_zombieSong);
+                if (IsMusicStreamPlaying(m_draculaSong))
+                    StopMusicStream(m_draculaSong);
 
                 if (m_endingSong.stream.buffer != nullptr)
                 {
@@ -2862,7 +2867,6 @@ void PrairieKing::Update(float deltaTime)
                 break;
 
             case 3:
-
 
                 m_endCutsceneTimer = 5000;
                 break;
@@ -4444,19 +4448,19 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         if (flashColorTimer > 0.0f)
         {
             // Textura de impacto para Spikey bloqueado
-            blockSource = { 352.0f, 48.0f, 16.0f, 16.0f };
+            blockSource = {352.0f, 48.0f, 16.0f, 16.0f};
         }
         else
         {
             // Textura normal de bloque
-            blockSource = { 448.0f, 64.0f, 16.0f, 16.0f };
+            blockSource = {448.0f, 64.0f, 16.0f, 16.0f};
         }
         Rectangle destRect = {
             topLeftScreenCoordinate.x + position.x,
             topLeftScreenCoordinate.y + position.y,
             position.width,
-            position.height };
-        DrawTexturePro(texture, blockSource, destRect, Vector2{ 0, 0 }, 0.0f, WHITE);
+            position.height};
+        DrawTexturePro(texture, blockSource, destRect, Vector2{0, 0}, 0.0f, WHITE);
         return;
     }
 
@@ -4536,7 +4540,6 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
     health -= damage;
     flashColorTimer = 0.3f;
     flashColor = RED;
-
 
     if (health <= 0)
     {
@@ -5846,12 +5849,29 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                 phaseInternalTimer = 1500;
             }
         }
+        // In the Dracula::Move method, replace the SummonEnemies calls:
+
+        // In SUMMON_DEMON_PHASE and SUMMON_MUMMY_PHASE cases:
         else if (phaseInternalCounter == 1 && phaseInternalTimer < 0)
         {
             // Summon enemies
             Vector2 origin = {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                               position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f};
-            SummonEnemies(origin, GetRandomInt(0, 5));
+
+            int monsterTypeIndex;
+            if (phase == SUMMON_DEMON_PHASE)
+            {
+                // Summon flying enemies (ghosts or imps) - indices 1 and 4
+                monsterTypeIndex = (GetRandomInt(0, 1) == 0) ? 1 : 4; // EVIL_BUTTERFLY or IMP
+            }
+            else
+            {
+                // Summon ground enemies - indices 0, 2, 3, 5
+                std::vector<int> groundEnemies = {0, 2, 3, 5}; // ORC, OGRE, MUMMY, MUSHROOM
+                monsterTypeIndex = groundEnemies[GetRandomInt(0, groundEnemies.size() - 1)];
+            }
+
+            SummonEnemies(origin, monsterTypeIndex);
 
             if (GetRandomFloat(0.0f, 1.0f) < 0.4f)
             {
@@ -6022,29 +6042,69 @@ void PrairieKing::Dracula::FireSpread(Vector2 origin, double offsetAngle)
 
 void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
 {
-    // Spawn positions around Dracula
-    std::vector<Vector2> spawnPositions = {
-        {origin.x - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
-        {origin.x + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
-        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2},
-        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() * 3 / 4}};
+    // Define valid monster types with their corresponding GameConstants
+    std::vector<int> validMonsterTypes = {
+        GameConstants::ORC,            // 0
+        GameConstants::EVIL_BUTTERFLY, // 1
+        GameConstants::OGRE,           // 2
+        GameConstants::MUMMY,          // 3
+        GameConstants::IMP,            // 4
+        GameConstants::MUSHROOM        // 5
+    };
 
+    // Clamp 'which' to valid range to prevent crashes
+    which = std::max(0, std::min(which, static_cast<int>(validMonsterTypes.size() - 1)));
+
+    int monsterType = validMonsterTypes[which];
+
+    // Spawn positions around Dracula - ensure they're valid positions
+    std::vector<Vector2> spawnPositions = {
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y},
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y},
+        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize()},
+        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize()}};
+
+    int successfulSpawns = 0;
     for (const auto &pos : spawnPositions)
     {
+        // Ensure spawn position is within map bounds
+        int tileX = static_cast<int>(pos.x) / PrairieKing::GetGameInstance()->GetTileSize();
+        int tileY = static_cast<int>(pos.y) / PrairieKing::GetGameInstance()->GetTileSize();
+
+        if (tileX < 1 || tileX >= MAP_WIDTH - 1 || tileY < 1 || tileY >= MAP_HEIGHT - 1)
+        {
+            continue; // Skip out-of-bounds positions
+        }
+
         Rectangle spawnRect = {pos.x, pos.y,
                                static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize()),
                                static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize())};
 
-        if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(spawnRect, nullptr))
+        // Check for collisions before spawning
+        if (!PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(spawnRect) &&
+            !PrairieKing::GetGameInstance()->IsCollidingWithMonster(spawnRect, nullptr))
         {
-            auto *monster = new PrairieKing::CowboyMonster(
-                PrairieKing::GetGameInstance()->m_assets, which, pos);
-            PrairieKing::GetGameInstance()->AddMonster(monster);
+            try
+            {
+                auto *monster = new PrairieKing::CowboyMonster(
+                    PrairieKing::GetGameInstance()->m_assets, monsterType, pos);
+
+                if (monster != nullptr)
+                {
+                    PrairieKing::GetGameInstance()->AddMonster(monster);
+                    successfulSpawns++;
+                }
+            }
+            catch (...)
+            {
+                // If monster creation fails, continue with other positions
+                continue;
+            }
         }
 
-        // Add summoning effect
+        // Add summoning effect even if spawn failed
         PrairieKing::TemporaryAnimatedSprite summonEffect(
-            Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
+            Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
             {PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x + pos.x,
              PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y + pos.y},
             0.0f, 3.0f, false, pos.y / 10000.0f, WHITE);
@@ -6052,7 +6112,11 @@ void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
         PrairieKing::GetGameInstance()->AddTemporarySprite(summonEffect);
     }
 
-    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+    // Only play sound if at least one monster was spawned
+    if (successfulSpawns > 0)
+    {
+        PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+    }
 }
 
 // ====================
