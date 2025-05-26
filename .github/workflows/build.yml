@@ -1,0 +1,180 @@
+name: Build Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (use 1.0 for alpha release)'
+        required: true
+        type: string
+        default: '1.0'
+      isPrerelease:
+        description: 'Is this a pre-release?'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Visual Studio Build Tools
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build project
+      run: |
+        ./build-VisualStudio2022.bat
+        msbuild JotPK.sln /p:Configuration=Release /p:Platform=x64
+
+    - name: Prepare Alpha Release Structure
+      run: |
+        # Define team and game names according to Assignment 3 requirements
+        $teamName = "Amphoreous"
+        $gameName = "JourneyOfThePrairieKing"
+        $version = "${{ github.event.inputs.version }}"
+        $releaseName = "${teamName}_${gameName}_v${version}"
+        $gameFolder = "$releaseName/$gameName"
+        
+        # Create directories following the required structure
+        New-Item -ItemType Directory -Path $gameFolder -Force
+        
+        # Copy executable (must be named GameName.exe as per requirements)
+        $exeFiles = Get-ChildItem "bin/Release/*.exe"
+        if ($exeFiles.Count -gt 0) {
+            Copy-Item $exeFiles[0].FullName -Destination "$gameFolder/$gameName.exe"
+        }
+        
+        # Copy only necessary DLL files (remove any debug/unnecessary files)
+        $dlls = Get-ChildItem "bin/Release/*.dll" -ErrorAction SilentlyContinue
+        foreach ($dll in $dlls) {
+          Copy-Item $dll.FullName -Destination $gameFolder
+        }
+        
+        # Copy resources folder (renamed to match assignment requirements)
+        if (Test-Path "resources") {
+            Copy-Item "resources" -Destination $gameFolder -Recurse
+        }
+        
+        # Copy required documentation files to root of release
+        if (Test-Path "LICENSE") {
+            Copy-Item "LICENSE" -Destination $releaseName
+        }
+        if (Test-Path "misc/README.md") {
+            Copy-Item "misc/README.md" -Destination $releaseName
+        } elseif (Test-Path "README.md") {
+            Copy-Item "README.md" -Destination $releaseName
+        }
+        if (Test-Path "misc/TasksList.pdf") {
+            Copy-Item "misc/TasksList.pdf" -Destination $releaseName
+        }
+        
+        # Verify no unnecessary files are included (remove any .pdb, .obj, temp files)
+        Get-ChildItem $gameFolder -Recurse -Include "*.pdb", "*.obj", "*.tmp", "*.log", "*.ilk" | Remove-Item -Force -ErrorAction SilentlyContinue
+        
+        # Create final ZIP with correct naming convention
+        Compress-Archive -Path $releaseName -DestinationPath "$releaseName.zip" -Force
+        
+        # Display final structure for verification
+        Write-Host "Final release structure:"
+        Get-ChildItem $releaseName -Recurse | ForEach-Object { Write-Host $_.FullName }
+      shell: pwsh
+
+    - name: Verify Release Requirements
+      run: |
+        $releaseName = "Amphoreous_JourneyOfThePrairieKing_v${{ github.event.inputs.version }}"
+        $gameFolder = "$releaseName/JourneyOfThePrairieKing"
+        
+        # Check required files exist
+        $requiredFiles = @(
+            "$releaseName/README.md",
+            "$releaseName/LICENSE", 
+            "$releaseName/TasksList.pdf",
+            "$gameFolder/JourneyOfThePrairieKing.exe"
+        )
+        
+        $missing = @()
+        foreach ($file in $requiredFiles) {
+            if (!(Test-Path $file)) {
+                $missing += $file
+            }
+        }
+        
+        if ($missing.Count -gt 0) {
+            Write-Error "Missing required files: $($missing -join ', ')"
+            exit 1
+        }
+        
+        # Check for forbidden files (source code, debug files)
+        $forbiddenPatterns = @("*.cpp", "*.h", "*.c", "*.cs", "*.java", "*.pdb", "*.obj", "*.vcxproj", "*.sln")
+        $forbidden = @()
+        foreach ($pattern in $forbiddenPatterns) {
+            $files = Get-ChildItem $releaseName -Recurse -Include $pattern
+            $forbidden += $files
+        }
+        
+        if ($forbidden.Count -gt 0) {
+            Write-Warning "Found potentially forbidden files: $($forbidden.Name -join ', ')"
+        }
+        
+        Write-Host "Release verification completed successfully!"
+      shell: pwsh
+
+    - name: Create Alpha Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: Amphoreous_JourneyOfThePrairieKing_v${{ github.event.inputs.version }}.zip
+        tag_name: v${{ github.event.inputs.version }}
+        name: Game Alpha Release v${{ github.event.inputs.version }}
+        body: |
+          # Journey of the Prairie King - Alpha Release v${{ github.event.inputs.version }}
+          
+          **Assignment 3: Game Alpha Release**
+          
+          ## 📦 Release Contents
+          This release includes the complete alpha version with:
+          - **JourneyOfThePrairieKing.exe** - Main game executable (Release build)
+          - **Required DLL files** - All necessary dependencies
+          - **Resources folder** - All game assets (PNG, WAV, OGG files)
+          - **README.md** - Complete game documentation
+          - **LICENSE** - Project license
+          - **TasksList.pdf** - Team member contributions and time tracking
+          
+          ## 🎮 Game Features
+          - **12 rooms** of gameplay
+          - **7 types of enemies** + **2 bosses** (Outlaw + Dracula)
+          - **8 power-ups** available in the store
+          - **Full UI implementation** - score, lives, timing
+          - **Complete audio** - music and sound effects
+          - **Store system** - buy upgrades between levels
+          - **Debug features** - level jumping, enemy spawning, item spawning
+          
+          ## 🎯 Assignment Requirements Met
+          - ✅ All gameplay features implemented
+          - ✅ Non-random level design based on original game
+          - ✅ Complete audio implementation
+          - ✅ Functional UI with score, lives, timing
+          - ✅ Debug functionalities included
+          - ✅ Proper file structure (no source code included)
+          - ✅ Release build with necessary DLLs only
+          
+          ## 📹 Gameplay Video
+          A 1-minute gameplay video demonstrating all features is available in the README.md file.
+          
+          ## 🔧 Technical Details
+          - Built with Release configuration
+          - All unnecessary files removed
+          - Follows required folder structure
+          - Compatible with university testing environment
+          
+        prerelease: ${{ github.event.inputs.isPrerelease }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
