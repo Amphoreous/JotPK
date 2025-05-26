@@ -2012,7 +2012,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
         newMap[6][8] = MAP_CACTUS;
         newMap[10][8] = MAP_CACTUS;
-        newMap[8][6] = MAP_CACTUS;
+        newMap[8][5] = MAP_CACTUS;
         newMap[8][9] = MAP_CACTUS;
         break;
 
