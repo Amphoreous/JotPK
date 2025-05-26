@@ -4321,7 +4321,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
 
     case GameConstants::MUMMY:
         health = 4;   // Las momias son muy resistentes
-        speed = 0.8f; // Las momias son lentas
+        speed = 1.0f; // Las momias son lentas
         break;
 
     case GameConstants::IMP:
@@ -4331,7 +4331,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
 
     default:
         health = 100; // Valor por defecto para otros tipos
-        speed = 0.5f; // Velocidad por defecto
+        speed = 1.0f; // Velocidad por defecto
         break;
     }
 
