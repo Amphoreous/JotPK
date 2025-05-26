@@ -225,6 +225,8 @@ void PrairieKing::Initialize()
     m_overworldSong = m_assets.GetMusic("overworld");
     m_outlawSong = m_assets.GetMusic("outlaw");
     m_zombieSong = m_assets.GetMusic("zombie");
+    m_draculaSong = m_assets.GetMusic("dracula");
+    m_endingSong = m_assets.GetMusic("ending");
 
     // Initialize map
     GetMap(0, m_map);
@@ -346,12 +348,13 @@ void PrairieKing::ApplyLevelSpecificStates()
             StopMusicStream(m_overworldSong);
         }
 
-        // Load and play outlaw music for boss fight
-        if (m_outlawSong.stream.buffer != nullptr)
+        // Load and play for Dracula boss fight
+        if (m_draculaSong.stream.buffer != nullptr)
         {
-            PlayMusicStream(m_outlawSong);
-            SetMusicVolume(m_outlawSong, 0.7f);
+            PlayMusicStream(m_draculaSong);
+            SetMusicVolume(m_draculaSong, 0.7f);
         }
+
     }
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
@@ -454,7 +457,7 @@ void PrairieKing::UsePowerup(int which)
     case POWERUP_HEART:
         m_itemToHold = 13;
         m_holdItemTimer = 4000;
-        PlaySound(GetSound("Cowboy_Secret"));
+        PlaySound(GetSound("cowboy_secret"));
 
         // Trigger end cutscene
         m_endCutscene = true;
@@ -466,10 +469,16 @@ void PrairieKing::UsePowerup(int which)
         {
             StopMusicStream(m_overworldSong);
         }
+
         if (IsMusicStreamPlaying(m_outlawSong))
         {
             StopMusicStream(m_outlawSong);
         }
+
+        if (IsMusicStreamPlaying(m_draculaSong)) {
+            StopMusicStream(m_draculaSong);
+        }
+
         if (IsMusicStreamPlaying(m_zombieSong))
         {
             StopMusicStream(m_zombieSong);
@@ -492,7 +501,7 @@ void PrairieKing::UsePowerup(int which)
     case POWERUP_SKULL:
         m_itemToHold = 11;
         m_holdItemTimer = 2000;
-        PlaySound(GetSound("Cowboy_Secret"));
+        PlaySound(GetSound("cowboy_secret"));
         m_gopherTrain = true;
         m_gopherTrainPosition = -GetTileSize() * 2;
         break;
@@ -500,7 +509,7 @@ void PrairieKing::UsePowerup(int which)
     case POWERUP_LOG:
         m_itemToHold = 12;
         m_holdItemTimer = 2000;
-        PlaySound(GetSound("Cowboy_Secret"));
+        PlaySound(GetSound("cowboy_secret"));
         m_gopherTrain = true;
         m_gopherTrainPosition = -GetTileSize() * 2;
         break;
@@ -903,6 +912,12 @@ void PrairieKing::UpdateBullets(float deltaTime)
                             {
                                 StopMusicStream(m_outlawSong);
                             }
+
+                            if (IsMusicStreamPlaying(m_draculaSong))
+                            {
+                                StopMusicStream(m_draculaSong);
+                            }
+
                             m_screenFlash = 200;
 
                             // Add multiple explosion effects
@@ -2237,10 +2252,22 @@ void PrairieKing::Update(float deltaTime)
         UpdateMusicStream(m_zombieSong);
     }
 
+    if (m_outlawSong.stream.buffer != nullptr) {
+        UpdateMusicStream(m_outlawSong);
+    }
+    if (m_endingSong.stream.buffer != nullptr)
+    {
+        UpdateMusicStream(m_endingSong);
+    }
+
     // Update button held state
     for (const auto &key : m_buttonHeldState)
     {
         m_buttonHeldFrames[key]++;
+    }
+
+    if (m_draculaSong.stream.buffer != nullptr) {
+        UpdateMusicStream(m_draculaSong);
     }
 
     // Process player inputs first
@@ -2343,11 +2370,10 @@ void PrairieKing::Update(float deltaTime)
             {
                 m_waveTimer = GameConstants::WAVE_DURATION;
             }
-            // If m_died is true, we preserve the current m_waveTimer value (which includes death penalty)
-
             m_waveCompleted = false;
             UpdateMonsterChancesForWave();
-            if (!IsMusicStreamPlaying(m_overworldSong))
+            // Solo reproducir música overworld si NO es nivel de jefe
+            if (!m_shootoutLevel && !IsMusicStreamPlaying(m_overworldSong))
             {
                 PlayMusicStream(m_overworldSong);
             }
@@ -2658,7 +2684,7 @@ void PrairieKing::Update(float deltaTime)
                     m_coins >= GetPriceForItem(it->second))
                 {
 
-                    PlaySound(GetSound("Cowboy_Secret"));
+                    PlaySound(GetSound("cowboy_secret"));
                     m_holdItemTimer = 2500;
                     m_motionPause = 2500;
                     m_itemToHold = it->second;
@@ -2815,7 +2841,16 @@ void PrairieKing::Update(float deltaTime)
             {
             case 1:
                 m_endCutsceneTimer = 15500;
-                PlaySound(GetSound("Cowboy_singing"));
+                if (IsMusicStreamPlaying(m_overworldSong)) StopMusicStream(m_overworldSong);
+                if (IsMusicStreamPlaying(m_outlawSong)) StopMusicStream(m_outlawSong);
+                if (IsMusicStreamPlaying(m_zombieSong)) StopMusicStream(m_zombieSong);
+                if (IsMusicStreamPlaying(m_draculaSong)) StopMusicStream(m_draculaSong);
+
+                if (m_endingSong.stream.buffer != nullptr)
+                {
+                    PlayMusicStream(m_endingSong);
+                    SetMusicVolume(m_endingSong, 0.7f);
+                }
                 GetMap(-1, m_map); // Get the special end cutscene map
                 break;
 
@@ -2825,6 +2860,8 @@ void PrairieKing::Update(float deltaTime)
                 break;
 
             case 3:
+
+
                 m_endCutsceneTimer = 5000;
                 break;
 
