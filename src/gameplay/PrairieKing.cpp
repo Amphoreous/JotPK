@@ -4528,17 +4528,17 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
 
         break;
     case 1:
-        orcChance = std::max(0.1f, orcChance - wave * 0.05f);
-        spikeyChance = std::min(0.9f, spikeyChance + wave * 0.02f);
+        orcChance = std::max(0.4f, orcChance - wave * 0.05f);
+        spikeyChance = std::min(0.1f, spikeyChance + wave * 0.02f);
         chances.push_back({ORC, orcChance});
         chances.push_back({SPIKEY, spikeyChance});
 
         break;
     case 2:
     case 3:
-        orcChance = std::max(0.2f, orcChance - wave * 0.05f);
-        ogreChance = std::min(0.4f, ogreChance + wave * 0.03f);
-        spikeyChance = std::min(0.4f, spikeyChance + wave * 0.02f);
+        orcChance = std::max(0.5f, orcChance - wave * 0.05f);
+        ogreChance = std::min(0.1f, ogreChance + wave * 0.03f);
+        spikeyChance = std::min(0.1f, spikeyChance + wave * 0.02f);
         chances.push_back({ORC, orcChance});
         chances.push_back({OGRE, ogreChance});
         chances.push_back({SPIKEY, spikeyChance});
@@ -4548,9 +4548,9 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
     case 5:
     case 6:
     case 7:
-        mushroomChance = std::max(0.6f, mushroomChance + wave * 0.1f);
-        ogreChance = std::min(0.4f, ogreChance + wave * 0.03f);
-        evilButterflyChance = std::min(0.4f, evilButterflyChance + wave * 0.1f);
+        mushroomChance = std::max(0.5f, mushroomChance + wave * 0.1f);
+        ogreChance = std::min(0.2f, ogreChance + wave * 0.03f);
+        evilButterflyChance = std::min(0.3f, evilButterflyChance + wave * 0.1f);
         chances.push_back({MUSHROOM, mushroomChance});
         chances.push_back({OGRE, ogreChance});
         chances.push_back({EVIL_BUTTERFLY, evilButterflyChance});
