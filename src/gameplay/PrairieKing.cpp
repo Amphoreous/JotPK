@@ -5836,22 +5836,28 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                 phaseInternalTimer = 1500;
             }
         }
+        // In the Dracula::Move method, replace the SummonEnemies calls:
+
+        // In SUMMON_DEMON_PHASE and SUMMON_MUMMY_PHASE cases:
         else if (phaseInternalCounter == 1 && phaseInternalTimer < 0)
         {
             // Summon enemies
             Vector2 origin = {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                               position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f};
+
             int monsterTypeIndex;
             if (phase == SUMMON_DEMON_PHASE)
             {
-                // Summon flying enemies (ghosts or imps)
-                monsterTypeIndex = GetRandomInt(1, 4); // EVIL_BUTTERFLY to IMP
+                // Summon flying enemies (ghosts or imps) - indices 1 and 4
+                monsterTypeIndex = (GetRandomInt(0, 1) == 0) ? 1 : 4; // EVIL_BUTTERFLY or IMP
             }
             else
             {
-                // Summon ground enemies (orcs, ogres, mummies, mushrooms)
-                monsterTypeIndex = (GetRandomInt(0, 1) == 0) ? 0 : GetRandomInt(2, 5); // ORC or OGRE to MUSHROOM
+                // Summon ground enemies - indices 0, 2, 3, 5
+                std::vector<int> groundEnemies = {0, 2, 3, 5}; // ORC, OGRE, MUMMY, MUSHROOM
+                monsterTypeIndex = groundEnemies[GetRandomInt(0, groundEnemies.size() - 1)];
             }
+
             SummonEnemies(origin, monsterTypeIndex);
 
             if (GetRandomFloat(0.0f, 1.0f) < 0.4f)
@@ -6023,7 +6029,7 @@ void PrairieKing::Dracula::FireSpread(Vector2 origin, double offsetAngle)
 
 void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
 {
-    // Map the 'which' parameter to valid monster types
+    // Define valid monster types with their corresponding GameConstants
     std::vector<int> validMonsterTypes = {
         GameConstants::ORC,            // 0
         GameConstants::EVIL_BUTTERFLY, // 1
@@ -6033,35 +6039,57 @@ void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
         GameConstants::MUSHROOM        // 5
     };
 
-    // Ensure 'which' is within valid range
-    if (which < 0 || which >= validMonsterTypes.size())
-    {
-        which = GetRandomInt(0, validMonsterTypes.size() - 1);
-    }
+    // Clamp 'which' to valid range to prevent crashes
+    which = std::max(0, std::min(which, static_cast<int>(validMonsterTypes.size() - 1)));
 
     int monsterType = validMonsterTypes[which];
 
-    // Spawn positions around Dracula
+    // Spawn positions around Dracula - ensure they're valid positions
     std::vector<Vector2> spawnPositions = {
-        {origin.x - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
-        {origin.x + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
-        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2},
-        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() * 3 / 4}};
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y},
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y},
+        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize()},
+        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize()}};
 
+    int successfulSpawns = 0;
     for (const auto &pos : spawnPositions)
     {
+        // Ensure spawn position is within map bounds
+        int tileX = static_cast<int>(pos.x) / PrairieKing::GetGameInstance()->GetTileSize();
+        int tileY = static_cast<int>(pos.y) / PrairieKing::GetGameInstance()->GetTileSize();
+
+        if (tileX < 1 || tileX >= MAP_WIDTH - 1 || tileY < 1 || tileY >= MAP_HEIGHT - 1)
+        {
+            continue; // Skip out-of-bounds positions
+        }
+
         Rectangle spawnRect = {pos.x, pos.y,
                                static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize()),
                                static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize())};
 
-        if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(spawnRect, nullptr))
+        // Check for collisions before spawning
+        if (!PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(spawnRect) &&
+            !PrairieKing::GetGameInstance()->IsCollidingWithMonster(spawnRect, nullptr))
         {
-            auto *monster = new PrairieKing::CowboyMonster(
-                PrairieKing::GetGameInstance()->m_assets, monsterType, pos);
-            PrairieKing::GetGameInstance()->AddMonster(monster);
+            try
+            {
+                auto *monster = new PrairieKing::CowboyMonster(
+                    PrairieKing::GetGameInstance()->m_assets, monsterType, pos);
+
+                if (monster != nullptr)
+                {
+                    PrairieKing::GetGameInstance()->AddMonster(monster);
+                    successfulSpawns++;
+                }
+            }
+            catch (...)
+            {
+                // If monster creation fails, continue with other positions
+                continue;
+            }
         }
 
-        // Add summoning effect
+        // Add summoning effect even if spawn failed
         PrairieKing::TemporaryAnimatedSprite summonEffect(
             Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
             {PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x + pos.x,
@@ -6071,7 +6099,11 @@ void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
         PrairieKing::GetGameInstance()->AddTemporarySprite(summonEffect);
     }
 
-    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+    // Only play sound if at least one monster was spawned
+    if (successfulSpawns > 0)
+    {
+        PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+    }
 }
 
 // ====================
