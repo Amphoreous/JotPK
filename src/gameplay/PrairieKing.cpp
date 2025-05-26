@@ -198,7 +198,7 @@ void PrairieKing::Initialize()
     m_whichWave = 0;
     m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
     m_waveTimer = 0;
-    m_world = DESERT_WORLD;
+    m_world = 0;
     m_lives = 3;
     m_coins = 0;
     m_score = 0;
@@ -724,17 +724,20 @@ void PrairieKing::EndOfGopherAnimationBehavior(int extraInfo)
     PlaySound(GetSound("cowboy_gopher"));
 }
 
-// Fix the KillOutlaw static function
 void PrairieKing::KillOutlaw()
 {
     if (s_instance && !s_instance->m_monsters.empty())
     {
-        // Add special powerup when outlaw is killed
+        // Drop POWERUP_LOG in first level (world 0), POWERUP_SKULL in second level (world 1)
         int powerupType = (s_instance->m_world == DESERT_WORLD) ? POWERUP_LOG : POWERUP_SKULL;
         Vector2 powerupPos = {8.0f * s_instance->GetTileSize(), 10.0f * s_instance->GetTileSize()};
         s_instance->m_powerups.push_back(CowboyPowerup(powerupType, powerupPos, 9999999));
+        
+        // Also add a life powerup
+        Vector2 lifePos = {8.0f * s_instance->GetTileSize() + s_instance->GetTileSize(), 10.0f * s_instance->GetTileSize()};
+        s_instance->m_powerups.push_back(CowboyPowerup(POWERUP_LIFE, lifePos, 9999999));
 
-        if (s_instance->m_outlawSong.stream.buffer != nullptr && IsMusicStreamPlaying(s_instance->m_outlawSong))
+        if (IsMusicStreamPlaying(s_instance->m_outlawSong))
         {
             StopMusicStream(s_instance->m_outlawSong);
         }
@@ -750,18 +753,20 @@ void PrairieKing::KillOutlaw()
         {
             Vector2 effectPos = {
                 static_cast<float>(s_instance->m_monsters[0]->position.x + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize())),
-                static_cast<float>(s_instance->m_monsters[0]->position.y + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize()))};
+                static_cast<float>(s_instance->m_monsters[0]->position.y + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize()))
+            };
 
             TemporaryAnimatedSprite explosion(
-                Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
-                {s_instance->m_topLeftScreenCoordinate.x + effectPos.x,
-                 s_instance->m_topLeftScreenCoordinate.y + effectPos.y},
-                0.0f, 3.0f, false, effectPos.y / 10000.0f, WHITE);
+                Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
+                Vector2{s_instance->m_topLeftScreenCoordinate.x + effectPos.x,
+                       s_instance->m_topLeftScreenCoordinate.y + effectPos.y},
+                0.0f, 3.0f, false, 1.0f, WHITE
+            );
             explosion.delayBeforeAnimationStart = i * 75;
             s_instance->AddTemporarySprite(explosion);
         }
 
-        // Clear all monsters (specifically the outlaw)
+        // Clear monsters
         for (auto* monster : s_instance->m_monsters)
         {
             delete monster;
@@ -773,95 +778,192 @@ void PrairieKing::KillOutlaw()
 void PrairieKing::UpdateBullets(float deltaTime)
 {
     // Update player bullets
-    for (auto bulletIt = m_bullets.begin(); bulletIt != m_bullets.end();)
+    for (int m = m_bullets.size() - 1; m >= 0; m--)
     {
-        bulletIt->position.x += bulletIt->motion.x * BULLET_SPEED * deltaTime;
-        bulletIt->position.y += bulletIt->motion.y * BULLET_SPEED * deltaTime;
+        m_bullets[m].position.x += m_bullets[m].motion.x * deltaTime * 60.0f; // Adjust for frame rate
+        m_bullets[m].position.y += m_bullets[m].motion.y * deltaTime * 60.0f;
 
-        bool bulletRemoved = false;
-        
-        // Check collision with monsters
-        for (auto monsterIt = m_monsters.begin(); monsterIt != m_monsters.end();)
+        // Check bounds
+        if (m_bullets[m].position.x <= 0 || m_bullets[m].position.y <= 0 || 
+            m_bullets[m].position.x >= 768 || m_bullets[m].position.y >= 768)
         {
-            auto monster = *monsterIt;
-            if (monster->invisible)
-            {
-                ++monsterIt;
-                continue;
-            }
+            m_bullets.erase(m_bullets.begin() + m);
+            continue;
+        }
 
+        // Check map collision
+        if (IsCollidingWithMapForBullets(m_bullets[m].position))
+        {
+            m_bullets.erase(m_bullets.begin() + m);
+            continue;
+        }
+
+        // Check monster collision
+        for (int k = m_monsters.size() - 1; k >= 0; k--)
+        {
             Rectangle bulletRect = {
-                bulletIt->position.x,
-                bulletIt->position.y,
-                static_cast<float>(GetTileSize() / 4),
-                static_cast<float>(GetTileSize() / 4)};
+                static_cast<int>(m_bullets[m].position.x), 
+                static_cast<int>(m_bullets[m].position.y), 
+                12, 12
+            };
 
-            if (CheckCollisionRecs(bulletRect, monster->position))
+            if (CheckCollisionRecs(bulletRect, m_monsters[k]->position))
             {
-                if (monster->TakeDamage(bulletIt->damage))
-                {
-                    AddGuts(Vector2{monster->position.x, monster->position.y}, monster->type);
-                    int loot = monster->GetLootDrop();
+                int monsterHealth = m_monsters[k]->health;
+                int monsterAfterDamageHealth = 0;
 
-                    // Special boss logic
+                if (m_monsters[k]->TakeDamage(m_bullets[m].damage))
+                {
+                    monsterAfterDamageHealth = m_monsters[k]->health;
+                    AddGuts(Vector2{static_cast<float>(m_monsters[k]->position.x), 
+                                   static_cast<float>(m_monsters[k]->position.y)}, m_monsters[k]->type);
+                    
+                    int loot = m_monsters[k]->GetLootDrop();
+                    
+                    // Apply round-based loot modifications
+                    if (m_whichRound == 1 && GetRandomFloat(0.0f, 1.0f) < 0.5f)
+                    {
+                        loot = -1; // No loot
+                    }
+                    
+                    if (m_whichRound > 0 && (loot == POWERUP_ZOMBIE || loot == POWERUP_LIFE) && 
+                        GetRandomFloat(0.0f, 1.0f) < 0.4f)
+                    {
+                        loot = -1; // No loot
+                    }
+
+                    // Handle special Outlaw behavior in shootout levels
                     if (m_shootoutLevel)
                     {
-                        if (m_whichWave == 12 && monster->type == DRACULA)
+                        // Check if this is the final boss (Dracula) in wave 12
+                        if (m_whichWave == 12 && m_monsters[k]->type == DRACULA)
                         {
                             PlaySound(GetSound("cowboy_explosion"));
-                            // Add heart powerup at specific location for Dracula
-                            Vector2 heartPos = {static_cast<float>(8 * GetTileSize()),
-                                                static_cast<float>(10 * GetTileSize())};
-                            m_powerups.push_back(CowboyPowerup(POWERUP_HEART, heartPos, 9999999));
+                            m_powerups.push_back(CowboyPowerup(POWERUP_HEART, 
+                                Vector2{8.0f * GetTileSize(), 10.0f * GetTileSize()}, 9999999));
+                            m_noPickUpBox = Rectangle{static_cast<float>(8 * GetTileSize()), static_cast<float>(10 * GetTileSize()), static_cast<float>(GetTileSize()), static_cast<float>(GetTileSize())};
+                            
+                            if (IsMusicStreamPlaying(m_outlawSong))
+                            {
+                                StopMusicStream(m_outlawSong);
+                            }
+                            m_screenFlash = 200;
+
+                            // Add multiple explosion effects
+                            for (int j = 0; j < 30; j++)
+                            {
+                                Vector2 explosionPos = {
+                                    static_cast<float>(m_monsters[k]->position.x + GetRandomInt(-GetTileSize(), GetTileSize())),
+                                    static_cast<float>(m_monsters[k]->position.y + GetRandomInt(-GetTileSize(), GetTileSize()))
+                                };
+
+                                TemporaryAnimatedSprite explosion(
+                                    Rectangle{512, 96, 16, 16}, 70.0f, 6, 0,
+                                    Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
+                                           m_topLeftScreenCoordinate.y + explosionPos.y},
+                                    0.0f, 3.0f, false, 1.0f, WHITE
+                                );
+                                explosion.delayBeforeAnimationStart = j * 75;
+                                AddTemporarySprite(explosion);
+
+                                // Add guts effects periodically
+                                if (j % 4 == 0)
+                                {
+                                    AddGuts(Vector2{explosionPos.x, explosionPos.y}, DRACULA);
+                                }
+
+                                // Add additional explosion effects
+                                if (j % 4 == 0)
+                                {
+                                    TemporaryAnimatedSprite additionalExplosion(
+                                        Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
+                                        Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
+                                               m_topLeftScreenCoordinate.y + explosionPos.y},
+                                        0.0f, 3.0f, false, 1.0f, WHITE
+                                    );
+                                    additionalExplosion.delayBeforeAnimationStart = j * 75;
+                                    AddTemporarySprite(additionalExplosion);
+                                }
+
+                                if (j % 3 == 0)
+                                {
+                                    TemporaryAnimatedSprite flyingEffect(
+                                        Rectangle{544, 128, 16, 16}, 100.0f, 4, 0,
+                                        Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
+                                               m_topLeftScreenCoordinate.y + explosionPos.y},
+                                        0.0f, 3.0f, false, 1.0f, WHITE
+                                    );
+                                    flyingEffect.delayBeforeAnimationStart = j * 75;
+                                    AddTemporarySprite(flyingEffect);
+                                }
+                            }
+                        }
+                        // Handle regular Outlaw in other shootout waves (not wave 12)
+                        else if (m_whichWave != 12 && m_monsters[k]->type == -1) // Outlaw type
+                        {
+                            // Drop POWERUP_LOG in first level (world 0), POWERUP_SKULL in second level (world 1)
+                            int powerupType = (m_world == DESERT_WORLD) ? POWERUP_LOG : POWERUP_SKULL;
+                            
+                            // Add the powerup and a life
+                            m_powerups.push_back(CowboyPowerup(powerupType, 
+                                Vector2{8.0f * GetTileSize(), 10.0f * GetTileSize()}, 9999999));
+                            m_powerups.push_back(CowboyPowerup(POWERUP_LIFE, 
+                                Vector2{8.0f * GetTileSize() + GetTileSize(), 10.0f * GetTileSize()}, 9999999));
+
+                            if (IsMusicStreamPlaying(m_outlawSong))
+                            {
+                                StopMusicStream(m_outlawSong);
+                            }
+                            
+                            // Set bridge tile to allow passage
+                            m_map[8][8] = MAP_BRIDGE;
+                            m_screenFlash = 200;
+
+                            // Add explosion effects
+                            for (int i = 0; i < 15; i++)
+                            {
+                                Vector2 explosionPos = {
+                                    static_cast<float>(m_monsters[k]->position.x + GetRandomInt(-GetTileSize(), GetTileSize())),
+                                    static_cast<float>(m_monsters[k]->position.y + GetRandomInt(-GetTileSize(), GetTileSize()))
+                                };
+
+                                TemporaryAnimatedSprite explosion(
+                                    Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
+                                    Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
+                                           m_topLeftScreenCoordinate.y + explosionPos.y},
+                                    0.0f, 3.0f, false, 1.0f, WHITE
+                                );
+                                explosion.delayBeforeAnimationStart = i * 75;
+                                AddTemporarySprite(explosion);
+                            }
                         }
                     }
-
-                    // Normal loot logic (but skip if it's an Outlaw as TakeDamage already handled it)
-                    if (loot != -1 && m_whichWave != 12 && monster->type != -1) // -1 indicates Outlaw
+                    // Handle normal loot drops for non-shootout levels
+                    else if (loot != -1 && m_whichWave != 12)
                     {
-                        if (m_whichRound > 0 && (loot == 5 || loot == 8) && GetRandomFloat(0, 1) < 0.4)
-                        {
-                            loot = -1; // No loot
-                        }
-
-                        if (loot != -1)
-                        {
-                            Vector2 lootPos = {monster->position.x, monster->position.y};
-                            m_powerups.push_back(CowboyPowerup(loot, lootPos, LOOT_DURATION));
-                        }
+                        m_powerups.push_back(CowboyPowerup(loot, 
+                            Vector2{static_cast<float>(m_monsters[k]->position.x), 
+                                   static_cast<float>(m_monsters[k]->position.y)}, LOOT_DURATION));
                     }
 
-                    // Special handling for Outlaw death is already done in TakeDamage
-                    // Just clean up the monster from the list
-                    delete monster;
-                    monsterIt = m_monsters.erase(monsterIt);
+                    // Remove the monster
+                    delete m_monsters[k];
+                    m_monsters.erase(m_monsters.begin() + k);
+                    PlaySound(GetSound("Cowboy_monsterDie"));
                 }
                 else
                 {
-                    ++monsterIt;
+                    monsterAfterDamageHealth = m_monsters[k]->health;
                 }
-                
-                // Remove the bullet
-                bulletIt = m_bullets.erase(bulletIt);
-                bulletRemoved = true;
+
+                // Reduce bullet damage and remove if depleted
+                m_bullets[m].damage -= monsterHealth - monsterAfterDamageHealth;
+                if (m_bullets[m].damage <= 0)
+                {
+                    m_bullets.erase(m_bullets.begin() + m);
+                }
                 break;
             }
-            else
-            {
-                ++monsterIt;
-            }
-        }
-
-        // Check collision with map if bullet wasn't removed by monster collision
-        if (!bulletRemoved && IsCollidingWithMapForBullets(bulletIt->position))
-        {
-            bulletIt = m_bullets.erase(bulletIt);
-            bulletRemoved = true;
-        }
-
-        if (!bulletRemoved)
-        {
-            ++bulletIt;
         }
     }
 
