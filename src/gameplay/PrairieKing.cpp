@@ -5315,7 +5315,9 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
                                      drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
                 Rectangle bubbleRect = {448 + ((PrairieKing::GetGameInstance()->m_whichWave > 5) ? 32 : 0),
                                         144, 32, 32};
-                DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
+                DrawTexturePro(texture, bubbleRect,
+                               Rectangle{bubblePos.x, bubblePos.y, 96, 96}, // 32 * 3 = 96 for proper scaling
+                               Vector2{0, 0}, 0.0f, WHITE);
             }
             break;
 
