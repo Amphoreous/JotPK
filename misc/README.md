@@ -2,7 +2,7 @@
 
 ## Links
 - **GitHub Repository:** [https://github.com/Amphoreous/JotPK](https://github.com/Amphoreous/JotPK)
-- **Demo Video:** [https://youtu.be/q4D6h2tgzlw](https://youtu.be/q4D6h2tgzlw)
+- **Demo Video:** [https://youtu.be/q4D6h2tgzlw](https://youtu.be/19ghKUwGLNk)
 
 ## Team Members
 - **Zakaria Hamdaoui** - [@TheUnrealZaka](https://github.com/TheUnrealZaka)
@@ -21,6 +21,7 @@ Journey of the Prairie King is an intense arcade-style twin-stick shooter set in
 
 
 ## Features Implemented
+- **Discord Presence**
 - **Rooms (levels)**
 - **Player Movement**
 - **Player Shooting**
@@ -35,4 +36,12 @@ Journey of the Prairie King is an intense arcade-style twin-stick shooter set in
 - **UI (lives, timer, inventory, coins, upgrades)**
 - **Animations**
 - **Background Music**
+- **Bosses**
 - **Sound effects (footsteps, gunshots, death)**
+- **Screen Mode (Fullscreen, windowed...)**
+- **Shop (Upgrades for the player)**
+- **Pause Button**
+- **Volume**
+- **Debug Mode (Add lives, coins, clear wave, enemies, increase Player's damage, god mode, spawn enemies and power-ups)**
+- **Cutscenes**
+- **Game's ending screen**
