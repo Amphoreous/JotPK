@@ -1413,13 +1413,19 @@ bool PrairieKing::IsMapTilePassableForMonsters(int tileType)
     return true;
 }
 
-bool PrairieKing::IsCollidingWithMonster(Rectangle r, CowboyMonster *subject)
+bool PrairieKing::IsCollidingWithMonster(Rectangle r, CowboyMonster* subject)
 {
     for (auto monster : m_monsters)
     {
         if (monster != subject && CheckCollisionRecs(r, monster->position))
         {
-            return true;
+            // Si el monstruo es un Spikey bloque, es un obstáculo sólido
+            if (monster->type == GameConstants::SPIKEY && monster->spikeyIsBlock)
+                return true;
+
+            // Si el monstruo es otro tipo, sigue la lógica normal
+            if (monster->type != GameConstants::SPIKEY)
+                return true;
         }
     }
     return false;
@@ -4201,47 +4207,11 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     case GameConstants::OGRE:
     case GameConstants::MUMMY:
     case GameConstants::MUSHROOM:
-    case GameConstants::SPIKEY:
     {
-        if (spikeyIsBlock)
-        {
-            // No se mueve si es bloque
-            return false;
-        }
-        spikeyWalkTimer += deltaTime;
-        if (spikeyWalkTimer >= 7.0f)
-        { // O usa GetRandomFloat(7.0f, 9.0f) si quieres aleatorio
-            spikeyIsBlock = true;
-            health = 7; // Ahora tiene 7 de vida
-            // Ajusta el tamaño a 1 tile
-            position.width = PrairieKing::GetGameInstance()->GetTileSize();
-            position.height = PrairieKing::GetGameInstance()->GetTileSize();
-            // Centra en la grilla
-            position.x = std::round(position.x / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
-            position.y = std::round(position.y / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
-            return false;
-        }
-
-        // Special behavior for Spikey
-        if (type == GameConstants::SPIKEY)
-        {
-            if (special || invisible)
-            {
-                break;
-            }
-            if (ticksSinceLastMovement > 20)
-            {
-                int tries = 0;
-                do
-                {
-                    targetPosition = {
-                        static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
-                        static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
-                    tries++;
-                } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
-            }
-        }
-        else if (ticksSinceLastMovement > 20)
+        // --- SOLO SPIKEYS PUEDEN ENTRAR EN MODO BLOQUE ---
+        // No bloque para otros monstruos
+        // Lógica normal de movimiento para estos monstruos
+        if (ticksSinceLastMovement > 20)
         {
             int tries = 0;
             do
@@ -4253,7 +4223,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
                         static_cast<int>(position.x) + PrairieKing::GetGameInstance()->GetTileSize() * 2)),
                     static_cast<float>(GetRandomInt(
                         static_cast<int>(position.y) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
-                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2))};
+                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2)) };
                 tries++;
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
@@ -4264,7 +4234,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         // If the gopher is running, chase the gopher instead
         if (PrairieKing::GetGameInstance()->m_gopherRunning)
         {
-            target = {PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y};
+            target = { PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y };
         }
 
         // Occasionally change movement direction
@@ -4274,7 +4244,188 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
 
         // Determine movement direction
-        if ((type == GameConstants::SPIKEY && !oppositeMotionGuy) ||
+        if (std::abs(target.x - position.x) > std::abs(target.y - position.y))
+        {
+            if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
+            {
+                movementDirection = 3; // Left
+            }
+            else if (target.x > position.x + speed && (movedLastTurn || movementDirection != 1))
+            {
+                movementDirection = 1; // Right
+            }
+            else if (target.y > position.y + speed && (movedLastTurn || movementDirection != 2))
+            {
+                movementDirection = 2; // Down
+            }
+            else if (target.y + speed < position.y && (movedLastTurn || movementDirection != 0))
+            {
+                movementDirection = 0; // Up
+            }
+        }
+        else
+        {
+            if (target.y > position.y + speed && (movedLastTurn || movementDirection != 2))
+            {
+                movementDirection = 2; // Down
+            }
+            else if (target.y + speed < position.y && (movedLastTurn || movementDirection != 0))
+            {
+                movementDirection = 0; // Up
+            }
+            else if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
+            {
+                movementDirection = 3; // Left
+            }
+            else if (target.x > position.x + speed && (movedLastTurn || movementDirection != 1))
+            {
+                movementDirection = 1; // Right
+            }
+        }
+
+        movedLastTurn = false;
+        Rectangle attemptedPosition = position;
+
+        // Apply movement based on direction
+        switch (movementDirection)
+        {
+        case 0: // Up
+            attemptedPosition.y -= speed;
+            break;
+        case 1: // Right
+            attemptedPosition.x += speed;
+            break;
+        case 2: // Down
+            attemptedPosition.y += speed;
+            break;
+        case 3: // Left
+            attemptedPosition.x -= speed;
+            break;
+        }
+
+        // ZOMBIE MODE REVERSAL
+        PrairieKing* game = PrairieKing::GetGameInstance();
+        if (game && game->m_zombieModeTimer > 0)
+        {
+            attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
+            attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
+        }
+
+        // Special behavior for Ogre (type 2)
+        if (type == GameConstants::OGRE)
+        {
+            for (int i = PrairieKing::GetGameInstance()->m_monsters.size() - 1; i >= 0; i--)
+            {
+                auto* monster = PrairieKing::GetGameInstance()->m_monsters[i];
+                if (monster->type == GameConstants::SPIKEY && monster->special &&
+                    CheckCollisionRecs(attemptedPosition, monster->position))
+                {
+                    PrairieKing::AddGuts({ monster->position.x, monster->position.y }, monster->type);
+                    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
+                    delete monster;
+                    PrairieKing::GetGameInstance()->m_monsters.erase(
+                        PrairieKing::GetGameInstance()->m_monsters.begin() + i);
+                }
+            }
+        }
+
+        // Check for collisions
+        if (PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) ||
+            PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this) ||
+            PrairieKing::GetGameInstance()->m_deathTimer > 0.0f)
+        {
+            // Si el monstruo está atascado, elige un nuevo target aleatorio
+            ticksSinceLastMovement = 0;
+            targetPosition = {
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+            break;
+        }
+
+        // Update position if no collisions
+        ticksSinceLastMovement = 0;
+        position = attemptedPosition;
+        movedLastTurn = true;
+
+        // Check if we reached the target
+        if (!CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
+            position))
+        {
+            break;
+        }
+
+        // Reset target
+        targetPosition = { 0.0f, 0.0f };
+
+        // Special behavior for Orc and Mummy
+        if ((type == GameConstants::ORC || type == GameConstants::MUMMY) && uninterested)
+        {
+            targetPosition = {
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+            if (GetRandomFloat(0.0f, 1.0f) < 0.5f)
+            {
+                uninterested = false;
+                targetPosition = { 0.0f, 0.0f };
+            }
+        }
+
+        break;
+    }
+    case GameConstants::SPIKEY:
+    {
+        // --- SOLO SPIKEYS PUEDEN ENTRAR EN MODO BLOQUE ---
+        if (spikeyIsBlock)
+        {
+            // No se mueve si es bloque
+            return false;
+        }
+        spikeyWalkTimer += deltaTime;
+        if (spikeyWalkTimer >= 7.0f)
+        {
+            spikeyIsBlock = true;
+            health = 7;
+            position.width = PrairieKing::GetGameInstance()->GetTileSize();
+            position.height = PrairieKing::GetGameInstance()->GetTileSize();
+            position.x = std::round(position.x / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
+            position.y = std::round(position.y / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
+            return false;
+        }
+
+        if (special || invisible)
+        {
+            break;
+        }
+        if (ticksSinceLastMovement > 20)
+        {
+            int tries = 0;
+            do
+            {
+                targetPosition = {
+                    static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                    static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+                tries++;
+            } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
+        }
+
+        // Determine the target
+        Vector2 target = (targetPosition.x != 0.0f || targetPosition.y != 0.0f) ? targetPosition : playerPosition;
+
+        // If the gopher is running, chase the gopher instead
+        if (PrairieKing::GetGameInstance()->m_gopherRunning)
+        {
+            target = { PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y };
+        }
+
+        // Occasionally change movement direction
+        if (GetRandomFloat(0.0f, 1.0f) < 0.001f)
+        {
+            oppositeMotionGuy = !oppositeMotionGuy;
+        }
+
+        // Determine movement direction
+        if ((!oppositeMotionGuy) ||
             std::abs(target.x - position.x) > std::abs(target.y - position.y))
         {
             if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
@@ -4334,31 +4485,12 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             break;
         }
 
-        // ZOMBIE MODE REVERSAL - This is the key missing piece!
-        PrairieKing *game = PrairieKing::GetGameInstance();
+        // ZOMBIE MODE REVERSAL
+        PrairieKing* game = PrairieKing::GetGameInstance();
         if (game && game->m_zombieModeTimer > 0)
         {
-            // Reverse the movement during zombie mode
             attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
             attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
-        }
-
-        // Special behavior for Ogre (type 2)
-        if (type == GameConstants::OGRE)
-        {
-            for (int i = PrairieKing::GetGameInstance()->m_monsters.size() - 1; i >= 0; i--)
-            {
-                auto *monster = PrairieKing::GetGameInstance()->m_monsters[i];
-                if (monster->type == GameConstants::SPIKEY && monster->special &&
-                    CheckCollisionRecs(attemptedPosition, monster->position))
-                {
-                    PrairieKing::AddGuts({monster->position.x, monster->position.y}, monster->type);
-                    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
-                    delete monster;
-                    PrairieKing::GetGameInstance()->m_monsters.erase(
-                        PrairieKing::GetGameInstance()->m_monsters.begin() + i);
-                }
-            }
         }
 
         // Check for collisions
@@ -4366,6 +4498,11 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this) ||
             PrairieKing::GetGameInstance()->m_deathTimer > 0.0f)
         {
+            // Si el monstruo está atascado, elige un nuevo target aleatorio
+            ticksSinceLastMovement = 0;
+            targetPosition = {
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
             break;
         }
 
@@ -4375,29 +4512,15 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         movedLastTurn = true;
 
         // Check if we reached the target
-        if (!CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                    position))
+        if (!CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
+            position))
         {
             break;
         }
 
         // Reset target
-        targetPosition = {0.0f, 0.0f};
-
-        // Special behavior for Orc and Mummy
-        if ((type == GameConstants::ORC || type == GameConstants::MUMMY) && uninterested)
-        {
-            targetPosition = {
-                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
-                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
-            if (GetRandomFloat(0.0f, 1.0f) < 0.5f)
-            {
-                uninterested = false;
-                targetPosition = {0.0f, 0.0f};
-            }
-        }
-
+        targetPosition = { 0.0f, 0.0f };
         break;
     }
     case GameConstants::EVIL_BUTTERFLY:
@@ -4416,7 +4539,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
                         static_cast<int>(position.x) + PrairieKing::GetGameInstance()->GetTileSize() * 2)),
                     static_cast<float>(GetRandomInt(
                         static_cast<int>(position.y) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
-                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2))};
+                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2)) };
                 tries++;
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
@@ -4426,9 +4549,9 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
 
         // Calculate velocity to target
         Vector2 targetToFly = GetVelocityTowardPoint(
-            {position.x, position.y},
-            {target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-             target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+            { position.x, position.y },
+            { target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+             target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
             speed);
 
         // Adjust acceleration
@@ -4456,7 +4579,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             position.x + static_cast<int>(std::ceil(acceleration.x)),
             position.y + static_cast<int>(std::ceil(acceleration.y)),
             position.width,
-            position.height};
+            position.height };
 
         // Update position if no collisions
         if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(newPosition, this) &&
@@ -4467,11 +4590,11 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             position.y += static_cast<int>(std::ceil(acceleration.y));
 
             // Check if reached target
-            if (CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                        target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                       position))
+            if (CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                        target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
+                position))
             {
-                targetPosition = {0.0f, 0.0f};
+                targetPosition = { 0.0f, 0.0f };
             }
         }
         break;
