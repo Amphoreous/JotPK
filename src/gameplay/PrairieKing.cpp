@@ -296,12 +296,12 @@ void PrairieKing::Reset()
     GetMap(m_whichWave, m_map);
 
     // Reiniciar la posición del jugador
-    m_playerPosition = { 384.0f, 384.0f };
+    m_playerPosition = {384.0f, 384.0f};
     m_playerBoundingBox = {
         m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
         m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
         static_cast<float>(GetTileSize()) / 2.0f,
-        static_cast<float>(GetTileSize()) / 2.0f };
+        static_cast<float>(GetTileSize()) / 2.0f};
 
     // Estado de la wave: NO completada, timer inicial
     m_waveCompleted = false;
@@ -339,6 +339,19 @@ void PrairieKing::ApplyLevelSpecificStates()
         {
             m_monsters.back()->health *= 2;
         }
+
+        // Stop overworld music and play outlaw music for Dracula fight
+        if (IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+
+        // Load and play outlaw music for boss fight
+        if (m_outlawSong.stream.buffer != nullptr)
+        {
+            PlayMusicStream(m_outlawSong);
+            SetMusicVolume(m_outlawSong, 0.7f);
+        }
     }
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
@@ -347,7 +360,18 @@ void PrairieKing::ApplyLevelSpecificStates()
         Vector2 outlawPos = {static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())};
         int outlawHealth = (m_world == 0) ? 50 : 100;
         m_monsters.push_back(new Outlaw(m_assets, outlawPos, outlawHealth));
-        PlaySound(GetSound("cowboy_outlawsong"));
+
+        // Stop overworld music and play outlaw music
+        if (IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+
+        if (m_outlawSong.stream.buffer != nullptr)
+        {
+            PlayMusicStream(m_outlawSong);
+            SetMusicVolume(m_outlawSong, 0.7f);
+        }
     }
     else
     {
@@ -431,8 +455,37 @@ void PrairieKing::UsePowerup(int which)
         m_itemToHold = 13;
         m_holdItemTimer = 4000;
         PlaySound(GetSound("Cowboy_Secret"));
+
+        // Trigger end cutscene
         m_endCutscene = true;
         m_endCutsceneTimer = 4000;
+        m_endCutscenePhase = 0;
+
+        // Stop all music
+        if (IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+        if (IsMusicStreamPlaying(m_outlawSong))
+        {
+            StopMusicStream(m_outlawSong);
+        }
+        if (IsMusicStreamPlaying(m_zombieSong))
+        {
+            StopMusicStream(m_zombieSong);
+        }
+
+        // Clear all monsters and bullets
+        for (auto monster : m_monsters)
+        {
+            delete monster;
+        }
+        m_monsters.clear();
+        m_bullets.clear();
+        m_enemyBullets.clear();
+
+        // Set final map
+        GetMap(-1, m_map); // Special end cutscene map
         m_world = 0;
         break;
 
@@ -1979,44 +2032,44 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 12:
+    {
+        // Convert barriers to cactus
+        for (int y = 0; y < MAP_HEIGHT; y++)
         {
-            // Convert barriers to cactus
-            for (int y = 0; y < MAP_HEIGHT; y++)
-            {
-                for (int x = 0; x < MAP_WIDTH; x++)
-                {
-                    if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2)
-                    {
-                        newMap[x][y] = MAP_CACTUS;
-                    }
-                }
-            }
-
-            // Add trench borders
             for (int x = 0; x < MAP_WIDTH; x++)
             {
-                newMap[x][0] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
-                newMap[x][15] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+                if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2)
+                {
+                    newMap[x][y] = MAP_CACTUS;
+                }
             }
-
-            // Add bridge border
-            Rectangle r = {1, 1, 14, 14};
-            std::vector<Vector2> border = GetBorderPoints(r);
-            for (const auto &pt : border)
-            {
-                newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
-            }
-
-            // Add rocky inner border
-            r = {2, 2, 12, 12};
-            border = GetBorderPoints(r);
-            for (const auto &pt : border)
-            {
-                newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_ROCKY1;
-            }
-            return; // Important: return early for wave 12
         }
-        break;
+
+        // Add trench borders
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            newMap[x][0] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+            newMap[x][15] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+        }
+
+        // Add bridge border
+        Rectangle r = {1, 1, 14, 14};
+        std::vector<Vector2> border = GetBorderPoints(r);
+        for (const auto &pt : border)
+        {
+            newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
+        }
+
+        // Add rocky inner border
+        r = {2, 2, 12, 12};
+        border = GetBorderPoints(r);
+        for (const auto &pt : border)
+        {
+            newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_ROCKY1;
+        }
+        return; // Important: return early for wave 12
+    }
+    break;
 
     default:
         // Default map additions
@@ -2739,6 +2792,45 @@ void PrairieKing::Update(float deltaTime)
             SaveGame();
         }
     }
+    // Handle end cutscene
+    if (m_endCutscene)
+    {
+        m_endCutsceneTimer -= deltaTime * 1000.0f;
+
+        if (m_endCutsceneTimer <= 0)
+        {
+            switch (m_endCutscenePhase)
+            {
+            case 0:
+                // Phase 0: Show final message and prepare for new game plus
+                m_endCutscenePhase = 1;
+                m_endCutsceneTimer = 3000; // 3 seconds to show message
+                break;
+
+            case 1:
+                // Phase 1: Start new game plus
+                m_endCutscene = false;
+                m_whichRound++;
+
+                // Reset for new game plus
+                Reset();
+                ApplyNewGamePlus();
+
+                // Start new round
+                m_whichWave = 0;
+                m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+
+                // Restart overworld music
+                if (m_overworldSong.stream.buffer != nullptr)
+                {
+                    PlayMusicStream(m_overworldSong);
+                    SetMusicVolume(m_overworldSong, 0.7f);
+                }
+                break;
+            }
+        }
+        return; // Skip normal updates during end cutscene
+    }
 }
 
 void PrairieKing::UpdateMonsterChancesForWave()
@@ -2819,6 +2911,66 @@ void PrairieKing::UpdateMonsterChancesForWave()
 
 void PrairieKing::Draw()
 {
+    // Handle end cutscene drawing
+    if (m_endCutscene)
+    {
+        // Draw the final map
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            for (int y = 0; y < MAP_HEIGHT; y++)
+            {
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{336.0f + 16.0f * m_map[x][y], 32.0f - m_world * 16.0f, 16.0f, 16.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
+                              m_topLeftScreenCoordinate.y + y * GetTileSize(),
+                              static_cast<float>(GetTileSize()),
+                              static_cast<float>(GetTileSize())},
+                    Vector2{0, 0}, 0.0f, WHITE);
+            }
+        }
+
+        // Draw player holding the heart
+        if (m_holdItemTimer > 0)
+        {
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{256.0f, 112.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                          48.0f, 48.0f},
+                Vector2{0, 0}, 0.0f, WHITE);
+
+            // Draw the heart above player
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{304.0f, 160.0f, 16.0f, 16.0f}, // POWERUP_HEART sprite
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
+                          48.0f, 48.0f},
+                Vector2{0, 0}, 0.0f, WHITE);
+        }
+
+        // Draw victory message
+        if (m_endCutscenePhase == 1)
+        {
+            const char *victoryText = "VICTORY!";
+            const char *newGameText = "Thank you for playing the game!";
+
+            DrawTextEx(m_assets.GetFont("title"), victoryText,
+                       Vector2{m_topLeftScreenCoordinate.x + 4.0f * GetTileSize(),
+                               m_topLeftScreenCoordinate.y + 6.0f * GetTileSize()},
+                       48, 1, WHITE);
+
+            DrawTextEx(m_assets.GetFont("text"), newGameText,
+                       Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
+                               m_topLeftScreenCoordinate.y + 8.0f * GetTileSize()},
+                       32, 1, WHITE);
+        }
+
+        return; // Don't draw normal game elements during cutscene
+    }
+
     if (m_gameOver || m_gameRestartTimer > 0)
     {
         // Draw black background
@@ -3392,7 +3544,6 @@ void PrairieKing::Draw()
     if (m_gopherTrain && m_gopherTrainPosition > -GetTileSize())
     {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
-
 
         // Draw gopher train cars
         Rectangle gopherCarRect = {256 + (m_gopherTrainPosition / 30 % 4) * 16, 144, 16, 16};
@@ -5280,7 +5431,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     if (flashColorTimer > 0.0f)
     {
         // Flash sprite when taking damage
-        sourceRect = {464, 96, 16, 16}; // Flash sprite
+        sourceRect = {336, 48, 16, 16}; // Flash sprite
     }
     else
     {
@@ -5292,10 +5443,10 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
         case SUMMON_DEMON_PHASE:
         case SUMMON_MUMMY_PHASE:
             // Normal Dracula animation
-            sourceRect = {592.0f + (phaseInternalTimer / 100 % 3) * 16, 160, 16, 16};
+            sourceRect = {464.0f + (phaseInternalTimer / 100 % 3) * 16, 64, 16, 16};
             break;
         default:
-            sourceRect = {592, 112, 16, 16};
+            sourceRect = {464, 112, 16, 16};
             break;
         }
 
@@ -5311,7 +5462,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
             // Draw speech bubble
             Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
                                  drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
-            Rectangle bubbleRect = {608, 128, 32, 32};
+            Rectangle bubbleRect = {480, 80, 32, 32};
             DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
         }
     }

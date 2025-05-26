@@ -141,7 +141,7 @@ public:
     static constexpr int MAP_WIDTH = 16;
     static constexpr int MAP_HEIGHT = 16;
     static constexpr int PIXEL_ZOOM = 3;
-    static constexpr int BULLET_SPEED = 10;
+    static constexpr int BULLET_SPEED = 9;
     static constexpr double LOOT_CHANCE = 0.05;
     static constexpr double COIN_CHANCE = 0.05;
     static constexpr int LOOT_DURATION = 7500;
