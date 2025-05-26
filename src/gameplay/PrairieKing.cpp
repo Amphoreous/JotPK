@@ -2476,7 +2476,7 @@ void PrairieKing::Update(float deltaTime)
             if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
                 !m_waitingForPlayerToMoveDownAMap && m_deathTimer <= 0)
             {
-                float spawnChance = 0.03f;
+                float spawnChance = 0.02f;
                 if (m_monsters.empty())
                 {
                     spawnChance = 0.1f;
@@ -4230,7 +4230,7 @@ int PrairieKing::CowboyMonster::GetLootDrop()
         }
 
         // 1% chance for coin
-        if (GetRandomFloat(0.0f, 1.0f) < 0.06f)
+        if (GetRandomFloat(0.0f, 1.0f) < 0.05f)
         {
             return COIN1;
         }
