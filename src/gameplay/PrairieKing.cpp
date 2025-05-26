@@ -5385,9 +5385,9 @@ void PrairieKing::DrawDebugInfo()
     currentY = startY;
     DrawText("Debug Controls:", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
-    DrawText("F4: God Mode", rightCol, currentY, 20, debugColor);
-    currentY += lineHeight;
     DrawText("F3: Toggle Debug", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F4: God Mode", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
     DrawText("F5: Add Life", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
