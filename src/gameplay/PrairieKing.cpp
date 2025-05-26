@@ -296,12 +296,25 @@ void PrairieKing::Reset()
     GetMap(m_whichWave, m_map);
 
     // Reiniciar la posición del jugador
-    m_playerPosition = {384.0f, 384.0f};
+    m_playerPosition = { 384.0f, 384.0f };
     m_playerBoundingBox = {
         m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
         m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
         static_cast<float>(GetTileSize()) / 2.0f,
-        static_cast<float>(GetTileSize()) / 2.0f};
+        static_cast<float>(GetTileSize()) / 2.0f };
+
+    // Estado de la wave: NO completada, timer inicial
+    m_waveCompleted = false;
+    m_waveTimer = GameConstants::WAVE_DURATION;
+    m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
+
+    // Limpiar el powerup del inventario del jugador
+    m_heldItem.reset();
+    m_holdItemTimer = 0;
+    m_itemToHold = -1;
+
+    // Actualizar probabilidades de spawn de monstruos
+    UpdateMonsterChancesForWave();
 }
 
 void PrairieKing::ApplyNewGamePlus()
@@ -1147,6 +1160,7 @@ void PrairieKing::ProcessInputs()
             }
             else
             {
+                Reset();
                 m_gameRestartTimer = 1500;
                 m_gameOver = false;
                 m_gameOverOption = 0;
@@ -1840,8 +1854,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
     break;
 
     case 5:
-        m_world = 2;
-
         // Add lots of corner cacti
         newMap[1][1] = MAP_CACTUS;
         newMap[14][1] = MAP_CACTUS;
@@ -1872,8 +1884,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 6:
-        m_world = 2;
-
         // Add rocks, cacti, and fences
         newMap[4][5] = MAP_ROCKY1;
         newMap[12][10] = MAP_CACTUS;
@@ -1894,8 +1904,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 7:
-        m_world = 2;
-
         // Add trenches through middle
         for (int x = 0; x < MAP_WIDTH; x++)
         {
@@ -1913,8 +1921,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 9:
-        m_world = 1;
-
         // Add cacti squares
         newMap[4][4] = MAP_CACTUS;
         newMap[5][4] = MAP_CACTUS;
@@ -1936,8 +1942,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 10:
-        m_world = 1;
-
         // Add trenches at top and bottom
         for (int x = 0; x < MAP_WIDTH; x++)
         {
@@ -1960,8 +1964,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 11:
-        m_world = 1;
-
         // Add fence borders
         for (int x = 0; x < MAP_WIDTH; x++)
         {
@@ -1976,8 +1978,6 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 12:
-        m_world = 1;
-
         {
             // Convert barriers to cactus
             for (int y = 0; y < MAP_HEIGHT; y++)
@@ -2418,7 +2418,7 @@ void PrairieKing::Update(float deltaTime)
             {
                 // Push vertically toward center
                 pushDirection.y = (tilePosition.y > centerY) ? -1.0f : 1.0f;
-            }            
+            }
             // Apply the push
             m_powerups[i].position.x += pushDirection.x;
             m_powerups[i].position.y += pushDirection.y;
@@ -2719,7 +2719,14 @@ void PrairieKing::Update(float deltaTime)
             m_whichWave++;
             GetMap(m_whichWave, m_map);
             m_playerPosition = {8.0f * GetTileSize(), 8.0f * GetTileSize()};
-            m_world = (m_world != 0) ? 2 : 1; // Cycle through worlds
+            if (m_world == 0)
+            {
+                m_world = 2; // Desert → Woods
+            }
+            else if (m_world == 2)
+            {
+                m_world = 1; // Woods → Graveyard
+            }
             m_waveTimer = 80000;
             m_betweenWaveTimer = 5000;
             m_waitingForPlayerToMoveDownAMap = false;
@@ -3379,12 +3386,8 @@ void PrairieKing::Draw()
     // Add to PrairieKing::Draw() method
     if (m_gopherTrain && m_gopherTrainPosition > -GetTileSize())
     {
-        // Draw black background
-        DrawRectangle(
-            static_cast<int>(m_topLeftScreenCoordinate.x),
-            static_cast<int>(m_topLeftScreenCoordinate.y),
-            16 * GetTileSize(), 16 * GetTileSize(),
-            BLACK);
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+
 
         // Draw gopher train cars
         Rectangle gopherCarRect = {256 + (m_gopherTrainPosition / 30 % 4) * 16, 144, 16, 16};
