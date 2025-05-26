@@ -1,0 +1,26 @@
+GLFW_ICON ICON "icon.ico"
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080904E4"  // English UK
+    BEGIN
+      VALUE "CompanyName", "Amphoreous"
+      VALUE "FileDescription", "An intense, arcade-style twin-stick shooter reimagining the classic Stardew Valley minigame"
+      VALUE "FileVersion", "1.0.0"
+      VALUE "InternalName", "JotPK"
+      VALUE "LegalCopyright", "(c) 2025 Amphoreous - MIT License (Source Code Only)"
+      VALUE "OriginalFilename", "JotPK"
+      VALUE "ProductName", "Journey of the Prairie King"
+      VALUE "ProductVersion", "1.0.0"
+      VALUE "Comments", "Created by Amphoreous Team: Zakaria Hamdaoui, Sofia Giner, Joel Martinez"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x809, 1252  // English UK
+  END
+END
