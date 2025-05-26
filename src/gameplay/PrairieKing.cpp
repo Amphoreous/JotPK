@@ -813,7 +813,7 @@ void PrairieKing::KillOutlaw()
         s_instance->m_map[8][8] = MAP_BRIDGE;
         s_instance->m_screenFlash = 200;
 
-        PlaySound(s_instance->GetSound("Cowboy_monsterDie"));
+        PlaySound(s_instance->GetSound("outlaw_dead"));
 
         // Add explosion effects
         for (int i = 0; i < 15; i++)
@@ -830,6 +830,7 @@ void PrairieKing::KillOutlaw()
             explosion.delayBeforeAnimationStart = i * 75;
             s_instance->AddTemporarySprite(explosion);
         }
+
 
         // Clear monsters
         for (auto *monster : s_instance->m_monsters)
@@ -1001,6 +1002,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                                 explosion.delayBeforeAnimationStart = i * 75;
                                 AddTemporarySprite(explosion);
                             }
+                            PlaySound(GetSound("outlaw_dead"));
                         }
                     }
                     // Handle normal loot drops for non-shootout levels
@@ -4503,6 +4505,8 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
 
 bool PrairieKing::CowboyMonster::TakeDamage(int damage)
 {
+    PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
+
     if (invisible)
         return false;
 
@@ -4510,7 +4514,6 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
     flashColorTimer = 0.3f;
     flashColor = RED;
 
-    PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
 
     if (health <= 0)
     {
