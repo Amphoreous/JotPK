@@ -296,12 +296,25 @@ void PrairieKing::Reset()
     GetMap(m_whichWave, m_map);
 
     // Reiniciar la posición del jugador
-    m_playerPosition = {384.0f, 384.0f};
+    m_playerPosition = { 384.0f, 384.0f };
     m_playerBoundingBox = {
         m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
         m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
         static_cast<float>(GetTileSize()) / 2.0f,
-        static_cast<float>(GetTileSize()) / 2.0f};
+        static_cast<float>(GetTileSize()) / 2.0f };
+
+    // Estado de la wave: NO completada, timer inicial
+    m_waveCompleted = false;
+    m_waveTimer = GameConstants::WAVE_DURATION;
+    m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
+
+    // Limpiar el powerup del inventario del jugador
+    m_heldItem.reset();
+    m_holdItemTimer = 0;
+    m_itemToHold = -1;
+
+    // Actualizar probabilidades de spawn de monstruos
+    UpdateMonsterChancesForWave();
 }
 
 void PrairieKing::ApplyNewGamePlus()
@@ -1147,6 +1160,7 @@ void PrairieKing::ProcessInputs()
             }
             else
             {
+                Reset();
                 m_gameRestartTimer = 1500;
                 m_gameOver = false;
                 m_gameOverOption = 0;
