@@ -2792,43 +2792,59 @@ void PrairieKing::Update(float deltaTime)
             SaveGame();
         }
     }
-    // Handle end cutscene
     if (m_endCutscene)
     {
         m_endCutsceneTimer -= deltaTime * 1000.0f;
 
-        if (m_endCutsceneTimer <= 0)
+        if (m_endCutsceneTimer < 0)
         {
+            m_endCutscenePhase++;
+            if (m_endCutscenePhase > 5)
+            {
+                m_endCutscenePhase = 5;
+            }
+
             switch (m_endCutscenePhase)
             {
-            case 0:
-                // Phase 0: Show final message and prepare for new game plus
-                m_endCutscenePhase = 1;
-                m_endCutsceneTimer = 3000; // 3 seconds to show message
+            case 1:
+                m_endCutsceneTimer = 15500;
+                PlaySound(GetSound("Cowboy_singing"));
+                GetMap(-1, m_map); // Get the special end cutscene map
                 break;
 
-            case 1:
-                // Phase 1: Start new game plus
-                m_endCutscene = false;
-                m_whichRound++;
+            case 2:
+                m_playerPosition = Vector2{0.0f, 8.0f * GetTileSize()};
+                m_endCutsceneTimer = 12000;
+                break;
 
-                // Reset for new game plus
-                Reset();
-                ApplyNewGamePlus();
+            case 3:
+                m_endCutsceneTimer = 5000;
+                break;
 
-                // Start new round
-                m_whichWave = 0;
-                m_betweenWaveTimer = BETWEEN_WAVE_DURATION;
+            case 4:
+                m_endCutsceneTimer = 1000;
+                break;
 
-                // Restart overworld music
-                if (m_overworldSong.stream.buffer != nullptr)
+            case 5:
+                // Wait for player input to start new game plus
+                // Check for any key press or controller input
+                if (IsKeyPressed(GameKeys::SelectOption))
                 {
-                    PlayMusicStream(m_overworldSong);
-                    SetMusicVolume(m_overworldSong, 0.7f);
+                        StartNewRound();
                 }
                 break;
             }
         }
+
+        // Handle player movement during phase 2
+        if (m_endCutscenePhase == 2 && m_playerPosition.x < 9.0f * GetTileSize())
+        {
+            m_playerPosition.x += 1.0f;
+            m_playerMotionAnimationTimer += deltaTime * 1000.0f;
+            if (m_playerMotionAnimationTimer >= 400.0f)
+                m_playerMotionAnimationTimer = fmod(m_playerMotionAnimationTimer, 400.0f);
+        }
+
         return; // Skip normal updates during end cutscene
     }
 }
@@ -2914,60 +2930,166 @@ void PrairieKing::Draw()
     // Handle end cutscene drawing
     if (m_endCutscene)
     {
-        // Draw the final map
-        for (int x = 0; x < MAP_WIDTH; x++)
+        switch (m_endCutscenePhase)
         {
-            for (int y = 0; y < MAP_HEIGHT; y++)
-            {
-                DrawTexturePro(
-                    GetTexture("cursors"),
-                    Rectangle{336.0f + 16.0f * m_map[x][y], 32.0f - m_world * 16.0f, 16.0f, 16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                              m_topLeftScreenCoordinate.y + y * GetTileSize(),
-                              static_cast<float>(GetTileSize()),
-                              static_cast<float>(GetTileSize())},
-                    Vector2{0, 0}, 0.0f, WHITE);
-            }
-        }
-
-        // Draw player holding the heart
-        if (m_holdItemTimer > 0)
-        {
+        case 0:
+            // Phase 0: Player holding heart with black background
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+            
+            // Draw player holding heart
             DrawTexturePro(
                 GetTexture("cursors"),
                 Rectangle{256.0f, 112.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                          m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4.0f,
                           48.0f, 48.0f},
-                Vector2{0, 0}, 0.0f, WHITE);
-
+                Vector2{0, 0}, 0.0f, 
+                (m_endCutsceneTimer < 2000) ? 
+                    ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
+            
             // Draw the heart above player
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{304.0f, 160.0f, 16.0f, 16.0f}, // POWERUP_HEART sprite
+                Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
-                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 2,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() * 2.0f / 3.0f - GetTileSize() / 4.0f,
                           48.0f, 48.0f},
+                Vector2{0, 0}, 0.0f, 
+                (m_endCutsceneTimer < 2000) ? 
+                    ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
+            break;
+            
+        case 1:
+        case 2:
+        case 3:
+            // Draw the final map
+            for (int x = 0; x < MAP_WIDTH; x++)
+            {
+                for (int y = 0; y < MAP_HEIGHT; y++)
+                {
+                    Rectangle sourceRect = {336.0f + 16.0f * m_map[x][y], 32.0f - m_world * 16.0f, 16.0f, 16.0f};
+                    if (m_map[x][y] == 5 && static_cast<int>(m_cactusDanceTimer / 1600.0f * 4.0f) % 2 == 1)
+                    {
+                        sourceRect.x += 16.0f;
+                    }
+                    
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        sourceRect,
+                        Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
+                                  m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition - 16 * GetTileSize(),
+                                  static_cast<float>(GetTileSize()),
+                                  static_cast<float>(GetTileSize())},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                }
+            }
+            
+            // Draw the cowboy statue/monument
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{160.0f, 49.0f, 64.0f, 80.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
+                          m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
+                          192.0f, 240.0f},
                 Vector2{0, 0}, 0.0f, WHITE);
+            
+            if (m_endCutscenePhase == 3)
+            {
+                // Draw reward chest
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{288.0f, 144.0f, 32.0f, 32.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + 9.0f * GetTileSize(),
+                              m_topLeftScreenCoordinate.y + 7.0f * GetTileSize(),
+                              96.0f, 96.0f},
+                    Vector2{0, 0}, 0.0f, WHITE);
+                
+                if (m_endCutsceneTimer < 3000)
+                {
+                    // Fade to black
+                    float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 3000.0f);
+                    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
+                }
+            }
+            else
+            {
+                // Draw the heart floating above the monument
+                int heartFrame = static_cast<int>(-m_endCutsceneTimer / 300) % 4;
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{144.0f - heartFrame * 16.0f, 144.0f, 16.0f, 16.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + 10.0f * GetTileSize(),
+                              m_topLeftScreenCoordinate.y + 8.0f * GetTileSize(),
+                              48.0f, 48.0f},
+                    Vector2{0, 0}, 0.0f, WHITE);
+                
+                if (m_endCutscenePhase == 2)
+                {
+                    // Draw walking player
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{356.0f, 112.0f + static_cast<int>(m_playerMotionAnimationTimer / 100.0f) * 3.0f, 8.0f, 3.0f},
+                        Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 4.0f * 3.0f,
+                                  m_topLeftScreenCoordinate.y + m_playerPosition.y + 13.0f * 3.0f,
+                                  24.0f, 9.0f},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                    
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{256.0f, 112.0f, 16.0f, 13.0f},
+                        Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                                  m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                                  48.0f, 39.0f},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                    
+                    // Draw held item
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
+                        Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                                  m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() * 2.0f / 3.0f - GetTileSize() / 4.0f,
+                                  48.0f, 48.0f},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                }
+            }
+            
+            // Apply fade effect based on phase
+            if (m_endCutscenePhase == 1)
+            {
+                float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 15500.0f);
+                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
+            }
+            break;
+            
+        case 4:
+        case 5:
+            // Victory screen with "THE END" message
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+            
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{96.0f, 96.0f, 64.0f, 48.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
+                          m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
+                          192.0f, 144.0f},
+                Vector2{0, 0}, 0.0f, 
+                (m_endCutsceneTimer > 0) ? 
+                    ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f)) : WHITE);
+            
+            if (m_endCutscenePhase == 5)
+            {
+                // Draw "Press any key for New Game Plus" message
+                const char* newGameText = "Press any key to start a new game";
+                Font font = GetFontDefault();
+                Vector2 textSize = MeasureTextEx(font, newGameText, 24, 1);
+                DrawTextEx(font, newGameText,
+                          Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
+                                  m_topLeftScreenCoordinate.y + 10.0f * GetTileSize()},
+                          24, 1, WHITE);
+            }
+            break;
         }
-
-        // Draw victory message
-        if (m_endCutscenePhase == 1)
-        {
-            const char *victoryText = "VICTORY!";
-            const char *newGameText = "Thank you for playing the game!";
-
-            DrawTextEx(m_assets.GetFont("title"), victoryText,
-                       Vector2{m_topLeftScreenCoordinate.x + 4.0f * GetTileSize(),
-                               m_topLeftScreenCoordinate.y + 6.0f * GetTileSize()},
-                       48, 1, WHITE);
-
-            DrawTextEx(m_assets.GetFont("text"), newGameText,
-                       Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
-                               m_topLeftScreenCoordinate.y + 8.0f * GetTileSize()},
-                       32, 1, WHITE);
-        }
-
+        
         return; // Don't draw normal game elements during cutscene
     }
 
