@@ -16,7 +16,7 @@ void AssetManager::LoadAssets() {
     m_sounds["cowboy_powerup"] = LoadSound("sounds/cowboy_powerup.wav");
     m_sounds["cowboy_explosion"] = LoadSound("sounds/cowboy_explosion.wav");
     m_sounds["cowboy_footstep"] = LoadSound("sounds/cowboy_footstep.wav");
-    m_sounds["cowboy_monsterhit"] = LoadSound("sounds/cowboy_monsterhit.wav");
+    m_sounds["cowboy_monsterhit"] = LoadSound("sounds/died.wav");
     m_sounds["cowboy_gopher"] = LoadSound("sounds/cowboy_gopher.wav");
     m_sounds["cowboy_singing"] = LoadSound("sounds/cowboy_singing.wav");
     m_sounds["cowboy_secret"] = LoadSound("sounds/cowboy_secret.wav");
