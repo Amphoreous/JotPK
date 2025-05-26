@@ -5271,6 +5271,7 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     {
         // Flash sprite when taking damage
         sourceRect = {336, 48, 16, 16}; // Flash sprite
+
     }
     else
     {
@@ -5302,7 +5303,12 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
             Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
                                  drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
             Rectangle bubbleRect = {480, 80, 32, 32};
-            DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
+  
+            
+            
+            DrawTexturePro(texture, bubbleRect,
+                Rectangle{ bubblePos.x, bubblePos.y, 96, 96 }, // 32 * 3 = 96 for proper scaling
+                Vector2{ 0, 0 }, 0.0f, WHITE);
         }
     }
 
