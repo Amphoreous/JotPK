@@ -1463,7 +1463,7 @@ bool PrairieKing::IsMapTilePassable(int tileType)
 bool PrairieKing::IsMapTilePassableForBullets(int tileType)
 {
     // Solo las barreras sólidas y las vallas bloquean balas, las trench NO
-    if (tileType <= 1 || tileType == 5 || tileType == 7)
+    if (tileType <= 1 || tileType == 7)
     {
         return false;
     }
