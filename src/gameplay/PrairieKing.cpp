@@ -2217,6 +2217,14 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
 
 void PrairieKing::Update(float deltaTime)
 {
+    // Flash Screen Duration update
+    if (m_screenFlash > 0)
+    {
+        m_screenFlash -= static_cast<int>(deltaTime * 1000.0f);
+        if (m_screenFlash < 0)
+            m_screenFlash = 0;
+    }
+
     if (m_merchantArriving || m_merchantLeaving)
     {
         m_shoppingTimer += deltaTime * 1000.0f;
@@ -3050,12 +3058,6 @@ void PrairieKing::Draw()
                 }
             }
 
-            //// Apply fade effect based on phase
-            //if (m_endCutscenePhase == 1)
-            //{
-            //    float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 15500.0f);
-            //    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
-            //}
             break;
 
         case 4:
@@ -4329,7 +4331,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
 
     default:
         health = 100; // Valor por defecto para otros tipos
-        speed = 1.0f; // Velocidad por defecto
+        speed = 0.5f; // Velocidad por defecto
         break;
     }
 
