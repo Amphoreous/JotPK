@@ -538,7 +538,7 @@ private:
     float m_deathTimer;
     int m_waveTimer;
     int m_betweenWaveTimer;
-    static int m_world;
+    int m_world;
     bool m_waveCompleted = false;
 
     // Game objects
