@@ -4083,8 +4083,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
                     static_cast<float>(GetTileSize()) / 2.0f};
 
                 // Verificar si la nueva posición es válida
-                if (!IsCollidingWithMap(newBounds) &&
-                    (!CheckCollisionRecs(newBounds, m_merchantBox) || CheckCollisionRecs(m_playerBoundingBox, m_merchantBox)))
+                if (!IsCollidingWithMap(newBounds))
                 {
                     m_playerPosition = newPosition;
                     m_playerBoundingBox = newBounds;
