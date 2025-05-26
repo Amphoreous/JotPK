@@ -198,7 +198,7 @@ void PrairieKing::Initialize()
     m_whichWave = 0;
     m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
     m_waveTimer = 0;
-    m_world = DESERT_WORLD;
+    m_world = 0;
     m_lives = 3;
     m_coins = 0;
     m_score = 0;
@@ -1675,18 +1675,18 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[8][11] = MAP_FENCE;
         newMap[5][8] = MAP_FENCE;
 
-        // newMap[1][1] = MAP_CACTUS;
-        // newMap[14][1] = MAP_CACTUS;
-        // newMap[14][14] = MAP_CACTUS;
-        // newMap[1][14] = MAP_CACTUS;
-        // newMap[2][1] = MAP_CACTUS;
-        // newMap[13][1] = MAP_CACTUS;
-        // newMap[13][14] = MAP_CACTUS;
-        // newMap[2][14] = MAP_CACTUS;
-        // newMap[1][2] = MAP_CACTUS;
-        // newMap[14][2] = MAP_CACTUS;
-        // newMap[14][13] = MAP_CACTUS;
-        // newMap[1][13] = MAP_CACTUS;
+         newMap[1][1] = MAP_CACTUS;
+         newMap[14][1] = MAP_CACTUS;
+         newMap[14][14] = MAP_CACTUS;
+         newMap[1][14] = MAP_CACTUS;
+         newMap[2][1] = MAP_CACTUS;
+         newMap[13][1] = MAP_CACTUS;
+         newMap[13][14] = MAP_CACTUS;
+         newMap[2][14] = MAP_CACTUS;
+         newMap[1][2] = MAP_CACTUS;
+         newMap[14][2] = MAP_CACTUS;
+         newMap[14][13] = MAP_CACTUS;
+         newMap[1][13] = MAP_CACTUS;
         break;
 
     case 3:
@@ -1748,14 +1748,8 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
     break;
 
     case 5:
-        // Cambiar todo el suelo interior a césped
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = MAP_GRASSY;
-            }
-        }
+        m_world = 2;
+
         // Add lots of corner cacti
         newMap[1][1] = MAP_CACTUS;
         newMap[14][1] = MAP_CACTUS;
@@ -1786,14 +1780,8 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 6:
-        // Cambiar todo el suelo interior a césped
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = MAP_GRASSY;
-            }
-        }
+        m_world = 2;
+
         // Add rocks, cacti, and fences
         newMap[4][5] = MAP_ROCKY1;
         newMap[12][10] = MAP_CACTUS;
@@ -1814,14 +1802,8 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 7:
-        // Cambiar todo el suelo interior a césped
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = MAP_GRASSY;
-            }
-        }
+        m_world = 2;
+
         // Add trenches through middle
         for (int x = 0; x < MAP_WIDTH; x++)
         {
@@ -1839,14 +1821,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 9:
-        // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = GRAVEYARD;
-            }
-        }
+        m_world = 1;
 
         // Add cacti squares
         newMap[4][4] = MAP_CACTUS;
@@ -1869,14 +1844,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 10:
-        // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = GRAVEYARD;
-            }
-        }
+        m_world = 1;
 
         // Add trenches at top and bottom
         for (int x = 0; x < MAP_WIDTH; x++)
@@ -1900,14 +1868,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 11:
-        // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = GRAVEYARD;
-            }
-        }
+        m_world = 1;
 
         // Add fence borders
         for (int x = 0; x < MAP_WIDTH; x++)
@@ -1923,16 +1884,9 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 12:
-        // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++)
-        {
-            for (int x = 1; x < MAP_WIDTH - 1; x++)
-            {
-                newMap[x][y] = GRAVEYARD;
-            }
-        }
+        m_world = 1;
 
-        {
+    {
             // Convert barriers to cactus
             for (int y = 0; y < MAP_HEIGHT; y++)
             {
@@ -2728,6 +2682,12 @@ void PrairieKing::Draw()
             BLACK);
     }
 
+    // Draw Shop
+    if (m_shopping)
+    {
+        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate);
+    }
+
     // 2. Main Game Elements (layerDepth: 0.001 - 0.9)
     // Draw temporary sprites
     for (auto &sprite : m_temporarySprites)
@@ -2768,6 +2728,7 @@ void PrairieKing::Draw()
             0.0f,
             WHITE);
     }
+
 
     // 3. Characters and Monsters (layerDepth: ~0.001 - 0.002 + position.Y/10000f)
     // Draw player
@@ -2943,10 +2904,7 @@ void PrairieKing::Draw()
         monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
-    if (m_shopping)
-    {
-        DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate);
-    }
+
 
     // 4. UI Elements (layerDepth: 0.25 - 0.5)
     // Draw UI background elements
@@ -3762,7 +3720,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
     case GameConstants::MUSHROOM:
         health = 2;
         speed = 2.1f;
-
+        break;
     case GameConstants::EVIL_BUTTERFLY:
         health = 2;   // Los fantasmas tienen salud moderada
         speed = 2.0f; // Los fantasmas son rápidos
@@ -4388,8 +4346,10 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
     case 6:
     case 7:
         mushroomChance = std::max(0.6f, mushroomChance + wave * 0.1f);
+        ogreChance = std::min(0.4f, ogreChance + wave * 0.03f);
         evilButterflyChance = std::min(0.4f, evilButterflyChance + wave * 0.1f);
         chances.push_back({MUSHROOM, mushroomChance});
+        chances.push_back({ OGRE, ogreChance });
         chances.push_back({EVIL_BUTTERFLY, evilButterflyChance});
         break;
     case 8: // BOSS
