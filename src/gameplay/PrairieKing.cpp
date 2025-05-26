@@ -1426,7 +1426,7 @@ bool PrairieKing::IsMapTilePassableForMonsters(int tileType)
     return true;
 }
 
-bool PrairieKing::IsCollidingWithMonster(Rectangle r, CowboyMonster* subject)
+bool PrairieKing::IsCollidingWithMonster(Rectangle r, CowboyMonster *subject)
 {
     for (auto monster : m_monsters)
     {
@@ -2246,7 +2246,6 @@ void PrairieKing::Update(float deltaTime)
             ResumeMusicStream(m_overworldSong);
         }
     }
-
     // Update cactus dance timer
     m_cactusDanceTimer += deltaTime * 1000.0f;
     if (m_cactusDanceTimer >= 1600.0f) // Full dance cycle is 1.6 seconds
@@ -2254,8 +2253,8 @@ void PrairieKing::Update(float deltaTime)
         m_cactusDanceTimer = 0.0f;
     }
 
-    // FIX: Update zombie mode timer BEFORE motion pause check
-    // This ensures zombie timer counts down during motion pause
+    // TIMER FIX 1: Update zombie mode timer BEFORE motion pause check
+    // This ensures zombie timer counts down during motion pause states
     if (m_zombieModeTimer > 0.0f)
     {
         m_zombieModeTimer -= deltaTime * 1000.0f;
@@ -2281,7 +2280,30 @@ void PrairieKing::Update(float deltaTime)
         }
     }
 
-    // Motion pause handling - now comes AFTER zombie timer update
+    // TIMER FIX 2: Update between wave timer during motion pause as well
+    // This ensures proper wave progression timing
+    if (m_betweenWaveTimer > 0)
+    {
+        m_betweenWaveTimer -= deltaTime * 1000.0f;
+        if (m_betweenWaveTimer <= 0)
+        {
+            // Only reset wave timer if we're starting a new wave (not respawning from death)
+            if (!m_died)
+            {
+                m_waveTimer = GameConstants::WAVE_DURATION;
+            }
+            // If m_died is true, we preserve the current m_waveTimer value (which includes death penalty)
+
+            m_waveCompleted = false;
+            UpdateMonsterChancesForWave();
+            if (!IsMusicStreamPlaying(m_overworldSong))
+            {
+                PlayMusicStream(m_overworldSong);
+            }
+        }
+    }
+
+    // Motion pause handling - now comes AFTER critical timer updates
     if (m_motionPause > 0)
     {
         m_motionPause -= deltaTime * 1000.0f;
@@ -2290,7 +2312,7 @@ void PrairieKing::Update(float deltaTime)
             m_behaviorAfterPause(0);
             m_behaviorAfterPause = nullptr;
         }
-        return; // Skip all other updates during motion pause!
+        return; // Skip all other updates during motion pause (except critical timers above)
     }
 
     if (m_holdItemTimer > 0.0f)
@@ -2411,10 +2433,9 @@ void PrairieKing::Update(float deltaTime)
                 // Push vertically toward center
                 pushDirection.y = (tilePosition.y > centerY) ? -1.0f : 1.0f;
             }
-
             // Apply the push
-            m_powerups[i].position.x -= pushDirection.x;
-            m_powerups[i].position.y -= pushDirection.y;
+            m_powerups[i].position.x += pushDirection.x;
+            m_powerups[i].position.y += pushDirection.y;
         }
 
         // Move powerups toward player if close enough (existing attraction logic)
@@ -2439,9 +2460,7 @@ void PrairieKing::Update(float deltaTime)
         {
             m_powerups.erase(m_powerups.begin() + i);
         }
-    }
-
-    // Update active powerup timers
+    } // Update active powerup timers
     for (auto it = m_activePowerups.begin(); it != m_activePowerups.end();)
     {
         it->second -= deltaTime * 1000.0f;
@@ -2455,42 +2474,25 @@ void PrairieKing::Update(float deltaTime)
         }
     }
 
-    // Handle between wave timer
+    // TIMER FIX 3: Removed duplicate between wave timer handling
+    // Between wave timer is now handled before motion pause check above
     if (m_betweenWaveTimer > 0)
     {
-        m_betweenWaveTimer -= deltaTime * 1000.0f;
-        if (m_betweenWaveTimer <= 0)
-        {
-            // Only reset wave timer if we're starting a new wave (not respawning from death)
-            if (!m_died)
-            {
-                m_waveTimer = GameConstants::WAVE_DURATION;
-            }
-            // If m_died is true, we preserve the current m_waveTimer value (which includes death penalty)
-
-            m_waveCompleted = false;
-            UpdateMonsterChancesForWave();
-            if (!IsMusicStreamPlaying(m_overworldSong))
-            {
-                PlayMusicStream(m_overworldSong);
-            }
-        }
-        return;
-    }
-
-    // Handle wave state
+        return; // Exit early if still in between wave state
+    } // Handle wave state
     if (!m_waveCompleted)
     {
-        // ONLY UPDATE WAVE TIMER HERE - This is the single place where wave timer should be updated
+        // TIMER FIX 4: Centralized wave timer update - ONLY UPDATE HERE
+        // This prevents multiple decrements and ensures consistent timing
         if (m_waveTimer > 0 && !m_shootoutLevel)
         {
-            m_waveTimer -= deltaTime * 1000.0f; // <-- KEEP ONLY THIS ONE
+            m_waveTimer -= deltaTime * 1000.0f;
 
             // Only spawn monsters if not in special states and player is alive
             if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
                 !m_waitingForPlayerToMoveDownAMap && m_deathTimer <= 0)
             {
-                float spawnChance = 0.03f;
+                float spawnChance = 0.02f;
                 if (m_monsters.empty())
                 {
                     spawnChance = 0.1f;
@@ -2731,7 +2733,14 @@ void PrairieKing::Update(float deltaTime)
             m_whichWave++;
             GetMap(m_whichWave, m_map);
             m_playerPosition = {8.0f * GetTileSize(), 8.0f * GetTileSize()};
-            m_world = (m_world != 0) ? 2 : 1; // Cycle through worlds
+            if (m_world == 0)
+            {
+                m_world = 1; // Desert → Woods
+            }
+            else if (m_world == 1)
+            {
+                m_world = 2; // Woods → Graveyard
+            }
             m_waveTimer = 80000;
             m_betweenWaveTimer = 5000;
             m_waitingForPlayerToMoveDownAMap = false;
@@ -4244,7 +4253,7 @@ int PrairieKing::CowboyMonster::GetLootDrop()
         }
 
         // 1% chance for coin
-        if (GetRandomFloat(0.0f, 1.0f) < 0.06f)
+        if (GetRandomFloat(0.0f, 1.0f) < 0.05f)
         {
             return COIN1;
         }
@@ -4338,7 +4347,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
                         static_cast<int>(position.x) + PrairieKing::GetGameInstance()->GetTileSize() * 2)),
                     static_cast<float>(GetRandomInt(
                         static_cast<int>(position.y) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
-                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2)) };
+                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2))};
                 tries++;
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
@@ -4349,7 +4358,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         // If the gopher is running, chase the gopher instead
         if (PrairieKing::GetGameInstance()->m_gopherRunning)
         {
-            target = { PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y };
+            target = {PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y};
         }
 
         // Occasionally change movement direction
@@ -4419,7 +4428,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
 
         // ZOMBIE MODE REVERSAL
-        PrairieKing* game = PrairieKing::GetGameInstance();
+        PrairieKing *game = PrairieKing::GetGameInstance();
         if (game && game->m_zombieModeTimer > 0)
         {
             attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
@@ -4431,11 +4440,11 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         {
             for (int i = PrairieKing::GetGameInstance()->m_monsters.size() - 1; i >= 0; i--)
             {
-                auto* monster = PrairieKing::GetGameInstance()->m_monsters[i];
+                auto *monster = PrairieKing::GetGameInstance()->m_monsters[i];
                 if (monster->type == GameConstants::SPIKEY && monster->special &&
                     CheckCollisionRecs(attemptedPosition, monster->position))
                 {
-                    PrairieKing::AddGuts({ monster->position.x, monster->position.y }, monster->type);
+                    PrairieKing::AddGuts({monster->position.x, monster->position.y}, monster->type);
                     PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
                     delete monster;
                     PrairieKing::GetGameInstance()->m_monsters.erase(
@@ -4453,7 +4462,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             ticksSinceLastMovement = 0;
             targetPosition = {
                 static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
-                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
             break;
         }
 
@@ -4463,26 +4472,26 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         movedLastTurn = true;
 
         // Check if we reached the target
-        if (!CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
-            position))
+        if (!CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                    position))
         {
             break;
         }
 
         // Reset target
-        targetPosition = { 0.0f, 0.0f };
+        targetPosition = {0.0f, 0.0f};
 
         // Special behavior for Orc and Mummy
         if ((type == GameConstants::ORC || type == GameConstants::MUMMY) && uninterested)
         {
             targetPosition = {
                 static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
-                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
             if (GetRandomFloat(0.0f, 1.0f) < 0.5f)
             {
                 uninterested = false;
-                targetPosition = { 0.0f, 0.0f };
+                targetPosition = {0.0f, 0.0f};
             }
         }
 
@@ -4519,7 +4528,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             {
                 targetPosition = {
                     static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
-                    static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+                    static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
                 tries++;
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
@@ -4530,7 +4539,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         // If the gopher is running, chase the gopher instead
         if (PrairieKing::GetGameInstance()->m_gopherRunning)
         {
-            target = { PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y };
+            target = {PrairieKing::GetGameInstance()->m_gopherBox.x, PrairieKing::GetGameInstance()->m_gopherBox.y};
         }
 
         // Occasionally change movement direction
@@ -4601,7 +4610,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
 
         // ZOMBIE MODE REVERSAL
-        PrairieKing* game = PrairieKing::GetGameInstance();
+        PrairieKing *game = PrairieKing::GetGameInstance();
         if (game && game->m_zombieModeTimer > 0)
         {
             attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
@@ -4617,7 +4626,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             ticksSinceLastMovement = 0;
             targetPosition = {
                 static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
-                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()) };
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
             break;
         }
 
@@ -4627,15 +4636,15 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         movedLastTurn = true;
 
         // Check if we reached the target
-        if (!CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
-            position))
+        if (!CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                    position))
         {
             break;
         }
 
         // Reset target
-        targetPosition = { 0.0f, 0.0f };
+        targetPosition = {0.0f, 0.0f};
         break;
     }
     case GameConstants::EVIL_BUTTERFLY:
@@ -4654,7 +4663,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
                         static_cast<int>(position.x) + PrairieKing::GetGameInstance()->GetTileSize() * 2)),
                     static_cast<float>(GetRandomInt(
                         static_cast<int>(position.y) - PrairieKing::GetGameInstance()->GetTileSize() * 2,
-                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2)) };
+                        static_cast<int>(position.y) + PrairieKing::GetGameInstance()->GetTileSize() * 2))};
                 tries++;
             } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 5);
         }
@@ -4664,9 +4673,9 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
 
         // Calculate velocity to target
         Vector2 targetToFly = GetVelocityTowardPoint(
-            { position.x, position.y },
-            { target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-             target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
+            {position.x, position.y},
+            {target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+             target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
             speed);
 
         // Adjust acceleration
@@ -4694,7 +4703,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             position.x + static_cast<int>(std::ceil(acceleration.x)),
             position.y + static_cast<int>(std::ceil(acceleration.y)),
             position.width,
-            position.height };
+            position.height};
 
         // Update position if no collisions
         if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(newPosition, this) &&
@@ -4705,11 +4714,11 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             position.y += static_cast<int>(std::ceil(acceleration.y));
 
             // Check if reached target
-            if (CheckCollisionPointRec({ target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                        target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f },
-                position))
+            if (CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                        target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                       position))
             {
-                targetPosition = { 0.0f, 0.0f };
+                targetPosition = {0.0f, 0.0f};
             }
         }
         break;
