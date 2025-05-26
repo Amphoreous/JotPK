@@ -988,12 +988,12 @@ void PrairieKing::UpdateBullets(float deltaTime)
         }
 
         // Check player collision
-        if (m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
+        if (!m_godMode && m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
         {
             Rectangle bulletRect = {
                 m_enemyBullets[i].position.x,
                 m_enemyBullets[i].position.y,
-                15, 15};
+                15, 15 };
 
             if (CheckCollisionRecs(m_playerBoundingBox, bulletRect))
             {
@@ -1002,6 +1002,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                 break; // Important: break after PlayerDie to avoid further processing
             }
         }
+
     }
 }
 
@@ -2075,6 +2076,10 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
             {
                 switch (key)
                 {
+                case GameKeys::DebugGodMode:
+                    m_godMode = !m_godMode;
+                    std::cout << "God Mode: " << (m_godMode ? "ON" : "OFF") << std::endl;
+                    break;
                 case GameKeys::DebugAddLife:
                     m_lives++;
                     std::cout << "Added life. Total: " << m_lives << std::endl;
@@ -2085,7 +2090,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     break;
                 case GameKeys::DebugIncDamage:
                     m_bulletDamage++;
-                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
+                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl; 
                     break;
                 case GameKeys::DebugClearMonsters:
                 {
@@ -3872,6 +3877,9 @@ void PrairieKing::UpdatePlayer(float deltaTime)
     {
         if (CheckCollisionRecs(m_monsters[i]->position, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
         {
+            if (m_godMode)
+                continue; // Ignora el daño si God Mode está activo
+
             if (m_monsters[i]->type == GameConstants::SPIKEY && m_monsters[i]->spikeyIsBlock)
             {
                 PlayerDie();
@@ -3887,7 +3895,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             else if (m_monsters[i]->type != -2) // Not a boss
             {
                 // Zombie mode - kill the monster!
-                AddGuts(Vector2{m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
+                AddGuts(Vector2{ m_monsters[i]->position.x, m_monsters[i]->position.y }, m_monsters[i]->type);
                 delete m_monsters[i];
                 m_monsters.erase(m_monsters.begin() + i);
                 PlaySound(GetSound("Cowboy_monsterDie"));
@@ -5053,6 +5061,8 @@ void PrairieKing::DrawDebugInfo()
     const float rightCol = GetScreenWidth() - 200;
     currentY = startY;
     DrawText("Debug Controls:", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F4: God Mode", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
     DrawText("F3: Toggle Debug", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;

@@ -118,6 +118,7 @@ public:
         DebugSpawn7,
         DebugSpawn8,
         DebugSpawn9,
+        DebugGodMode,
         DebugAddLife,
         DebugAddCoins,
         DebugIncDamage,
@@ -140,7 +141,7 @@ public:
     static constexpr int MAP_WIDTH = 16;
     static constexpr int MAP_HEIGHT = 16;
     static constexpr int PIXEL_ZOOM = 3;
-    static constexpr int BULLET_SPEED = 23;
+    static constexpr int BULLET_SPEED = 10;
     static constexpr double LOOT_CHANCE = 0.05;
     static constexpr double COIN_CHANCE = 0.05;
     static constexpr int LOOT_DURATION = 7500;
@@ -159,6 +160,7 @@ public:
     static constexpr int PLAYER_MOTION_DELAY = 100;
     static constexpr int PLAYER_FOOTSTEP_DELAY = 200;
     static constexpr int DEATH_DELAY = 3000;
+
 
     // Map tile types
     static constexpr int MAP_BARRIER1 = 0;
@@ -540,6 +542,7 @@ private:
     int m_betweenWaveTimer;
     int m_world;
     bool m_waveCompleted = false;
+    bool m_godMode = false;
 
     // Game objects
     Vector2 m_playerPosition;
