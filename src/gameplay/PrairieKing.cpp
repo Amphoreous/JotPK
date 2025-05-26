@@ -2418,7 +2418,7 @@ void PrairieKing::Update(float deltaTime)
             {
                 // Push vertically toward center
                 pushDirection.y = (tilePosition.y > centerY) ? -1.0f : 1.0f;
-            }            
+            }
             // Apply the push
             m_powerups[i].position.x += pushDirection.x;
             m_powerups[i].position.y += pushDirection.y;
@@ -2719,7 +2719,14 @@ void PrairieKing::Update(float deltaTime)
             m_whichWave++;
             GetMap(m_whichWave, m_map);
             m_playerPosition = {8.0f * GetTileSize(), 8.0f * GetTileSize()};
-            m_world = (m_world != 0) ? 2 : 1; // Cycle through worlds
+            if (m_world == 0)
+            {
+                m_world = 1; // Desert → Woods
+            }
+            else if (m_world == 1)
+            {
+                m_world = 2; // Woods → Graveyard
+            }
             m_waveTimer = 80000;
             m_betweenWaveTimer = 5000;
             m_waitingForPlayerToMoveDownAMap = false;
