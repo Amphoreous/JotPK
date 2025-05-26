@@ -4427,13 +4427,23 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
 
     if (type == GameConstants::SPIKEY && spikeyIsBlock)
     {
-        Rectangle blockSource = {448, 64.0f, 16.0f, 16.0f};
+        Rectangle blockSource;
+        if (flashColorTimer > 0.0f)
+        {
+            // Textura de impacto para Spikey bloqueado
+            blockSource = { 352.0f, 48.0f, 16.0f, 16.0f };
+        }
+        else
+        {
+            // Textura normal de bloque
+            blockSource = { 448.0f, 64.0f, 16.0f, 16.0f };
+        }
         Rectangle destRect = {
             topLeftScreenCoordinate.x + position.x,
             topLeftScreenCoordinate.y + position.y,
             position.width,
-            position.height};
-        DrawTexturePro(texture, blockSource, destRect, Vector2{0, 0}, 0.0f, WHITE);
+            position.height };
+        DrawTexturePro(texture, blockSource, destRect, Vector2{ 0, 0 }, 0.0f, WHITE);
         return;
     }
 
