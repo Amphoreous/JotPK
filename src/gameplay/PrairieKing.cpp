@@ -2106,35 +2106,23 @@ void PrairieKing::Update(float deltaTime)
     if (m_gameRestartTimer > 0)
     {
         m_gameRestartTimer -= static_cast<int>(deltaTime * 1000.0f);
-        if (m_gameRestartTimer <= 0)
+        return;
+    }
+
+    if (m_fadeThenQuitTimer > 0)
+    {
+        m_fadeThenQuitTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (m_fadeThenQuitTimer <= 0)
         {
-            // Full reset for new game
-            if (m_whichRound == 0 || !m_endCutscene)
-            {
-                Initialize();
-            }
-            else
-            {
-                // Preserve progress for New Game+
-                Initialize();
-                m_coins = m_progress.coins;
-                m_ammoLevel = m_progress.ammoLevel;
-                m_bulletDamage = m_progress.bulletDamage;
-                m_fireSpeedLevel = m_progress.fireSpeedLevel;
-                m_runSpeedLevel = m_progress.runSpeedLevel;
-                m_lives = m_progress.lives;
-                m_spreadPistol = m_progress.spreadPistol;
-                m_whichRound = m_progress.whichRound;
-            }
+            m_quit = true;
         }
         return;
     }
 
-    // Update timers
-    if (m_deathTimer > 0)
+    if (m_deathTimer > 0.0f)
     {
         m_deathTimer -= deltaTime * 1000.0f;
-        if (m_deathTimer <= 0)
+        if (m_deathTimer <= 0.0f)
         {
             AfterPlayerDeathFunction(0);
         }
@@ -2158,17 +2146,8 @@ void PrairieKing::Update(float deltaTime)
         m_cactusDanceTimer = 0.0f;
     }
 
-    if (m_motionPause > 0)
-    {
-        m_motionPause -= deltaTime * 1000.0f;
-        if (m_motionPause <= 0 && m_behaviorAfterPause)
-        {
-            m_behaviorAfterPause(0);
-            m_behaviorAfterPause = nullptr;
-        }
-        return; // Skip all other updates during motion pause!
-    }
-
+    // FIX: Update zombie mode timer BEFORE motion pause check
+    // This ensures zombie timer counts down during motion pause
     if (m_zombieModeTimer > 0.0f)
     {
         m_zombieModeTimer -= deltaTime * 1000.0f;
@@ -2189,6 +2168,18 @@ void PrairieKing::Update(float deltaTime)
                 PlayMusicStream(m_overworldSong);
             }
         }
+    }
+
+    // Motion pause handling - now comes AFTER zombie timer update
+    if (m_motionPause > 0)
+    {
+        m_motionPause -= deltaTime * 1000.0f;
+        if (m_motionPause <= 0 && m_behaviorAfterPause)
+        {
+            m_behaviorAfterPause(0);
+            m_behaviorAfterPause = nullptr;
+        }
+        return; // Skip all other updates during motion pause!
     }
 
     if (m_holdItemTimer > 0.0f)
