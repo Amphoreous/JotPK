@@ -913,7 +913,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                                     static_cast<float>(m_monsters[k]->position.y + GetRandomInt(-GetTileSize(), GetTileSize()))};
 
                                 TemporaryAnimatedSprite explosion(
-                                    Rectangle{512, 96, 16, 16}, 70.0f, 6, 0,
+                                    Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
                                     Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
                                             m_topLeftScreenCoordinate.y + explosionPos.y},
                                     0.0f, 3.0f, false, 1.0f, WHITE);
@@ -930,7 +930,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                                 if (j % 4 == 0)
                                 {
                                     TemporaryAnimatedSprite additionalExplosion(
-                                        Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
+                                        Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
                                         Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
                                                 m_topLeftScreenCoordinate.y + explosionPos.y},
                                         0.0f, 3.0f, false, 1.0f, WHITE);
@@ -941,7 +941,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                                 if (j % 3 == 0)
                                 {
                                     TemporaryAnimatedSprite flyingEffect(
-                                        Rectangle{544, 128, 16, 16}, 100.0f, 4, 0,
+                                        Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
                                         Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
                                                 m_topLeftScreenCoordinate.y + explosionPos.y},
                                         0.0f, 3.0f, false, 1.0f, WHITE);
@@ -979,7 +979,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                                     static_cast<float>(m_monsters[k]->position.y + GetRandomInt(-GetTileSize(), GetTileSize()))};
 
                                 TemporaryAnimatedSprite explosion(
-                                    Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
+                                    Rectangle{336, 144, 16, 16}, 80.0f, 5, 0,
                                     Vector2{m_topLeftScreenCoordinate.x + explosionPos.x,
                                             m_topLeftScreenCoordinate.y + explosionPos.y},
                                     0.0f, 3.0f, false, 1.0f, WHITE);
@@ -2141,7 +2141,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     std::cout << "Added 10 coins. Total: " << m_coins << std::endl;
                     break;
                 case GameKeys::DebugIncDamage:
-                    m_bulletDamage++;
+                    m_bulletDamage+=100;
                     std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
                     break;
                 case GameKeys::DebugClearMonsters:
@@ -2992,10 +2992,10 @@ void PrairieKing::Draw()
 
             if (m_endCutscenePhase == 3)
             {
-                // Draw reward chest
+                // Draw kiss
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{288.0f, 144.0f, 32.0f, 32.0f},
+                    Rectangle{416.0f, 144.0f, 32.0f, 32.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + 9.0f * GetTileSize(),
                               m_topLeftScreenCoordinate.y + 7.0f * GetTileSize(),
                               96.0f, 96.0f},
@@ -3010,11 +3010,11 @@ void PrairieKing::Draw()
             }
             else
             {
-                // Draw the heart floating above the monument
+                // Draw singing wife
                 int heartFrame = static_cast<int>(-m_endCutsceneTimer / 300) % 4;
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{144.0f - heartFrame * 16.0f, 144.0f, 16.0f, 16.0f},
+                    Rectangle{96.0f - heartFrame * 16.0f, 144.0f, 16.0f, 16.0f},
                     Rectangle{m_topLeftScreenCoordinate.x + 10.0f * GetTileSize(),
                               m_topLeftScreenCoordinate.y + 8.0f * GetTileSize(),
                               48.0f, 48.0f},
@@ -3050,12 +3050,12 @@ void PrairieKing::Draw()
                 }
             }
 
-            // Apply fade effect based on phase
-            if (m_endCutscenePhase == 1)
-            {
-                float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 15500.0f);
-                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
-            }
+            //// Apply fade effect based on phase
+            //if (m_endCutscenePhase == 1)
+            //{
+            //    float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 15500.0f);
+            //    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
+            //}
             break;
 
         case 4:
