@@ -917,7 +917,8 @@ void PrairieKing::PlayerDie()
     m_gopherRunning = false;
     m_hasGopherAppeared = false;
 
-    // Reset spawn queues
+    // Reset spawn queues - Initialize properly first
+    m_spawnQueue.resize(4);
     for (int i = 0; i < 4; i++)
     {
         m_spawnQueue[i].clear();
@@ -942,9 +943,9 @@ void PrairieKing::PlayerDie()
 
     m_deathTimer = 3000.0f; // Changed from DEATH_DELAY to match C# (3000f)
 
-    // Add death animation sprite - using the correct sprite coordinates
+    // Add death animation sprite - using the correct sprite coordinates (336, 160, 16, 16)
     m_temporarySprites.push_back(TemporaryAnimatedSprite(
-        Rectangle{336, 160, 16, 16},
+        Rectangle{336, 160, 16, 16}, // Fixed coordinates from C#
         120.0f, 5, 0,
         Vector2{
             m_topLeftScreenCoordinate.x + m_playerPosition.x,
@@ -953,7 +954,7 @@ void PrairieKing::PlayerDie()
         1.0f, WHITE));
 
     // Reset the wave timer properly - matches C# logic
-    m_waveTimer = std::min(80000.0f, m_waveTimer + 10000.0f); // Changed from WAVE_DURATION
+    m_waveTimer = std::min(80000, m_waveTimer + 10000); // Fixed: use int, not float
     m_betweenWaveTimer = 4000;
 
     // Lose a life
@@ -962,12 +963,12 @@ void PrairieKing::PlayerDie()
     
     if (m_shootoutLevel)
     {
-        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())}; // Changed Y position
+        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())}; // Fixed Y position
         PlaySound(GetSound("Cowboy_monsterDie"));
     }
     else
     {
-        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())}; // Changed X position
+        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())};
         m_playerBoundingBox = {
             m_playerPosition.x + GetTileSize() / 4.0f,
             m_playerPosition.y + GetTileSize() / 4.0f,
@@ -993,7 +994,6 @@ void PrairieKing::PlayerDie()
         { AfterPlayerDeathFunction(extra); };
 
         m_deathTimer *= 3.0f;
-        // Save game progress reset
         SaveGame();
     }
     else if (!m_shootoutLevel)
