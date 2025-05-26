@@ -192,7 +192,7 @@ PrairieKing::PrairieKing(AssetManager &assets)
 void PrairieKing::Initialize()
 {
     // Initialize game state
-    m_whichWave = 11;
+    m_whichWave = 0;
     m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
     m_waveTimer = 0;
     m_world = 0;
