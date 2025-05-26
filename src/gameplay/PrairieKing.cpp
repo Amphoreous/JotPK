@@ -180,6 +180,7 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_playerFootstepSoundTimer(200.0f),
       m_spawnQueue(4),
       m_overworldSong({0}),
+      m_zombieSong({0}),
       m_debugMode(false),
       m_isPaused(false)
 {
@@ -321,7 +322,7 @@ void PrairieKing::ApplyLevelSpecificStates()
         m_shootoutLevel = true;
         // Create Dracula boss
         m_monsters.push_back(new Dracula(m_assets));
-        
+
         if (m_whichRound > 0)
         {
             // Double health for subsequent rounds
@@ -332,8 +333,8 @@ void PrairieKing::ApplyLevelSpecificStates()
     {
         m_shootoutLevel = true;
         // Create Outlaw boss
-        Vector2 outlawPos = {static_cast<float>(8 * GetTileSize()), 
-                           static_cast<float>(13 * GetTileSize())};
+        Vector2 outlawPos = {static_cast<float>(8 * GetTileSize()),
+                             static_cast<float>(13 * GetTileSize())};
         int outlawHealth = (m_world == 0) ? 50 : 100;
         m_monsters.push_back(new Outlaw(m_assets, outlawPos, outlawHealth));
 
@@ -455,19 +456,21 @@ void PrairieKing::UsePowerup(int which)
         {
             StopMusicStream(m_overworldSong);
         }
-        if (IsMusicStreamPlaying(m_zombieSong))
-        {
-            StopMusicStream(m_zombieSong);
-            UnloadMusicStream(m_zombieSong);
-        }
 
         // Load and play zombie music stream
         m_zombieSong = m_assets.GetMusic("zombie");
-        PlayMusicStream(m_zombieSong);
+        if (m_zombieSong.stream.buffer != nullptr)
+        {
+            PlayMusicStream(m_zombieSong);
+            SetMusicVolume(m_zombieSong, 0.7f);
+        }
 
-        // Set motion pause and zombie timer (these are the key parts!)
-        m_motionPause = 1800.0f;  // 1.8 second pause for animation
-        m_zombieModeTimer = 10000.0f;  // 10 seconds of zombie mode
+        // FIXED: Use only motion pause for the initial animation, then start zombie mode immediately
+        m_motionPause = 1800.0f;      // 1.8 seconds for transformation animation
+        m_zombieModeTimer = 11800.0f; // 10 seconds active + 1.8 seconds animation = 11.8 total
+
+        PlaySound(GetSound("cowboy_powerup"));
+        std::cout << "Zombie mode activated! Timer: " << m_zombieModeTimer << std::endl;
         break;
 
     case POWERUP_TELEPORT:
@@ -544,11 +547,11 @@ void PrairieKing::UsePowerup(int which)
     case POWERUP_NUKE:
     {
         PlaySound(GetSound("cowboy_explosion"));
-        
+
         if (!m_shootoutLevel)
         {
             // Normal behavior - clear all monsters
-            for (auto* monster : m_monsters)
+            for (auto *monster : m_monsters)
             {
                 AddGuts(Vector2{monster->position.x, monster->position.y}, monster->type);
                 delete monster;
@@ -558,12 +561,12 @@ void PrairieKing::UsePowerup(int which)
         else
         {
             // Boss level behavior - damage bosses instead of killing them
-            for (auto* monster : m_monsters)
+            for (auto *monster : m_monsters)
             {
                 monster->TakeDamage(30);
                 // Add visual bullet effect
-                Vector2 bulletPos = {monster->position.x + monster->position.width/2, 
-                                   monster->position.y + monster->position.height/2};
+                Vector2 bulletPos = {monster->position.x + monster->position.width / 2,
+                                     monster->position.y + monster->position.height / 2};
                 m_bullets.push_back(CowboyBullet(bulletPos, Vector2{2, 1}, 1));
             }
         }
@@ -718,7 +721,7 @@ void PrairieKing::KillOutlaw()
     {
         // Add special powerup when outlaw is killed
         int powerupType = (s_instance->m_world == 0) ? POWERUP_LOG : POWERUP_SKULL;
-        Vector2 powerupPos = { 8.0f * s_instance->GetTileSize(), 10.0f * s_instance->GetTileSize() };
+        Vector2 powerupPos = {8.0f * s_instance->GetTileSize(), 10.0f * s_instance->GetTileSize()};
         s_instance->m_powerups.push_back(CowboyPowerup(powerupType, powerupPos, 9999999));
 
         // Stop outlaw music
@@ -735,13 +738,12 @@ void PrairieKing::KillOutlaw()
         {
             Vector2 effectPos = {
                 static_cast<float>(s_instance->m_monsters[0]->position.x + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize())),
-                static_cast<float>(s_instance->m_monsters[0]->position.y + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize()))
-            };
+                static_cast<float>(s_instance->m_monsters[0]->position.y + GetRandomInt(-s_instance->GetTileSize(), s_instance->GetTileSize()))};
 
             TemporaryAnimatedSprite explosion(
-                Rectangle{ 464, 192, 16, 16 }, 80.0f, 5, 0,
-                { s_instance->m_topLeftScreenCoordinate.x + effectPos.x,
-                 s_instance->m_topLeftScreenCoordinate.y + effectPos.y },
+                Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
+                {s_instance->m_topLeftScreenCoordinate.x + effectPos.x,
+                 s_instance->m_topLeftScreenCoordinate.y + effectPos.y},
                 0.0f, 3.0f, false, effectPos.y / 10000.0f, WHITE);
             explosion.delayBeforeAnimationStart = i * 75;
             s_instance->AddTemporarySprite(explosion);
@@ -779,7 +781,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                 {
                     AddGuts(Vector2{monster->position.x, monster->position.y}, monster->type);
                     int loot = monster->GetLootDrop();
-                    
+
                     // Special boss logic
                     if (m_shootoutLevel)
                     {
@@ -787,24 +789,24 @@ void PrairieKing::UpdateBullets(float deltaTime)
                         {
                             PlaySound(GetSound("cowboy_explosion"));
                             // Add heart powerup at specific location for Dracula
-                            Vector2 heartPos = {static_cast<float>(8 * GetTileSize()), 
-                                              static_cast<float>(10 * GetTileSize())};
+                            Vector2 heartPos = {static_cast<float>(8 * GetTileSize()),
+                                                static_cast<float>(10 * GetTileSize())};
                             m_powerups.push_back(CowboyPowerup(POWERUP_HEART, heartPos, 9999999));
                         }
                     }
-                    
+
                     // Normal loot logic
                     if (m_whichRound > 0 && (loot == 5 || loot == 8) && GetRandomFloat(0, 1) < 0.4)
                     {
                         loot = -1; // No loot
                     }
-                    
+
                     if (loot != -1 && m_whichWave != 12)
                     {
                         Vector2 lootPos = {monster->position.x, monster->position.y};
                         m_powerups.push_back(CowboyPowerup(loot, lootPos, LOOT_DURATION));
                     }
-                    
+
                     // Remove the monster
                     delete monster;
                     m_monsters.erase(m_monsters.begin() + monsterIndex);
@@ -835,24 +837,24 @@ void PrairieKing::UpdateBullets(float deltaTime)
     {
         m_enemyBullets[i].position.x += m_enemyBullets[i].motion.x;
         m_enemyBullets[i].position.y += m_enemyBullets[i].motion.y;
-        
+
         // Check bounds
-        if (m_enemyBullets[i].position.x <= 0 || 
-            m_enemyBullets[i].position.y <= 0 || 
-            m_enemyBullets[i].position.x >= 762 || 
+        if (m_enemyBullets[i].position.x <= 0 ||
+            m_enemyBullets[i].position.y <= 0 ||
+            m_enemyBullets[i].position.x >= 762 ||
             m_enemyBullets[i].position.y >= 762)
         {
             m_enemyBullets.erase(m_enemyBullets.begin() + i);
             continue;
         }
-        
+
         // Check collision with map
         if (IsCollidingWithMapForBullets(m_enemyBullets[i].position))
         {
             m_enemyBullets.erase(m_enemyBullets.begin() + i);
             continue;
         }
-        
+
         // Check collision with player
         if (m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
         {
@@ -1266,7 +1268,6 @@ bool PrairieKing::IsMapTilePassableForBullets(int tileType)
     return true;
 }
 
-
 bool PrairieKing::IsMapTilePassableForMonsters(int tileType)
 {
     if (tileType == 5 || (tileType >= 7 && tileType <= 9))
@@ -1327,7 +1328,6 @@ bool PrairieKing::IsCollidingWithMapForBullets(Vector2 position)
     }
     return true; // Off the map is considered collision
 }
-
 
 bool PrairieKing::IsCollidingWithMap(Rectangle positionToCheck)
 {
@@ -1400,10 +1400,10 @@ void PrairieKing::StartShoppingLevel()
 {
     // Reset merchant position and dimensions off screen
     m_merchantBox = {
-        static_cast<float>(9 * GetTileSize() - GetTileSize()),  // Center the merchant
-        static_cast<float>(-GetTileSize()),                     // Start above screen
-        static_cast<float>(GetTileSize()),                      // Proper width
-        static_cast<float>(GetTileSize())                       // Proper height
+        static_cast<float>(9 * GetTileSize() - GetTileSize()), // Center the merchant
+        static_cast<float>(-GetTileSize()),                    // Start above screen
+        static_cast<float>(GetTileSize()),                     // Proper width
+        static_cast<float>(GetTileSize())                      // Proper height
     };
 
     // Set shopping state flags
@@ -1468,25 +1468,39 @@ void PrairieKing::StartShoppingLevel()
                                static_cast<float>(GetTileSize())}] =
             (m_ammoLevel < 3) ? (ITEM_AMMO1 + m_ammoLevel) : ITEM_STAR;
     }
-    
+
     // Make sure we have the next map ready
     GetMap(m_whichWave, m_nextMap);
 }
 
-int PrairieKing::GetPriceForItem(int whichItem) const {
-    switch (whichItem) {
-        case ITEM_AMMO1: return 15;
-        case ITEM_AMMO2: return 30;  
-        case ITEM_AMMO3: return 45;
-        case ITEM_FIRESPEED1: return 10;
-        case ITEM_FIRESPEED2: return 20;
-        case ITEM_FIRESPEED3: return 30;
-        case ITEM_LIFE: return 10;
-        case ITEM_RUNSPEED1: return 8;
-        case ITEM_RUNSPEED2: return 20;
-        case ITEM_SPREADPISTOL: return 99;
-        case ITEM_STAR: return 10;
-        default: return 5;
+int PrairieKing::GetPriceForItem(int whichItem) const
+{
+    switch (whichItem)
+    {
+    case ITEM_AMMO1:
+        return 15;
+    case ITEM_AMMO2:
+        return 30;
+    case ITEM_AMMO3:
+        return 45;
+    case ITEM_FIRESPEED1:
+        return 10;
+    case ITEM_FIRESPEED2:
+        return 20;
+    case ITEM_FIRESPEED3:
+        return 30;
+    case ITEM_LIFE:
+        return 10;
+    case ITEM_RUNSPEED1:
+        return 8;
+    case ITEM_RUNSPEED2:
+        return 20;
+    case ITEM_SPREADPISTOL:
+        return 99;
+    case ITEM_STAR:
+        return 10;
+    default:
+        return 5;
     }
 }
 
@@ -1497,7 +1511,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
     {
         for (int x = 0; x < MAP_WIDTH; x++)
         {
-            if ((x == 0 || x == 15 || y == 0 || y == 15) && 
+            if ((x == 0 || x == 15 || y == 0 || y == 15) &&
                 (x <= 6 || x >= 10) && (y <= 6 || y >= 10))
             {
                 newMap[x][y] = MAP_CACTUS; // 5
@@ -1527,14 +1541,14 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         {
             for (int x = 0; x < MAP_WIDTH; x++)
             {
-                if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2 || 
+                if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2 ||
                     newMap[x][y] == MAP_ROCKY1 || newMap[x][y] == MAP_CACTUS)
                 {
                     newMap[x][y] = MAP_DESERT; // 3
                 }
             }
         }
-        
+
         // Add special features for endgame map
         newMap[3][1] = MAP_CACTUS;
         newMap[8][2] = MAP_CACTUS;
@@ -1543,7 +1557,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[10][2] = MAP_ROCKY1;
         newMap[15][2] = MAP_BARRIER2;
         newMap[14][12] = MAP_CACTUS;
-        
+
         // Add fence walls
         newMap[10][6] = MAP_FENCE;
         newMap[11][6] = MAP_FENCE;
@@ -1557,13 +1571,13 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[14][11] = MAP_FENCE;
         newMap[14][12] = MAP_FENCE;
         newMap[14][13] = MAP_FENCE;
-        
+
         // Add trenches
         for (int k = 0; k < 16; k++)
         {
             newMap[k][3] = ((k % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2);
         }
-        
+
         // Add bridge and other features
         newMap[3][3] = MAP_BRIDGE; // 10
         newMap[7][8] = MAP_ROCKY1;
@@ -1583,7 +1597,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 0:
-        //Default map
+        // Default map
         break;
 
     case 1:
@@ -1591,15 +1605,15 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[4][4] = MAP_FENCE;
         newMap[4][5] = MAP_FENCE;
         newMap[5][4] = MAP_FENCE;
-        
+
         newMap[12][4] = MAP_FENCE;
         newMap[11][4] = MAP_FENCE;
         newMap[12][5] = MAP_FENCE;
-        
+
         newMap[4][12] = MAP_FENCE;
         newMap[5][12] = MAP_FENCE;
         newMap[4][11] = MAP_FENCE;
-        
+
         newMap[12][12] = MAP_FENCE;
         newMap[11][12] = MAP_FENCE;
         newMap[12][11] = MAP_FENCE;
@@ -1611,19 +1625,19 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[11][8] = MAP_FENCE;
         newMap[8][11] = MAP_FENCE;
         newMap[5][8] = MAP_FENCE;
-        
-        //newMap[1][1] = MAP_CACTUS;
-        //newMap[14][1] = MAP_CACTUS;
-        //newMap[14][14] = MAP_CACTUS;
-        //newMap[1][14] = MAP_CACTUS;
-        //newMap[2][1] = MAP_CACTUS;
-        //newMap[13][1] = MAP_CACTUS;
-        //newMap[13][14] = MAP_CACTUS;
-        //newMap[2][14] = MAP_CACTUS;
-        //newMap[1][2] = MAP_CACTUS;
-        //newMap[14][2] = MAP_CACTUS;
-        //newMap[14][13] = MAP_CACTUS;
-        //newMap[1][13] = MAP_CACTUS;
+
+        // newMap[1][1] = MAP_CACTUS;
+        // newMap[14][1] = MAP_CACTUS;
+        // newMap[14][14] = MAP_CACTUS;
+        // newMap[1][14] = MAP_CACTUS;
+        // newMap[2][1] = MAP_CACTUS;
+        // newMap[13][1] = MAP_CACTUS;
+        // newMap[13][14] = MAP_CACTUS;
+        // newMap[2][14] = MAP_CACTUS;
+        // newMap[1][2] = MAP_CACTUS;
+        // newMap[14][2] = MAP_CACTUS;
+        // newMap[14][13] = MAP_CACTUS;
+        // newMap[1][13] = MAP_CACTUS;
         break;
 
     case 3:
@@ -1635,19 +1649,19 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[9][5] = MAP_FENCE;
         newMap[10][5] = MAP_FENCE;
         newMap[11][5] = MAP_FENCE;
-        
+
         newMap[5][11] = MAP_FENCE;
         newMap[6][11] = MAP_FENCE;
         newMap[7][11] = MAP_FENCE;
         newMap[9][11] = MAP_FENCE;
         newMap[10][11] = MAP_FENCE;
         newMap[11][11] = MAP_FENCE;
-        
+
         newMap[5][6] = MAP_FENCE;
         newMap[5][7] = MAP_FENCE;
         newMap[5][9] = MAP_FENCE;
         newMap[5][10] = MAP_FENCE;
-        
+
         newMap[11][6] = MAP_FENCE;
         newMap[11][7] = MAP_FENCE;
         newMap[11][9] = MAP_FENCE;
@@ -1655,39 +1669,41 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
     case 4:
     case 8:
+    {
+        // Replace cacti with random barriers
+        for (int y = 0; y < MAP_HEIGHT; y++)
         {
-            // Replace cacti with random barriers
-            for (int y = 0; y < MAP_HEIGHT; y++)
-            {
-                for (int x = 0; x < MAP_WIDTH; x++)
-                {
-                    if (newMap[x][y] == MAP_CACTUS)
-                    {
-                        newMap[x][y] = (GetRandomFloat(0, 1) < 0.5f) ? MAP_BARRIER2 : MAP_BARRIER1;
-                    }
-                }
-            }
-            
-            // Add trench through middle
             for (int x = 0; x < MAP_WIDTH; x++)
             {
-                newMap[x][8] = (GetRandomFloat(0, 1) < 0.5f) ? MAP_TRENCH1 : MAP_TRENCH2;
+                if (newMap[x][y] == MAP_CACTUS)
+                {
+                    newMap[x][y] = (GetRandomFloat(0, 1) < 0.5f) ? MAP_BARRIER2 : MAP_BARRIER1;
+                }
             }
-            
-            // Add fences and cacti
-            newMap[8][4] = MAP_FENCE;
-            newMap[8][12] = MAP_FENCE;
-            newMap[9][12] = MAP_FENCE;
-            newMap[7][12] = MAP_FENCE;
-            newMap[5][6] = MAP_CACTUS;
-            newMap[10][6] = MAP_CACTUS;
         }
-        break;
+
+        // Add trench through middle
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            newMap[x][8] = (GetRandomFloat(0, 1) < 0.5f) ? MAP_TRENCH1 : MAP_TRENCH2;
+        }
+
+        // Add fences and cacti
+        newMap[8][4] = MAP_FENCE;
+        newMap[8][12] = MAP_FENCE;
+        newMap[9][12] = MAP_FENCE;
+        newMap[7][12] = MAP_FENCE;
+        newMap[5][6] = MAP_CACTUS;
+        newMap[10][6] = MAP_CACTUS;
+    }
+    break;
 
     case 5:
         // Cambiar todo el suelo interior a césped
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = MAP_GRASSY;
             }
         }
@@ -1704,7 +1720,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[14][2] = MAP_CACTUS;
         newMap[14][13] = MAP_CACTUS;
         newMap[1][13] = MAP_CACTUS;
-        
+
         // Add more cacti
         newMap[3][1] = MAP_CACTUS;
         newMap[13][1] = MAP_CACTUS;
@@ -1722,8 +1738,10 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 6:
         // Cambiar todo el suelo interior a césped
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = MAP_GRASSY;
             }
         }
@@ -1738,7 +1756,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[2][3] = MAP_CACTUS;
         newMap[11][3] = MAP_CACTUS;
         newMap[10][6] = MAP_CACTUS;
-        
+
         // Add fences
         newMap[5][9] = MAP_FENCE;
         newMap[10][12] = MAP_FENCE;
@@ -1748,8 +1766,10 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 7:
         // Cambiar todo el suelo interior a césped
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = MAP_GRASSY;
             }
         }
@@ -1759,7 +1779,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
             newMap[x][5] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
             newMap[x][10] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
         }
-        
+
         // Add bridges
         newMap[4][5] = MAP_BRIDGE;
         newMap[8][5] = MAP_BRIDGE;
@@ -1771,8 +1791,10 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 9:
         // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = GRAVEYARD;
             }
         }
@@ -1786,7 +1808,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[5][5] = MAP_CACTUS;
         newMap[10][5] = MAP_CACTUS;
         newMap[12][5] = MAP_CACTUS;
-        
+
         newMap[4][10] = MAP_CACTUS;
         newMap[5][10] = MAP_CACTUS;
         newMap[10][10] = MAP_CACTUS;
@@ -1799,8 +1821,10 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 10:
         // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = GRAVEYARD;
             }
         }
@@ -1811,7 +1835,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
             newMap[x][1] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
             newMap[x][14] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
         }
-        
+
         // Add bridges and cacti
         newMap[8][1] = MAP_BRIDGE;
         newMap[7][1] = MAP_BRIDGE;
@@ -1819,7 +1843,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         newMap[8][14] = MAP_BRIDGE;
         newMap[7][14] = MAP_BRIDGE;
         newMap[9][14] = MAP_BRIDGE;
-        
+
         newMap[6][8] = MAP_CACTUS;
         newMap[10][8] = MAP_CACTUS;
         newMap[8][6] = MAP_CACTUS;
@@ -1828,8 +1852,10 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 11:
         // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = GRAVEYARD;
             }
         }
@@ -1849,8 +1875,10 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
 
     case 12:
         // Cambiar todo el suelo interior a cementerio
-        for (int y = 1; y < MAP_HEIGHT - 1; y++) {
-            for (int x = 1; x < MAP_WIDTH - 1; x++) {
+        for (int y = 1; y < MAP_HEIGHT - 1; y++)
+        {
+            for (int x = 1; x < MAP_WIDTH - 1; x++)
+            {
                 newMap[x][y] = GRAVEYARD;
             }
         }
@@ -1867,14 +1895,14 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
                     }
                 }
             }
-            
+
             // Add trench borders
             for (int x = 0; x < MAP_WIDTH; x++)
             {
                 newMap[x][0] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
                 newMap[x][15] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
             }
-            
+
             // Add bridge border
             Rectangle r = {1, 1, 14, 14};
             std::vector<Vector2> border = GetBorderPoints(r);
@@ -1882,7 +1910,7 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
             {
                 newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
             }
-            
+
             // Add rocky inner border
             r = {2, 2, 12, 12};
             border = GetBorderPoints(r);
@@ -1987,15 +2015,33 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     break;
                 }
                 // Numpad debug spawns:
-                case GameKeys::DebugSpawn1: SpawnDebugMonster(ORC); break;
-                case GameKeys::DebugSpawn2: SpawnDebugMonster(EVIL_BUTTERFLY); break;
-                case GameKeys::DebugSpawn3: SpawnDebugMonster(OGRE); break;
-                case GameKeys::DebugSpawn4: SpawnDebugMonster(MUMMY); break;
-                case GameKeys::DebugSpawn5: SpawnDebugMonster(IMP); break;
-                case GameKeys::DebugSpawn6: SpawnDebugMonster(MUSHROOM); break;
-                case GameKeys::DebugSpawn7: SpawnDebugMonster(SPIKEY); break;
-                case GameKeys::DebugSpawn8: SpawnDebugPowerup(GetRandomInt(0, 5)); break;
-                case GameKeys::DebugSpawn9: SpawnDebugPowerup(GetRandomInt(6, 10)); break;
+                case GameKeys::DebugSpawn1:
+                    SpawnDebugMonster(ORC);
+                    break;
+                case GameKeys::DebugSpawn2:
+                    SpawnDebugMonster(EVIL_BUTTERFLY);
+                    break;
+                case GameKeys::DebugSpawn3:
+                    SpawnDebugMonster(OGRE);
+                    break;
+                case GameKeys::DebugSpawn4:
+                    SpawnDebugMonster(MUMMY);
+                    break;
+                case GameKeys::DebugSpawn5:
+                    SpawnDebugMonster(IMP);
+                    break;
+                case GameKeys::DebugSpawn6:
+                    SpawnDebugMonster(MUSHROOM);
+                    break;
+                case GameKeys::DebugSpawn7:
+                    SpawnDebugMonster(SPIKEY);
+                    break;
+                case GameKeys::DebugSpawn8:
+                    SpawnDebugPowerup(GetRandomInt(0, 5));
+                    break;
+                case GameKeys::DebugSpawn9:
+                    SpawnDebugPowerup(GetRandomInt(6, 10));
+                    break;
                 default:
                     break;
                 }
@@ -2019,11 +2065,17 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
 
 void PrairieKing::Update(float deltaTime)
 {
-    if (m_merchantArriving || m_merchantLeaving) {
+    if (m_merchantArriving || m_merchantLeaving)
+    {
         m_shoppingTimer += deltaTime * 1000.0f;
     }
 
     UpdateMusicStream(m_overworldSong);
+
+    if (m_zombieSong.stream.buffer != nullptr)
+    {
+        UpdateMusicStream(m_zombieSong);
+    }
 
     // Update button held state
     for (const auto &key : m_buttonHeldState)
@@ -2119,7 +2171,7 @@ void PrairieKing::Update(float deltaTime)
     if (m_zombieModeTimer > 0.0f)
     {
         m_zombieModeTimer -= deltaTime * 1000.0f;
-        
+
         // When zombie mode ends, restart overworld music
         if (m_zombieModeTimer <= 0.0f)
         {
@@ -2129,7 +2181,7 @@ void PrairieKing::Update(float deltaTime)
                 UnloadMusicStream(m_zombieSong);
                 m_zombieSong = {0};
             }
-            
+
             // Restart overworld music
             if (m_overworldSong.stream.buffer != nullptr)
             {
@@ -2227,7 +2279,7 @@ void PrairieKing::Update(float deltaTime)
         // ONLY UPDATE WAVE TIMER HERE - This is the single place where wave timer should be updated
         if (m_waveTimer > 0 && !m_shootoutLevel)
         {
-            m_waveTimer -= deltaTime * 1000.0f;  // <-- KEEP ONLY THIS ONE
+            m_waveTimer -= deltaTime * 1000.0f; // <-- KEEP ONLY THIS ONE
 
             // Only spawn monsters if not in special states and player is alive
             if (!m_scrollingMap && !m_merchantArriving && !m_merchantLeaving &&
@@ -2294,7 +2346,7 @@ void PrairieKing::Update(float deltaTime)
     if (m_waveTimer <= 0 && !m_monsters.empty() && IsSpawnQueueEmpty())
     {
         bool onlySpikeys = true;
-        for (const auto& monster : m_monsters)
+        for (const auto &monster : m_monsters)
         {
             if (monster->type != GameConstants::SPIKEY)
             {
@@ -2302,11 +2354,11 @@ void PrairieKing::Update(float deltaTime)
                 break;
             }
         }
-        
+
         // If only Spikeys are left, make them easier to kill
         if (onlySpikeys)
         {
-            for (auto& monster : m_monsters)
+            for (auto &monster : m_monsters)
             {
                 monster->health = 1;
             }
@@ -2335,7 +2387,7 @@ void PrairieKing::Update(float deltaTime)
                     m_merchantBox.x,
                     m_merchantBox.y + GetTileSize(),
                     static_cast<float>(GetTileSize()),
-                    static_cast<float>(GetTileSize() * 2) };
+                    static_cast<float>(GetTileSize() * 2)};
             }
         }
 
@@ -2382,11 +2434,11 @@ void PrairieKing::Update(float deltaTime)
                 m_shopping = false;
                 m_merchantLeaving = false;
                 m_merchantArriving = true;
-                
+
                 // Make sure to load the next wave map here
-                //m_whichWave++; // Increment wave since we're moving to the next one
+                // m_whichWave++; // Increment wave since we're moving to the next one
                 GetMap(m_whichWave, m_nextMap); // Load the next map
-                
+
                 // Set up for map transition
                 m_waitingForPlayerToMoveDownAMap = true;
                 m_map[8][15] = MAP_DESERT; // Clear path at the bottom
@@ -2459,7 +2511,7 @@ void PrairieKing::UpdateMonsterChancesForWave()
         m_monsterChances[0] = Vector2Add(m_monsterChances[0], Vector2{0.001f, 0.02f}); // Orcs
         if (m_whichWave > 1)
         {
-            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f,0.01f});
+            m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.001f, 0.01f});
         }
         break;
 
@@ -2474,13 +2526,13 @@ void PrairieKing::UpdateMonsterChancesForWave()
             if (m_whichRound > 0)
             {
                 m_monsterChances[5] = {0.01f + static_cast<float>(m_whichRound) * 0.004f,
-                                      0.15f + static_cast<float>(m_whichRound) * 0.04f};
+                                       0.15f + static_cast<float>(m_whichRound) * 0.04f};
             }
         }
-        m_monsterChances[0] = Vector2Zero(); // Disable Orcs
-        m_monsterChances[6] = Vector2Zero(); // Disable Spikey
-        m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.002f, 0.02f}); // More Ogres
-        m_monsterChances[5] = Vector2Add(m_monsterChances[5], Vector2{0.001f, 0.02f}); // More Mushrooms
+        m_monsterChances[0] = Vector2Zero();                                            // Disable Orcs
+        m_monsterChances[6] = Vector2Zero();                                            // Disable Spikey
+        m_monsterChances[2] = Vector2Add(m_monsterChances[2], Vector2{0.002f, 0.02f});  // More Ogres
+        m_monsterChances[5] = Vector2Add(m_monsterChances[5], Vector2{0.001f, 0.02f});  // More Mushrooms
         m_monsterChances[1] = Vector2Add(m_monsterChances[1], Vector2{0.0018f, 0.08f}); // More Ghosts
         if (m_whichRound > 0)
         {
@@ -2496,28 +2548,28 @@ void PrairieKing::UpdateMonsterChancesForWave()
         m_monsterChances[5] = Vector2Zero(); // Disable Mushrooms
         m_monsterChances[1] = Vector2Zero(); // Disable Ghosts
         m_monsterChances[2] = Vector2Zero(); // Disable Ogres
-        
+
         if (Vector2Equals(m_monsterChances[3], Vector2Zero()))
         {
             m_monsterChances[3] = {0.012f, 0.4f}; // Initialize Mummies
             if (m_whichRound > 0)
             {
                 m_monsterChances[3] = {0.012f + static_cast<float>(m_whichRound) * 0.005f,
-                                      0.4f + static_cast<float>(m_whichRound) * 0.075f};
+                                       0.4f + static_cast<float>(m_whichRound) * 0.075f};
             }
         }
-        
+
         if (Vector2Equals(m_monsterChances[4], Vector2Zero()))
         {
             m_monsterChances[4] = {0.003f, 0.1f}; // Initialize Devils
         }
-        
-        m_monsterChances[3] = Vector2Add(m_monsterChances[3], Vector2{0.002f, 0.05f}); // More Mummies
+
+        m_monsterChances[3] = Vector2Add(m_monsterChances[3], Vector2{0.002f, 0.05f});  // More Mummies
         m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.0015f, 0.04f}); // More Devils
-        
+
         if (m_whichWave == 11)
         {
-            m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.01f, 0.04f}); // Even more Devils
+            m_monsterChances[4] = Vector2Add(m_monsterChances[4], Vector2{0.01f, 0.04f});                // Even more Devils
             m_monsterChances[3] = Vector2{m_monsterChances[3].x - 0.01f, m_monsterChances[3].y + 0.04f}; // Less Mummies, increase weight
         }
         break;
@@ -2580,9 +2632,9 @@ void PrairieKing::Draw()
             DrawTexturePro(
                 GetTexture("cursors"),
                 Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                           32.0f - m_world * 16.0f,
-                           16.0f,
-                           16.0f},
+                          32.0f - m_world * 16.0f,
+                          16.0f,
+                          16.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
                           m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0),
                           static_cast<float>(GetTileSize()),
@@ -2616,7 +2668,7 @@ void PrairieKing::Draw()
                     WHITE);
             }
         }
-        
+
         // Draw black borders above and below the visible map area
         DrawRectangle(
             static_cast<int>(m_topLeftScreenCoordinate.x),
@@ -2704,7 +2756,7 @@ void PrairieKing::Draw()
         }
         else if (m_zombieModeTimer > 8200)
         {
-        // Draw black background during transformation
+            // Draw black background during transformation
             DrawRectangle(
                 static_cast<int>(m_topLeftScreenCoordinate.x),
                 static_cast<int>(m_topLeftScreenCoordinate.y),
@@ -2848,7 +2900,8 @@ void PrairieKing::Draw()
         monster->Draw(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
-    if (m_shopping) {
+    if (m_shopping)
+    {
         DrawShopping(GetTexture("cursors"), m_topLeftScreenCoordinate);
     }
 
@@ -2942,7 +2995,7 @@ void PrairieKing::Draw()
         WHITE);
 
     // Only draw the timer bar if we're in an active wave state
-    if (!m_shootoutLevel && m_betweenWaveTimer <= 0 && !m_shopping && 
+    if (!m_shootoutLevel && m_betweenWaveTimer <= 0 && !m_shopping &&
         !m_merchantArriving && !m_merchantLeaving && !m_waitingForPlayerToMoveDownAMap)
     {
         Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
@@ -3018,7 +3071,7 @@ void PrairieKing::Draw()
     {
         Vector2 pos = {GetScreenWidth() / 2.6, GetScreenHeight() - 138 - 3};
         Vector2 pos2 = {GetScreenWidth() / 1.89, GetScreenHeight() - 138 - 3};
-        Vector2 pos3 = { GetScreenWidth() / 1.89, GetScreenHeight() - 81 - 3 };
+        Vector2 pos3 = {GetScreenWidth() / 1.89, GetScreenHeight() - 81 - 3};
 
         // Drawing controls instruction box
 
@@ -3044,9 +3097,9 @@ void PrairieKing::Draw()
 
         DrawTexturePro(
             GetTexture("cursors"),
-            Rectangle{ 74, 0, 45, 19 },
-            Rectangle{ pos3.x, pos3.y, 151, 55 },
-            Vector2{ 0, 0 },
+            Rectangle{74, 0, 45, 19},
+            Rectangle{pos3.x, pos3.y, 151, 55},
+            Vector2{0, 0},
             0.0f,
             WHITE);
     }
@@ -3251,7 +3304,7 @@ void PrairieKing::StartNewWave()
         m_monsterChances[0] = {0.01f + (m_whichWave - 1) * 0.005f, 0.1f + (m_whichWave - 1) * 0.05f}; // Orcs
         if (m_whichWave > 1)
         {
-            m_monsterChances[2] = {0.1,0.1}; // Ogres
+            m_monsterChances[2] = {0.1, 0.1}; // Ogres
         }
         m_monsterChances[6] = {0.005f + (m_whichWave - 1) * 0.003f, 0.05f + (m_whichWave - 1) * 0.03f}; // Spikeys
         if (m_whichRound > 0)
@@ -3377,28 +3430,28 @@ void PrairieKing::UpdatePlayer(float deltaTime)
     if (m_deathTimer <= 0 && !m_playerMovementDirections.empty() && !m_scrollingMap)
     {
         int effectiveDirections = m_playerMovementDirections.size();
-        
+
         // Apply movement cancellation logic
-        if (effectiveDirections >= 2 && 
+        if (effectiveDirections >= 2 &&
             m_playerMovementDirections.back() == (m_playerMovementDirections[m_playerMovementDirections.size() - 2] + 2) % 4)
         {
             effectiveDirections = 1;
         }
 
         float speed = GetMovementSpeed(PLAYER_SPEED, effectiveDirections);
-        
+
         // Apply speed powerup
         if (m_activePowerups.find(POWERUP_SPEED) != m_activePowerups.end())
         {
             speed *= 1.5f;
         }
-        
+
         // Apply zombie mode speed boost!
         if (m_zombieModeTimer > 0)
         {
             speed *= 1.5f;
         }
-        
+
         // Apply run speed upgrades
         for (int i = 0; i < m_runSpeedLevel; i++)
         {
@@ -3503,7 +3556,8 @@ void PrairieKing::UpdatePlayer(float deltaTime)
     {
         if (CheckCollisionRecs(m_monsters[i]->position, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
         {
-            if (m_monsters[i]->type == GameConstants::SPIKEY && m_monsters[i]->spikeyIsBlock) {
+            if (m_monsters[i]->type == GameConstants::SPIKEY && m_monsters[i]->spikeyIsBlock)
+            {
                 PlayerDie();
                 break;
             }
@@ -3651,7 +3705,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         break;
 
     case GameConstants::SPIKEY:
-        health = 2;   // Vida normal
+        health = 2; // Vida normal
         speed = 1.8f;
         spikeyIsBlock = false;
         spikeyWalkTimer = 0.0f;
@@ -3681,7 +3735,6 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         speed = 2.5f; // Los demonios son muy rápidos
         break;
 
-
     default:
         health = 100; // Valor por defecto para otros tipos
         speed = 1.0f; // Velocidad por defecto
@@ -3706,8 +3759,7 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
 }
 
 PrairieKing::Dracula::Dracula(AssetManager &assets)
-    : CowboyMonster(assets, DRACULA, Vector2{static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM), 
-                                           static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM)})
+    : CowboyMonster(assets, DRACULA, Vector2{static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM), static_cast<float>(8 * BASE_TILE_SIZE * PIXEL_ZOOM)})
 {
     homePosition = Vector2{position.x, position.y};
     position.y += BASE_TILE_SIZE * PIXEL_ZOOM * 4; // Move down 4 tiles from home
@@ -3740,15 +3792,15 @@ PrairieKing::Outlaw::Outlaw(AssetManager &assets, Vector2 position, int health)
 void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
 {
 
-    if (type == GameConstants::SPIKEY && spikeyIsBlock) {
-        Rectangle blockSource = { 448, 64.0f, 16.0f, 16.0f };
+    if (type == GameConstants::SPIKEY && spikeyIsBlock)
+    {
+        Rectangle blockSource = {448, 64.0f, 16.0f, 16.0f};
         Rectangle destRect = {
             topLeftScreenCoordinate.x + position.x,
             topLeftScreenCoordinate.y + position.y,
             position.width,
-            position.height
-        };
-        DrawTexturePro(texture, blockSource, destRect, Vector2{ 0, 0 }, 0.0f, WHITE);
+            position.height};
+        DrawTexturePro(texture, blockSource, destRect, Vector2{0, 0}, 0.0f, WHITE);
         return;
     }
 
@@ -3790,27 +3842,26 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
             // Walking animation
             sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), 64.0f, 16.0f, 16.0f};
         }
-        
+
         // Draw the monster
         DrawTexturePro(texture, sourceRect, destRect, Vector2{0, 0}, 0.0f, WHITE);
-        
+
         // Draw confusion indicator if monster is confused
         if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
         {
             // Get font and text measurements from the asset manager
             Font smallFont = PrairieKing::GetGameInstance()->m_assets.GetFont("small");
-            const char* text = "?";
+            const char *text = "?";
             Vector2 textSize = MeasureTextEx(smallFont, text, 16.0f, 1.0f);
-            
+
             // Position for the question mark
             Vector2 textPos = {
-                topLeftScreenCoordinate.x + position.x + position.width/2 - textSize.x/2,
-                topLeftScreenCoordinate.y + position.y - PrairieKing::GetGameInstance()->GetTileSize()/2
-            };
-            
+                topLeftScreenCoordinate.x + position.x + position.width / 2 - textSize.x / 2,
+                topLeftScreenCoordinate.y + position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2};
+
             // Draw with "drop shadow" effect
             Color confusionColor = {88, 29, 43, 255}; // Dark red color
-            
+
             // Draw question mark with slight offsets for outline effect
             DrawTextEx(smallFont, text, Vector2{textPos.x, textPos.y}, 16.0f, 1.0f, confusionColor);
             DrawTextEx(smallFont, text, Vector2{textPos.x + 1.0f, textPos.y}, 16.0f, 1.0f, confusionColor);
@@ -3827,7 +3878,6 @@ bool PrairieKing::CowboyMonster::TakeDamage(int damage)
     health -= damage;
     flashColorTimer = 0.3f;
     flashColor = RED;
-
 
     PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
 
@@ -3920,7 +3970,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     if (flashColorTimer > 0.0f)
     {
         flashColorTimer -= deltaTime;
-        //return false;
+        // return false;
     }
 
     // Important fix: Don't return here, just update the timer and continue
@@ -3929,7 +3979,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     {
         // Update the timer but don't return
         PrairieKing::GetGameInstance()->m_monsterConfusionTimer -= deltaTime * 1000.0f;
-        
+
         // For confused monsters, occasionally change direction
         if (GetRandomFloat(0.0f, 1.0f) < 0.05f)
         {
@@ -3949,12 +3999,14 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     case GameConstants::MUSHROOM:
     case GameConstants::SPIKEY:
     {
-        if (spikeyIsBlock) {
+        if (spikeyIsBlock)
+        {
             // No se mueve si es bloque
             return false;
         }
         spikeyWalkTimer += deltaTime;
-        if (spikeyWalkTimer >= 7.0f) { // O usa GetRandomFloat(7.0f, 9.0f) si quieres aleatorio
+        if (spikeyWalkTimer >= 7.0f)
+        { // O usa GetRandomFloat(7.0f, 9.0f) si quieres aleatorio
             spikeyIsBlock = true;
             health = 7; // Ahora tiene 7 de vida
             // Ajusta el tamaño a 1 tile
@@ -4079,7 +4131,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
 
         // ZOMBIE MODE REVERSAL - This is the key missing piece!
-        PrairieKing* game = PrairieKing::GetGameInstance();
+        PrairieKing *game = PrairieKing::GetGameInstance();
         if (game && game->m_zombieModeTimer > 0)
         {
             // Reverse the movement during zombie mode
@@ -4120,8 +4172,8 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
 
         // Check if we reached the target
         if (!CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                    target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                   position))
+                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                    position))
         {
             break;
         }
@@ -4212,8 +4264,8 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
 
             // Check if reached target
             if (CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                       target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                      position))
+                                        target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                       position))
             {
                 targetPosition = {0.0f, 0.0f};
             }
@@ -4230,13 +4282,13 @@ Vector2 PrairieKing::CowboyMonster::GetVelocityTowardPoint(Vector2 start, Vector
 {
     Vector2 direction = {end.x - start.x, end.y - start.y};
     float length = sqrtf(direction.x * direction.x + direction.y * direction.y);
-    
+
     if (length > 0)
     {
         direction.x = (direction.x / length) * speed;
         direction.y = (direction.y / length) * speed;
     }
-    
+
     return direction;
 }
 
@@ -4268,24 +4320,24 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
     {
     case 0:
         orcChance = std::max(0.1f, orcChance - wave * 0.05f);
-        chances.push_back({ ORC, orcChance });
+        chances.push_back({ORC, orcChance});
 
         break;
     case 1:
         orcChance = std::max(0.1f, orcChance - wave * 0.05f);
         spikeyChance = std::min(0.9f, spikeyChance + wave * 0.02f);
-        chances.push_back({ ORC, orcChance });
-        chances.push_back({ SPIKEY, spikeyChance });
- 
+        chances.push_back({ORC, orcChance});
+        chances.push_back({SPIKEY, spikeyChance});
+
         break;
     case 2:
     case 3:
         orcChance = std::max(0.2f, orcChance - wave * 0.05f);
         ogreChance = std::min(0.4f, ogreChance + wave * 0.03f);
         spikeyChance = std::min(0.4f, spikeyChance + wave * 0.02f);
-        chances.push_back({ ORC, orcChance });
-        chances.push_back({ OGRE, ogreChance });
-        chances.push_back({ SPIKEY, spikeyChance });
+        chances.push_back({ORC, orcChance});
+        chances.push_back({OGRE, ogreChance});
+        chances.push_back({SPIKEY, spikeyChance});
         break;
     case 4: // BOSS
         break;
@@ -4294,27 +4346,24 @@ std::vector<Vector2> PrairieKing::GetMonsterChancesForWave(int wave)
     case 7:
         mushroomChance = std::max(0.6f, mushroomChance + wave * 0.1f);
         evilButterflyChance = std::min(0.4f, evilButterflyChance + wave * 0.1f);
-        chances.push_back({ MUSHROOM, mushroomChance });
-        chances.push_back({ EVIL_BUTTERFLY, evilButterflyChance });
+        chances.push_back({MUSHROOM, mushroomChance});
+        chances.push_back({EVIL_BUTTERFLY, evilButterflyChance});
         break;
-    case 8: //BOSS
+    case 8: // BOSS
         break;
     case 9:
     case 10:
     case 11:
         mummyChance = std::max(0.6f, mummyChance + wave * 0.1f);
         impChance = std::min(0.4f, impChance + wave * 0.1f);
-        chances.push_back({ MUMMY,  mummyChance });
-        chances.push_back({ IMP, impChance });
+        chances.push_back({MUMMY, mummyChance});
+        chances.push_back({IMP, impChance});
         break;
-    case 12: //BOSS
+    case 12: // BOSS
         break;
     default:
         break;
     }
-
-
-
 
     return chances;
 }
@@ -4358,7 +4407,7 @@ int PrairieKing::ChooseMonsterType(const std::vector<Vector2> &chances)
         }
     }
 
-    //return ORC; // Default to orc if something goes wrong
+    // return ORC; // Default to orc if something goes wrong
 }
 int PrairieKing::GetRandomInt(int min, int max)
 {
@@ -4610,138 +4659,146 @@ void PrairieKing::DrawDebugInfo()
         GREEN);
 }
 
-void PrairieKing::ApplyPurchasedUpgrade(int itemId) {
-    switch (itemId) {
-        case ITEM_AMMO1:
-        case ITEM_AMMO2:
-        case ITEM_AMMO3:
-            m_ammoLevel++;
-            m_bulletDamage++;
-            break;
+void PrairieKing::ApplyPurchasedUpgrade(int itemId)
+{
+    switch (itemId)
+    {
+    case ITEM_AMMO1:
+    case ITEM_AMMO2:
+    case ITEM_AMMO3:
+        m_ammoLevel++;
+        m_bulletDamage++;
+        break;
 
-        case ITEM_FIRESPEED1:
-        case ITEM_FIRESPEED2:
-        case ITEM_FIRESPEED3:
-            m_fireSpeedLevel++;
-            break;
+    case ITEM_FIRESPEED1:
+    case ITEM_FIRESPEED2:
+    case ITEM_FIRESPEED3:
+        m_fireSpeedLevel++;
+        break;
 
-        case ITEM_RUNSPEED1:
-        case ITEM_RUNSPEED2:
-            m_runSpeedLevel++;
-            break;
+    case ITEM_RUNSPEED1:
+    case ITEM_RUNSPEED2:
+        m_runSpeedLevel++;
+        break;
 
-        case ITEM_LIFE:
-            m_lives++;
-            break;
+    case ITEM_LIFE:
+        m_lives++;
+        break;
 
-        case ITEM_SPREADPISTOL:
-            m_spreadPistol = true;
-            break;
+    case ITEM_SPREADPISTOL:
+        m_spreadPistol = true;
+        break;
 
-        case ITEM_STAR:
-            if (!m_heldItem) {
-                m_heldItem = std::make_unique<CowboyPowerup>(POWERUP_SHERRIFF, 
-                    Vector2{0, 0}, 9999);
-            }
-            break;
+    case ITEM_STAR:
+        if (!m_heldItem)
+        {
+            m_heldItem = std::make_unique<CowboyPowerup>(POWERUP_SHERRIFF,
+                                                         Vector2{0, 0}, 9999);
+        }
+        break;
     }
 }
 
-void PrairieKing::DrawShopping(const Texture2D& texture, Vector2 topLeftScreenCoordinate) {
+void PrairieKing::DrawShopping(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
+{
     // Draw arriving/leaving merchant animation
-    if ((m_merchantArriving || m_merchantLeaving) && !m_merchantShopOpen) {
-        DrawTexturePro(texture, 
-            Rectangle{336.0f + ((m_shoppingTimer / 100 % 2 == 0) ? 16.0f : 0), 80, 16, 16},
-            Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x, 
-                     topLeftScreenCoordinate.y + m_merchantBox.y, 
-                     48, 48},
-            Vector2{0, 0},
-            0.0f,
-            WHITE);
+    if ((m_merchantArriving || m_merchantLeaving) && !m_merchantShopOpen)
+    {
+        DrawTexturePro(texture,
+                       Rectangle{336.0f + ((m_shoppingTimer / 100 % 2 == 0) ? 16.0f : 0), 80, 16, 16},
+                       Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x,
+                                 topLeftScreenCoordinate.y + m_merchantBox.y,
+                                 48, 48},
+                       Vector2{0, 0},
+                       0.0f,
+                       WHITE);
     }
-    else {
+    else
+    {
         // Draw merchant facing direction based on player position
-        int whichFrame = (m_playerBoundingBox.x - m_merchantBox.x > GetTileSize()) ? 2 :
-                        (m_merchantBox.x - m_playerBoundingBox.x > GetTileSize()) ? 1 : 0;
-        
+        int whichFrame = (m_playerBoundingBox.x - m_merchantBox.x > GetTileSize()) ? 2 : (m_merchantBox.x - m_playerBoundingBox.x > GetTileSize()) ? 1
+                                                                                                                                                   : 0;
+
         // Draw merchant
         DrawTexturePro(texture,
-            Rectangle{368.0f + whichFrame * 16, 80, 16, 16},
-            Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x,
-                     topLeftScreenCoordinate.y + m_merchantBox.y,
-                     48, 48}, 
-            Vector2{0, 0},
-            0.0f,
-            WHITE);
+                       Rectangle{368.0f + whichFrame * 16, 80, 16, 16},
+                       Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x,
+                                 topLeftScreenCoordinate.y + m_merchantBox.y,
+                                 48, 48},
+                       Vector2{0, 0},
+                       0.0f,
+                       WHITE);
 
         // Draw merchant shop counter
         DrawTexturePro(texture,
-            Rectangle{401, 96, 63, 32},
-            Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x - GetTileSize(),
-                     topLeftScreenCoordinate.y + m_merchantBox.y + GetTileSize(),
-                     189, 96},
-            Vector2{0, 0},
-            0.0f,
-            WHITE);
+                       Rectangle{401, 96, 63, 32},
+                       Rectangle{topLeftScreenCoordinate.x + m_merchantBox.x - GetTileSize(),
+                                 topLeftScreenCoordinate.y + m_merchantBox.y + GetTileSize(),
+                                 189, 96},
+                       Vector2{0, 0},
+                       0.0f,
+                       WHITE);
 
         // Draw store items
-        for (const auto& item : m_storeItems) {
+        for (const auto &item : m_storeItems)
+        {
             // Draw item sprite
             DrawTexturePro(texture,
-                Rectangle{192.0f + item.second * 16, 128, 16, 16},
-                Rectangle{topLeftScreenCoordinate.x + item.first.x,
-                         topLeftScreenCoordinate.y + item.first.y,
-                         48, 48},
-                Vector2{0, 0},
-                0.0f,
-                WHITE);
+                           Rectangle{192.0f + item.second * 16, 128, 16, 16},
+                           Rectangle{topLeftScreenCoordinate.x + item.first.x,
+                                     topLeftScreenCoordinate.y + item.first.y,
+                                     48, 48},
+                           Vector2{0, 0},
+                           0.0f,
+                           WHITE);
 
             // Draw item price
             std::string priceText = std::to_string(GetPriceForItem(item.second));
             Vector2 textSize = MeasureTextEx(m_assets.GetFont("small"), priceText.c_str(), 16, 1);
-            
+
             Color priceColor = {88, 29, 43, 255};
-            
+
             // Draw price with outline effect
             DrawTextEx(m_assets.GetFont("small"),
-                priceText.c_str(),
-                Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize()/2 - textSize.x/2,
-                       topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
-                16,
-                1,
-                priceColor);
-
-            DrawTextEx(m_assets.GetFont("small"), 
-                priceText.c_str(),
-                Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize()/2 - textSize.x/2 - 1,
-                       topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
-                16,
-                1,
-                priceColor);
+                       priceText.c_str(),
+                       Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize() / 2 - textSize.x / 2,
+                               topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
+                       16,
+                       1,
+                       priceColor);
 
             DrawTextEx(m_assets.GetFont("small"),
-                priceText.c_str(), 
-                Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize()/2 - textSize.x/2 + 1,
-                       topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
-                16,
-                1,
-                priceColor);
+                       priceText.c_str(),
+                       Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize() / 2 - textSize.x / 2 - 1,
+                               topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
+                       16,
+                       1,
+                       priceColor);
+
+            DrawTextEx(m_assets.GetFont("small"),
+                       priceText.c_str(),
+                       Vector2{topLeftScreenCoordinate.x + item.first.x + GetTileSize() / 2 - textSize.x / 2 + 1,
+                               topLeftScreenCoordinate.y + item.first.y + GetTileSize() + 3},
+                       16,
+                       1,
+                       priceColor);
         }
     }
 
     // Draw down arrow when player can move to next level
-    if (m_waitingForPlayerToMoveDownAMap && 
-        (m_merchantShopOpen || m_merchantLeaving || !m_shopping) && 
-        m_shoppingTimer < 250) {
-            
+    if (m_waitingForPlayerToMoveDownAMap &&
+        (m_merchantShopOpen || m_merchantLeaving || !m_shopping) &&
+        m_shoppingTimer < 250)
+    {
+
         DrawTexturePro(texture,
-            Rectangle{207, 102, 8, 8},
-            Rectangle{topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
-                     topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
-                     24, 24},
-            Vector2{0, 0},
-            0.0f,
-            WHITE);
+                       Rectangle{207, 102, 8, 8},
+                       Rectangle{topLeftScreenCoordinate.x + 8.5f * GetTileSize() - 12,
+                                 topLeftScreenCoordinate.y + 15.0f * GetTileSize(),
+                                 24, 24},
+                       Vector2{0, 0},
+                       0.0f,
+                       WHITE);
     }
 }
 
@@ -4762,20 +4819,19 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     {
         float healthPercentage = static_cast<float>(health) / static_cast<float>(fullHealth);
         int healthBarWidth = static_cast<int>(16 * PrairieKing::GetGameInstance()->GetTileSize() * healthPercentage);
-        
+
         Rectangle healthBar = {
             static_cast<int>(topLeftScreenCoordinate.x),
             static_cast<int>(topLeftScreenCoordinate.y) + 16 * PrairieKing::GetGameInstance()->GetTileSize() + 3,
             healthBarWidth,
-            PrairieKing::GetGameInstance()->GetTileSize() / 3
-        };
+            PrairieKing::GetGameInstance()->GetTileSize() / 3};
         DrawRectangleRec(healthBar, Color{188, 51, 74, 255});
     }
 
     // Draw Dracula sprite based on phase and flash state
     Rectangle sourceRect;
     Vector2 drawPos = {topLeftScreenCoordinate.x + position.x, topLeftScreenCoordinate.y + position.y};
-    
+
     if (flashColorTimer > 0.0f)
     {
         // Flash sprite when taking damage
@@ -4797,24 +4853,24 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
             sourceRect = {592, 112, 16, 16};
             break;
         }
-        
+
         // Special effects for gloating phase
         if (phase == GLOATING_PHASE)
         {
             // Draw cape animation
-            Vector2 capePos = {drawPos.x, drawPos.y + PrairieKing::GetGameInstance()->GetTileSize() + 
-                              sinf(static_cast<float>(phaseInternalTimer) / 1000.0f) * 3.0f};
+            Vector2 capePos = {drawPos.x, drawPos.y + PrairieKing::GetGameInstance()->GetTileSize() +
+                                              sinf(static_cast<float>(phaseInternalTimer) / 1000.0f) * 3.0f};
             Rectangle capeRect = {528, 176, 16, 16};
             DrawTextureRec(texture, capeRect, capePos, WHITE);
-            
+
             // Draw speech bubble
-            Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2, 
-                               drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
+            Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
+                                 drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
             Rectangle bubbleRect = {608, 128, 32, 32};
             DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
         }
     }
-    
+
     DrawTextureRec(texture, sourceRect, drawPos, WHITE);
 }
 
@@ -4829,13 +4885,13 @@ bool PrairieKing::Dracula::TakeDamage(int damage)
     {
         return false; // Invulnerable during gloating
     }
-    
+
     health -= damage;
     if (health < 0)
     {
         return true;
     }
-    
+
     flashColorTimer = 100.0f;
     PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
     return false;
@@ -4848,10 +4904,10 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
     {
         flashColorTimer -= deltaTime * 1000.0f;
     }
-    
+
     // Update phase timer
     phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
-    
+
     switch (phase)
     {
     case GLOATING_PHASE:
@@ -4863,109 +4919,125 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
             phase = WALK_RANDOMLY_AND_SHOOT_PHASE;
         }
         break;
-        
+
     case WALK_RANDOMLY_AND_SHOOT_PHASE:
+    {
+        if (phaseInternalCounter == 0)
         {
-            if (phaseInternalCounter == 0)
+            phaseInternalCounter++;
+            phaseInternalTimer = GetRandomInt(3000, 7000);
+        }
+
+        if (phaseInternalTimer < 0)
+        {
+            phaseInternalCounter = 0;
+            phase = GetRandomInt(1, 4); // Random phase 1-3
+            phaseInternalTimer = 9999;
+        }
+
+        Vector2 target = playerPosition;
+        if (PrairieKing::GetGameInstance()->m_deathTimer <= 0.0f)
+        {
+            int movementDirection = -1;
+
+            // Determine movement direction (move away from player)
+            if (abs(target.x - position.x) > abs(target.y - position.y))
             {
-                phaseInternalCounter++;
-                phaseInternalTimer = GetRandomInt(3000, 7000);
+                if (target.x + speed < position.x)
+                    movementDirection = 3; // Left
+                else if (target.x > position.x + speed)
+                    movementDirection = 1; // Right
+                else if (target.y > position.y + speed)
+                    movementDirection = 2; // Down
+                else if (target.y + speed < position.y)
+                    movementDirection = 0; // Up
             }
-            
-            if (phaseInternalTimer < 0)
+            else
             {
-                phaseInternalCounter = 0;
-                phase = GetRandomInt(1, 4); // Random phase 1-3
-                phaseInternalTimer = 9999;
+                if (target.y > position.y + speed)
+                    movementDirection = 2; // Down
+                else if (target.y + speed < position.y)
+                    movementDirection = 0; // Up
+                else if (target.x + speed < position.x)
+                    movementDirection = 3; // Left
+                else if (target.x > position.x + speed)
+                    movementDirection = 1; // Right
             }
-            
-            Vector2 target = playerPosition;
-            if (PrairieKing::GetGameInstance()->m_deathTimer <= 0.0f)
+
+            Rectangle attemptedPosition = position;
+            switch (movementDirection)
             {
-                int movementDirection = -1;
-                
-                // Determine movement direction (move away from player)
-                if (abs(target.x - position.x) > abs(target.y - position.y))
+            case 0:
+                attemptedPosition.y -= speed;
+                break;
+            case 1:
+                attemptedPosition.x += speed;
+                break;
+            case 2:
+                attemptedPosition.y += speed;
+                break;
+            case 3:
+                attemptedPosition.x -= speed;
+                break;
+            }
+
+            // Move away from player (invert movement)
+            attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
+            attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
+
+            if (!PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) &&
+                !PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this))
+            {
+                position = attemptedPosition;
+            }
+
+            // Shooting behavior
+            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+            if (shootTimer < 0)
+            {
+                Vector2 trajectory = GetVelocityTowardPoint(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
+                    {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    8.0f);
+
+                // Predict player movement
+                if (!PrairieKing::GetGameInstance()->m_playerMovementDirections.empty())
                 {
-                    if (target.x + speed < position.x)
-                        movementDirection = 3; // Left
-                    else if (target.x > position.x + speed)
-                        movementDirection = 1; // Right
-                    else if (target.y > position.y + speed)
-                        movementDirection = 2; // Down
-                    else if (target.y + speed < position.y)
-                        movementDirection = 0; // Up
-                }
-                else
-                {
-                    if (target.y > position.y + speed)
-                        movementDirection = 2; // Down
-                    else if (target.y + speed < position.y)
-                        movementDirection = 0; // Up
-                    else if (target.x + speed < position.x)
-                        movementDirection = 3; // Left
-                    else if (target.x > position.x + speed)
-                        movementDirection = 1; // Right
-                }
-                
-                Rectangle attemptedPosition = position;
-                switch (movementDirection)
-                {
-                case 0: attemptedPosition.y -= speed; break;
-                case 1: attemptedPosition.x += speed; break;
-                case 2: attemptedPosition.y += speed; break;
-                case 3: attemptedPosition.x -= speed; break;
-                }
-                
-                // Move away from player (invert movement)
-                attemptedPosition.x = position.x - (attemptedPosition.x - position.x);
-                attemptedPosition.y = position.y - (attemptedPosition.y - position.y);
-                
-                if (!PrairieKing::GetGameInstance()->IsCollidingWithMapForMonsters(attemptedPosition) &&
-                    !PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this))
-                {
-                    position = attemptedPosition;
-                }
-                
-                // Shooting behavior
-                shootTimer -= static_cast<int>(deltaTime * 1000.0f);
-                if (shootTimer < 0)
-                {
-                    Vector2 trajectory = GetVelocityTowardPoint(
-                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
-                        {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, 
-                         playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                        8.0f);
-                    
-                    // Predict player movement
-                    if (!PrairieKing::GetGameInstance()->m_playerMovementDirections.empty())
+                    int lastDir = PrairieKing::GetGameInstance()->m_playerMovementDirections.back();
+                    Vector2 prediction = {0, 0};
+                    switch (lastDir)
                     {
-                        int lastDir = PrairieKing::GetGameInstance()->m_playerMovementDirections.back();
-                        Vector2 prediction = {0, 0};
-                        switch (lastDir)
-                        {
-                        case 0: prediction.y = -3.0f; break;
-                        case 1: prediction.x = 3.0f; break;
-                        case 2: prediction.y = 3.0f; break;
-                        case 3: prediction.x = -3.0f; break;
-                        }
-                        trajectory.x += prediction.x;
-                        trajectory.y += prediction.y;
+                    case 0:
+                        prediction.y = -3.0f;
+                        break;
+                    case 1:
+                        prediction.x = 3.0f;
+                        break;
+                    case 2:
+                        prediction.y = 3.0f;
+                        break;
+                    case 3:
+                        prediction.x = -3.0f;
+                        break;
                     }
-                    
-                    PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
-                        PrairieKing::CowboyBullet(
-                            {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                             position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                            trajectory, 1));
-                    
-                    shootTimer = 250;
-                    PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+                    trajectory.x += prediction.x;
+                    trajectory.y += prediction.y;
                 }
+
+                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                    PrairieKing::CowboyBullet(
+                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                         position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                        trajectory, 1));
+
+                shootTimer = 250;
+                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
             }
         }
-        break;
-        
+    }
+    break;
+
     case SUMMON_DEMON_PHASE:
     case SUMMON_MUMMY_PHASE:
         if (phaseInternalCounter == 0)
@@ -4976,12 +5048,12 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                 position.x -= 6;
             else if (position.x < homePosition.x - 6)
                 position.x += 6;
-                
+
             if (position.y > homePosition.y + 6)
                 position.y -= 6;
             else if (position.y < homePosition.y - 6)
                 position.y += 6;
-                
+
             if (Vector2Distance({position.x, position.y}, oldPos) < 0.1f)
             {
                 phaseInternalCounter++;
@@ -4992,9 +5064,9 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
         {
             // Summon enemies
             Vector2 origin = {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                            position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f};
+                              position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f};
             SummonEnemies(origin, GetRandomInt(0, 5));
-            
+
             if (GetRandomFloat(0.0f, 1.0f) < 0.4f)
             {
                 phase = WALK_RANDOMLY_AND_SHOOT_PHASE;
@@ -5006,7 +5078,7 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
             }
         }
         break;
-        
+
     case SPREAD_SHOT_PHASE:
         if (phaseInternalCounter == 0)
         {
@@ -5016,12 +5088,12 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                 position.x -= 6;
             else if (position.x < homePosition.x - 6)
                 position.x += 6;
-                
+
             if (position.y > homePosition.y + 6)
                 position.y -= 6;
             else if (position.y < homePosition.y - 6)
                 position.y += 6;
-                
+
             if (Vector2Distance({position.x, position.y}, oldPos) < 0.1f)
             {
                 phaseInternalCounter++;
@@ -5036,7 +5108,8 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                 phaseInternalTimer = 2000;
                 shootTimer = 200;
                 FireSpread({position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                          position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f}, 0.0);
+                            position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                           0.0);
             }
         }
         else if (phaseInternalCounter == 2)
@@ -5045,7 +5118,8 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
             if (shootTimer < 0)
             {
                 FireSpread({position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                          position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f}, 0.0);
+                            position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                           0.0);
                 shootTimer = 200;
             }
             if (phaseInternalTimer < 0)
@@ -5061,20 +5135,20 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                 phaseInternalTimer = 2000;
                 shootTimer = 200;
                 phaseInternalCounter++;
-                
+
                 // Aimed shot at player
                 Vector2 trajectory = GetVelocityTowardPoint(
                     {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
                     {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                      playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
                     8.0f);
-                
+
                 PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
                     PrairieKing::CowboyBullet(
                         {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                          position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
                         trajectory, 1));
-                
+
                 PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
             }
         }
@@ -5089,20 +5163,20 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
                     {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                      playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
                     8.0f);
-                
+
                 trajectory.x += GetRandomFloat(-1.0f, 1.0f);
                 trajectory.y += GetRandomFloat(-1.0f, 1.0f);
-                
+
                 PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
                     PrairieKing::CowboyBullet(
                         {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                          position.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
                         trajectory, 1));
-                
+
                 PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
                 shootTimer = 200;
             }
-            
+
             if (phaseInternalTimer < 0)
             {
                 if (GetRandomFloat(0.0f, 1.0f) < 0.4f)
@@ -5119,7 +5193,7 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
         }
         break;
     }
-    
+
     return false;
 }
 
@@ -5127,36 +5201,36 @@ void PrairieKing::Dracula::FireSpread(Vector2 origin, double offsetAngle)
 {
     // Get surrounding tile positions (8 directions around Dracula)
     std::vector<Vector2> directions = {
-        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize()}, // Up
+        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize()},                                                 // Up
         {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y - PrairieKing::GetGameInstance()->GetTileSize()}, // Up-Right
-        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y}, // Right
+        {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y},                                                 // Right
         {origin.x + PrairieKing::GetGameInstance()->GetTileSize(), origin.y + PrairieKing::GetGameInstance()->GetTileSize()}, // Down-Right
-        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize()}, // Down
+        {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize()},                                                 // Down
         {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y + PrairieKing::GetGameInstance()->GetTileSize()}, // Down-Left
-        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y}, // Left
+        {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y},                                                 // Left
         {origin.x - PrairieKing::GetGameInstance()->GetTileSize(), origin.y - PrairieKing::GetGameInstance()->GetTileSize()}, // Up-Left
     };
-    
-    for (const auto& direction : directions)
+
+    for (const auto &direction : directions)
     {
         Vector2 trajectory = GetVelocityTowardPoint(origin, direction, 6.0f);
-        
+
         if (offsetAngle > 0.0)
         {
             offsetAngle /= 2.0;
             float cosAngle = cosf(offsetAngle);
             float sinAngle = sinf(offsetAngle);
-            
+
             float newX = cosAngle * (direction.x - origin.x) - sinAngle * (direction.y - origin.y) + origin.x;
             float newY = sinAngle * (direction.x - origin.x) + cosAngle * (direction.y - origin.y) + origin.y;
-            
+
             trajectory = GetVelocityTowardPoint(origin, {newX, newY}, 8.0f);
         }
-        
+
         PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
             PrairieKing::CowboyBullet(origin, trajectory, 1));
     }
-    
+
     PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
 }
 
@@ -5167,32 +5241,31 @@ void PrairieKing::Dracula::SummonEnemies(Vector2 origin, int which)
         {origin.x - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
         {origin.x + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2, origin.y},
         {origin.x, origin.y + PrairieKing::GetGameInstance()->GetTileSize() + PrairieKing::GetGameInstance()->GetTileSize() / 2},
-        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() * 3 / 4}
-    };
-    
-    for (const auto& pos : spawnPositions)
+        {origin.x, origin.y - PrairieKing::GetGameInstance()->GetTileSize() - PrairieKing::GetGameInstance()->GetTileSize() * 3 / 4}};
+
+    for (const auto &pos : spawnPositions)
     {
-        Rectangle spawnRect = {pos.x, pos.y, 
-                             static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize()),
-                             static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize())};
-        
+        Rectangle spawnRect = {pos.x, pos.y,
+                               static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize()),
+                               static_cast<float>(PrairieKing::GetGameInstance()->GetTileSize())};
+
         if (!PrairieKing::GetGameInstance()->IsCollidingWithMonster(spawnRect, nullptr))
         {
-            auto* monster = new PrairieKing::CowboyMonster(
+            auto *monster = new PrairieKing::CowboyMonster(
                 PrairieKing::GetGameInstance()->m_assets, which, pos);
             PrairieKing::GetGameInstance()->AddMonster(monster);
         }
-        
+
         // Add summoning effect
         PrairieKing::TemporaryAnimatedSprite summonEffect(
-            Rectangle{464, 192, 16, 16}, 80.0f, 5, 0, 
+            Rectangle{464, 192, 16, 16}, 80.0f, 5, 0,
             {PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x + pos.x,
              PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y + pos.y},
             0.0f, 3.0f, false, pos.y / 10000.0f, WHITE);
         summonEffect.delayBeforeAnimationStart = GetRandomInt(0, 800);
         PrairieKing::GetGameInstance()->AddTemporarySprite(summonEffect);
     }
-    
+
     PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_monsterDie"));
 }
 
@@ -5205,18 +5278,17 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
     // Draw health bar
     float healthPercentage = static_cast<float>(health) / static_cast<float>(fullHealth);
     int healthBarWidth = static_cast<int>(16 * PrairieKing::GetGameInstance()->GetTileSize() * healthPercentage);
-    
+
     Rectangle healthBar = {
         static_cast<int>(topLeftScreenCoordinate.x),
         static_cast<int>(topLeftScreenCoordinate.y) + 16 * PrairieKing::GetGameInstance()->GetTileSize() + 3,
         healthBarWidth,
-        PrairieKing::GetGameInstance()->GetTileSize() / 3
-    };
+        PrairieKing::GetGameInstance()->GetTileSize() / 3};
     DrawRectangleRec(healthBar, Color{188, 51, 74, 255});
-    
+
     Vector2 drawPos = {topLeftScreenCoordinate.x + position.x, topLeftScreenCoordinate.y + position.y};
     Rectangle sourceRect;
-    
+
     if (flashColorTimer > 0.0f)
     {
         // Flash sprite when taking damage
@@ -5230,18 +5302,18 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
         case HIDING_PHASE:
             // Stationary sprite
             sourceRect = {432.0f + ((phaseCountdown / 250 % 2 == 0) ? 16 : 0), 128, 16, 16};
-            
+
             // Draw speech bubble during talking phase
             if (phase == TALKING_PHASE && phaseCountdown > 1000)
             {
                 Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
-                                   drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
-                Rectangle bubbleRect = {448 + ((PrairieKing::GetGameInstance()->m_whichWave > 5) ? 32 : 0), 
-                                      144, 32, 32};
+                                     drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
+                Rectangle bubbleRect = {448 + ((PrairieKing::GetGameInstance()->m_whichWave > 5) ? 32 : 0),
+                                        144, 32, 32};
                 DrawTextureRec(texture, bubbleRect, bubblePos, WHITE);
             }
             break;
-            
+
         case RUN_GUN_AND_PANT_PHASE:
             if (phaseInternalCounter == 2)
             {
@@ -5254,14 +5326,14 @@ void PrairieKing::Outlaw::Draw(const Texture2D &texture, Vector2 topLeftScreenCo
                 sourceRect = {464.0f + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 128, 16, 16};
             }
             break;
-            
+
         default:
             // Moving sprite for other phases
             sourceRect = {464.0f + ((phaseCountdown / 80 % 2 == 0) ? 16 : 0), 128, 16, 16};
             break;
         }
     }
-    
+
     DrawTextureRec(texture, sourceRect, drawPos, WHITE);
 }
 
@@ -5271,16 +5343,16 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
     {
         flashColorTimer -= deltaTime * 1000.0f;
     }
-    
+
     phaseCountdown -= static_cast<int>(deltaTime * 1000.0f);
-    
+
     // Wrap around screen boundaries
-    if (position.x > 17 * PrairieKing::GetGameInstance()->GetTileSize() || 
+    if (position.x > 17 * PrairieKing::GetGameInstance()->GetTileSize() ||
         position.x < -PrairieKing::GetGameInstance()->GetTileSize())
     {
         position.x = 16 * PrairieKing::GetGameInstance()->GetTileSize() / 2.0f;
     }
-    
+
     switch (phase)
     {
     case TALKING_PHASE:
@@ -5289,9 +5361,9 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
         {
             phase = GetRandomInt(1, 5);
             dartLeft = (playerPosition.x < position.x);
-            
+
             // Special logic for phase selection based on player position
-            if (playerPosition.x > 7 * PrairieKing::GetGameInstance()->GetTileSize() && 
+            if (playerPosition.x > 7 * PrairieKing::GetGameInstance()->GetTileSize() &&
                 playerPosition.x < 9 * PrairieKing::GetGameInstance()->GetTileSize())
             {
                 if (GetRandomFloat(0.0f, 1.0f) < 0.66f || phase == RUN_AND_GUN_PHASE)
@@ -5303,134 +5375,136 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
             {
                 phase = RUN_GUN_AND_PANT_PHASE;
             }
-            
+
             phaseInternalCounter = 0;
             phaseInternalTimer = 0;
         }
         break;
-        
+
     case SHOOT_AT_PLAYER_PHASE:
+    {
+        int motion = dartLeft ? -3 : 3;
+
+        if (phaseInternalCounter == 0 &&
+            !(playerPosition.x > 7 * PrairieKing::GetGameInstance()->GetTileSize() &&
+              playerPosition.x < 9 * PrairieKing::GetGameInstance()->GetTileSize()))
         {
-            int motion = dartLeft ? -3 : 3;
-            
-            if (phaseInternalCounter == 0 && 
-                !(playerPosition.x > 7 * PrairieKing::GetGameInstance()->GetTileSize() && 
-                  playerPosition.x < 9 * PrairieKing::GetGameInstance()->GetTileSize()))
-            {
-                phaseInternalCounter = 1;
-                phaseInternalTimer = GetRandomInt(500, 1500);
-                break;
-            }
-            
-            if (abs(position.x - homePosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f) < 
-                7 * PrairieKing::GetGameInstance()->GetTileSize() + 12 && phaseInternalCounter == 0)
-            {
-                position.x += motion;
-                break;
-            }
-            
-            if (phaseInternalCounter == 2)
-            {
-                motion = dartLeft ? -4 : 4;
-                position.x -= motion;
-                if (abs(position.x - homePosition.x) < 4)
-                {
-                    position.x = homePosition.x;
-                    phase = HIDING_PHASE;
-                    phaseCountdown = GetRandomInt(1000, 2000);
-                }
-                break;
-            }
-            
-            if (phaseInternalCounter == 0)
-            {
-                phaseInternalCounter++;
-                phaseInternalTimer = GetRandomInt(1000, 2000);
-            }
-            
-            phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
-            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
-            
-            if (shootTimer < 0)
-            {
-                Vector2 trajectory = GetVelocityTowardPoint(
-                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
-                    {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                     playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                    8.0f);
-                
-                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
-                    PrairieKing::CowboyBullet(
-                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                         position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                        trajectory, 1));
-                
-                shootTimer = 120;
-                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
-            }
-            
-            if (phaseInternalTimer <= 0)
-            {
-                phaseInternalCounter++;
-            }
+            phaseInternalCounter = 1;
+            phaseInternalTimer = GetRandomInt(500, 1500);
+            break;
         }
-        break;
-        
+
+        if (abs(position.x - homePosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f) <
+                7 * PrairieKing::GetGameInstance()->GetTileSize() + 12 &&
+            phaseInternalCounter == 0)
+        {
+            position.x += motion;
+            break;
+        }
+
+        if (phaseInternalCounter == 2)
+        {
+            motion = dartLeft ? -4 : 4;
+            position.x -= motion;
+            if (abs(position.x - homePosition.x) < 4)
+            {
+                position.x = homePosition.x;
+                phase = HIDING_PHASE;
+                phaseCountdown = GetRandomInt(1000, 2000);
+            }
+            break;
+        }
+
+        if (phaseInternalCounter == 0)
+        {
+            phaseInternalCounter++;
+            phaseInternalTimer = GetRandomInt(1000, 2000);
+        }
+
+        phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+        shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+
+        if (shootTimer < 0)
+        {
+            Vector2 trajectory = GetVelocityTowardPoint(
+                {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f, position.y},
+                {playerPosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                 playerPosition.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                8.0f);
+
+            PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                PrairieKing::CowboyBullet(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    trajectory, 1));
+
+            shootTimer = 120;
+            PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+        }
+
+        if (phaseInternalTimer <= 0)
+        {
+            phaseInternalCounter++;
+        }
+    }
+    break;
+
     case DART_OUT_AND_SHOOT_PHASE:
+    {
+        int motion = dartLeft ? -3 : 3;
+
+        if (abs(position.x - homePosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f) <
+                2 * PrairieKing::GetGameInstance()->GetTileSize() + 12 &&
+            phaseInternalCounter == 0)
         {
-            int motion = dartLeft ? -3 : 3;
-            
-            if (abs(position.x - homePosition.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f) < 
-                2 * PrairieKing::GetGameInstance()->GetTileSize() + 12 && phaseInternalCounter == 0)
+            position.x += motion;
+            if (position.x > 256)
             {
-                position.x += motion;
-                if (position.x > 256)
-                {
-                    phaseInternalCounter = 2;
-                }
-                break;
+                phaseInternalCounter = 2;
             }
-            
-            if (phaseInternalCounter == 2)
-            {
-                position.x -= motion;
-                if (abs(position.x - homePosition.x) < 4)
-                {
-                    position.x = homePosition.x;
-                    phase = HIDING_PHASE;
-                    phaseCountdown = GetRandomInt(1000, 2000);
-                }
-                break;
-            }
-            
-            if (phaseInternalCounter == 0)
-            {
-                phaseInternalCounter++;
-                phaseInternalTimer = GetRandomInt(1000, 2000);
-            }
-            
-            phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
-            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
-            
-            if (shootTimer < 0)
-            {
-                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
-                    PrairieKing::CowboyBullet(
-                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                         position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                        {static_cast<float>(GetRandomInt(-2, 3)), -8.0f}, 1));
-                
-                shootTimer = 150;
-                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
-            }
-            
-            if (phaseInternalTimer <= 0)
-            {
-                phaseInternalCounter++;
-            }
+            break;
         }
-        break;
-        
+
+        if (phaseInternalCounter == 2)
+        {
+            position.x -= motion;
+            if (abs(position.x - homePosition.x) < 4)
+            {
+                position.x = homePosition.x;
+                phase = HIDING_PHASE;
+                phaseCountdown = GetRandomInt(1000, 2000);
+            }
+            break;
+        }
+
+        if (phaseInternalCounter == 0)
+        {
+            phaseInternalCounter++;
+            phaseInternalTimer = GetRandomInt(1000, 2000);
+        }
+
+        phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+        shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+
+        if (shootTimer < 0)
+        {
+            PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                PrairieKing::CowboyBullet(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    {static_cast<float>(GetRandomInt(-2, 3)), -8.0f}, 1));
+
+            shootTimer = 150;
+            PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+        }
+
+        if (phaseInternalTimer <= 0)
+        {
+            phaseInternalCounter++;
+        }
+    }
+    break;
+
     case RUN_AND_GUN_PHASE:
         if (phaseInternalCounter == 2)
         {
@@ -5438,7 +5512,7 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
                 position.x += 4;
             else
                 position.x -= 4;
-                
+
             if (abs(position.x - homePosition.x) < 5)
             {
                 position.x = homePosition.x;
@@ -5447,15 +5521,15 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
             }
             return false;
         }
-        
+
         if (phaseInternalCounter == 0)
         {
             phaseInternalCounter++;
             phaseInternalTimer = GetRandomInt(4000, 7000);
         }
-        
+
         phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
-        
+
         // Chase player horizontally
         if (position.x > playerPosition.x && position.x - playerPosition.x > 3.0f)
         {
@@ -5465,7 +5539,7 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
         {
             position.x += 2;
         }
-        
+
         shootTimer -= static_cast<int>(deltaTime * 1000.0f);
         if (shootTimer < 0)
         {
@@ -5474,7 +5548,7 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
                     {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
                      position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
                     {static_cast<float>(GetRandomInt(-1, 2)), -8.0f}, 1));
-            
+
             shootTimer = 250;
             if (fullHealth > 50)
             {
@@ -5486,94 +5560,94 @@ bool PrairieKing::Outlaw::Move(Vector2 playerPosition, float deltaTime)
             }
             PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
         }
-        
+
         if (phaseInternalTimer <= 0)
         {
             phaseInternalCounter++;
         }
         break;
-        
+
     case RUN_GUN_AND_PANT_PHASE:
+    {
+        if (phaseInternalCounter == 0)
         {
-            if (phaseInternalCounter == 0)
-            {
-                phaseInternalCounter++;
-                phaseInternalTimer = GetRandomInt(3000, 6500);
-                break;
-            }
-            
-            if (phaseInternalCounter == 2)
-            {
-                phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
-                if (phaseInternalTimer <= 0)
-                {
-                    phaseInternalCounter++;
-                }
-                break;
-            }
-            
-            if (phaseInternalCounter == 3)
-            {
-                if (position.x < homePosition.x)
-                    position.x += 4;
-                else
-                    position.x -= 4;
-                    
-                if (abs(position.x - homePosition.x) < 5)
-                {
-                    position.x = homePosition.x;
-                    phase = HIDING_PHASE;
-                    phaseCountdown = GetRandomInt(1000, 2000);
-                }
-                break;
-            }
-            
-            // Run back and forth while shooting
-            int motion = dartLeft ? -3 : 3;
-            position.x += motion;
-            
-            if (position.x < PrairieKing::GetGameInstance()->GetTileSize() || 
-                position.x > 15 * PrairieKing::GetGameInstance()->GetTileSize())
-            {
-                dartLeft = !dartLeft;
-            }
-            
-            shootTimer -= static_cast<int>(deltaTime * 1000.0f);
-            if (shootTimer < 0)
-            {
-                PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
-                    PrairieKing::CowboyBullet(
-                        {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                         position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                        {static_cast<float>(GetRandomInt(-1, 2)), -8.0f}, 1));
-                
-                shootTimer = 250;
-                if (fullHealth > 50)
-                {
-                    shootTimer -= 50;
-                }
-                if (GetRandomFloat(0.0f, 1.0f) < 0.2f)
-                {
-                    shootTimer = 150;
-                }
-                PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
-            }
-            
+            phaseInternalCounter++;
+            phaseInternalTimer = GetRandomInt(3000, 6500);
+            break;
+        }
+
+        if (phaseInternalCounter == 2)
+        {
             phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
             if (phaseInternalTimer <= 0)
             {
-                if (phase == RUN_AND_GUN_PHASE)
-                {
-                    phaseInternalCounter = 3;
-                    break;
-                }
-                phaseInternalTimer = 3000;
                 phaseInternalCounter++;
             }
+            break;
         }
-        break;
+
+        if (phaseInternalCounter == 3)
+        {
+            if (position.x < homePosition.x)
+                position.x += 4;
+            else
+                position.x -= 4;
+
+            if (abs(position.x - homePosition.x) < 5)
+            {
+                position.x = homePosition.x;
+                phase = HIDING_PHASE;
+                phaseCountdown = GetRandomInt(1000, 2000);
+            }
+            break;
+        }
+
+        // Run back and forth while shooting
+        int motion = dartLeft ? -3 : 3;
+        position.x += motion;
+
+        if (position.x < PrairieKing::GetGameInstance()->GetTileSize() ||
+            position.x > 15 * PrairieKing::GetGameInstance()->GetTileSize())
+        {
+            dartLeft = !dartLeft;
+        }
+
+        shootTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (shootTimer < 0)
+        {
+            PrairieKing::GetGameInstance()->m_enemyBullets.push_back(
+                PrairieKing::CowboyBullet(
+                    {position.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                     position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                    {static_cast<float>(GetRandomInt(-1, 2)), -8.0f}, 1));
+
+            shootTimer = 250;
+            if (fullHealth > 50)
+            {
+                shootTimer -= 50;
+            }
+            if (GetRandomFloat(0.0f, 1.0f) < 0.2f)
+            {
+                shootTimer = 150;
+            }
+            PlaySound(PrairieKing::GetGameInstance()->GetSound("Cowboy_gunshot"));
+        }
+
+        phaseInternalTimer -= static_cast<int>(deltaTime * 1000.0f);
+        if (phaseInternalTimer <= 0)
+        {
+            if (phase == RUN_AND_GUN_PHASE)
+            {
+                phaseInternalCounter = 3;
+                break;
+            }
+            phaseInternalTimer = 3000;
+            phaseInternalCounter++;
+        }
     }
-    
+    break;
+    }
+
     return false;
 }
 
@@ -5588,13 +5662,13 @@ bool PrairieKing::Outlaw::TakeDamage(int damage)
     {
         return false; // Invulnerable when at home position
     }
-    
+
     health -= damage;
     if (health < 0)
     {
         return true;
     }
-    
+
     flashColorTimer = 150.0f;
     PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
     return false;
