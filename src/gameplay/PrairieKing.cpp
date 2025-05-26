@@ -1463,7 +1463,7 @@ bool PrairieKing::IsMapTilePassable(int tileType)
 bool PrairieKing::IsMapTilePassableForBullets(int tileType)
 {
     // Solo las barreras sólidas y las vallas bloquean balas, las trench NO
-    if (tileType <= 1 || tileType == 5 || tileType == 7)
+    if (tileType <= 1 || tileType == 7)
     {
         return false;
     }
@@ -4085,8 +4085,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
                     static_cast<float>(GetTileSize()) / 2.0f};
 
                 // Verificar si la nueva posición es válida
-                if (!IsCollidingWithMap(newBounds) &&
-                    (!CheckCollisionRecs(newBounds, m_merchantBox) || CheckCollisionRecs(m_playerBoundingBox, m_merchantBox)))
+                if (!IsCollidingWithMap(newBounds))
                 {
                     m_playerPosition = newPosition;
                     m_playerBoundingBox = newBounds;
