@@ -180,6 +180,7 @@ PrairieKing::PrairieKing(AssetManager &assets)
       m_playerFootstepSoundTimer(200.0f),
       m_spawnQueue(4),
       m_overworldSong({0}),
+      m_outlawSong({0}),
       m_zombieSong({0}),
       m_debugMode(false),
       m_isPaused(false)
@@ -225,6 +226,8 @@ void PrairieKing::Initialize()
 
     // Load music
     m_overworldSong = m_assets.GetMusic("overworld");
+    m_outlawSong = m_assets.GetMusic("outlaw");
+    m_zombieSong = m_assets.GetMusic("zombie");
 
     // Initialize map
     GetMap(0, m_map);
@@ -467,7 +470,6 @@ void PrairieKing::UsePowerup(int which)
         }
 
         // Load and play zombie music stream (fresh each time)
-        m_zombieSong = m_assets.GetMusic("zombie");
         if (m_zombieSong.stream.buffer != nullptr)
         {
             PlayMusicStream(m_zombieSong);
@@ -722,25 +724,28 @@ void PrairieKing::EndOfGopherAnimationBehavior(int extraInfo)
     PlaySound(GetSound("cowboy_gopher"));
 }
 
+// Fix the KillOutlaw static function
 void PrairieKing::KillOutlaw()
 {
-    if (s_instance)
+    if (s_instance && !s_instance->m_monsters.empty())
     {
         // Add special powerup when outlaw is killed
-        int powerupType = (s_instance->m_world == 0) ? POWERUP_LOG : POWERUP_SKULL;
+        int powerupType = (s_instance->m_world == DESERT_WORLD) ? POWERUP_LOG : POWERUP_SKULL;
         Vector2 powerupPos = {8.0f * s_instance->GetTileSize(), 10.0f * s_instance->GetTileSize()};
         s_instance->m_powerups.push_back(CowboyPowerup(powerupType, powerupPos, 9999999));
 
-        // Stop outlaw music
-        // StopMusicStream(s_instance->m_outlawSong);
+        if (s_instance->m_outlawSong.stream.buffer != nullptr && IsMusicStreamPlaying(s_instance->m_outlawSong))
+        {
+            StopMusicStream(s_instance->m_outlawSong);
+        }
 
-        // Set bridge tile
+        // Set bridge tile to allow passage
         s_instance->m_map[8][8] = MAP_BRIDGE;
         s_instance->m_screenFlash = 200;
 
         PlaySound(s_instance->GetSound("Cowboy_monsterDie"));
 
-        // Add explosion effects
+        // Add explosion effects around the outlaw
         for (int i = 0; i < 15; i++)
         {
             Vector2 effectPos = {
@@ -756,6 +761,11 @@ void PrairieKing::KillOutlaw()
             s_instance->AddTemporarySprite(explosion);
         }
 
+        // Clear all monsters (specifically the outlaw)
+        for (auto* monster : s_instance->m_monsters)
+        {
+            delete monster;
+        }
         s_instance->m_monsters.clear();
     }
 }
@@ -763,28 +773,32 @@ void PrairieKing::KillOutlaw()
 void PrairieKing::UpdateBullets(float deltaTime)
 {
     // Update player bullets
-    for (auto it = m_bullets.begin(); it != m_bullets.end();)
+    for (auto bulletIt = m_bullets.begin(); bulletIt != m_bullets.end();)
     {
-        it->position.x += it->motion.x * BULLET_SPEED * deltaTime;
-        it->position.y += it->motion.y * BULLET_SPEED * deltaTime;
+        bulletIt->position.x += bulletIt->motion.x * BULLET_SPEED * deltaTime;
+        bulletIt->position.y += bulletIt->motion.y * BULLET_SPEED * deltaTime;
 
+        bool bulletRemoved = false;
+        
         // Check collision with monsters
-        bool hitMonster = false;
-        for (int monsterIndex = 0; monsterIndex < m_monsters.size(); monsterIndex++)
+        for (auto monsterIt = m_monsters.begin(); monsterIt != m_monsters.end();)
         {
-            auto monster = m_monsters[monsterIndex];
+            auto monster = *monsterIt;
             if (monster->invisible)
+            {
+                ++monsterIt;
                 continue;
+            }
 
             Rectangle bulletRect = {
-                it->position.x,
-                it->position.y,
+                bulletIt->position.x,
+                bulletIt->position.y,
                 static_cast<float>(GetTileSize() / 4),
                 static_cast<float>(GetTileSize() / 4)};
 
             if (CheckCollisionRecs(bulletRect, monster->position))
             {
-                if (monster->TakeDamage(it->damage))
+                if (monster->TakeDamage(bulletIt->damage))
                 {
                     AddGuts(Vector2{monster->position.x, monster->position.y}, monster->type);
                     int loot = monster->GetLootDrop();
@@ -802,44 +816,56 @@ void PrairieKing::UpdateBullets(float deltaTime)
                         }
                     }
 
-                    // Normal loot logic
-                    if (m_whichRound > 0 && (loot == 5 || loot == 8) && GetRandomFloat(0, 1) < 0.4)
+                    // Normal loot logic (but skip if it's an Outlaw as TakeDamage already handled it)
+                    if (loot != -1 && m_whichWave != 12 && monster->type != -1) // -1 indicates Outlaw
                     {
-                        loot = -1; // No loot
+                        if (m_whichRound > 0 && (loot == 5 || loot == 8) && GetRandomFloat(0, 1) < 0.4)
+                        {
+                            loot = -1; // No loot
+                        }
+
+                        if (loot != -1)
+                        {
+                            Vector2 lootPos = {monster->position.x, monster->position.y};
+                            m_powerups.push_back(CowboyPowerup(loot, lootPos, LOOT_DURATION));
+                        }
                     }
 
-                    if (loot != -1 && m_whichWave != 12)
-                    {
-                        Vector2 lootPos = {monster->position.x, monster->position.y};
-                        m_powerups.push_back(CowboyPowerup(loot, lootPos, LOOT_DURATION));
-                    }
-
-                    // Remove the monster
+                    // Special handling for Outlaw death is already done in TakeDamage
+                    // Just clean up the monster from the list
                     delete monster;
-                    m_monsters.erase(m_monsters.begin() + monsterIndex);
+                    monsterIt = m_monsters.erase(monsterIt);
                 }
-                hitMonster = true;
+                else
+                {
+                    ++monsterIt;
+                }
+                
+                // Remove the bullet
+                bulletIt = m_bullets.erase(bulletIt);
+                bulletRemoved = true;
                 break;
+            }
+            else
+            {
+                ++monsterIt;
             }
         }
 
-        // Check collision with map
-        if (!hitMonster && IsCollidingWithMapForBullets(it->position))
+        // Check collision with map if bullet wasn't removed by monster collision
+        if (!bulletRemoved && IsCollidingWithMapForBullets(bulletIt->position))
         {
-            hitMonster = true;
+            bulletIt = m_bullets.erase(bulletIt);
+            bulletRemoved = true;
         }
 
-        if (hitMonster)
+        if (!bulletRemoved)
         {
-            it = m_bullets.erase(it);
-        }
-        else
-        {
-            ++it;
+            ++bulletIt;
         }
     }
 
-    // In UpdateBullets method, add bounds checking for enemy bullets vs player
+    // Update enemy bullets (existing code remains the same)
     for (int i = m_enemyBullets.size() - 1; i >= 0; i--)
     {
         // Update bullet position
@@ -861,7 +887,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
             continue;
         }
 
-        // Check player collision - ADD PROPER BOUNDS CHECKING
+        // Check player collision
         if (m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
         {
             Rectangle bulletRect = {
@@ -881,7 +907,12 @@ void PrairieKing::UpdateBullets(float deltaTime)
 
 void PrairieKing::PlayerDie()
 {
-    PauseMusicStream(m_overworldSong);
+    // Stop overworld music immediately
+    if (m_overworldSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_overworldSong))
+    {
+        StopMusicStream(m_overworldSong);
+    }
+    
     m_gopherRunning = false;
     m_hasGopherAppeared = false;
 
@@ -907,47 +938,47 @@ void PrairieKing::PlayerDie()
 
     m_died = true;
     m_activePowerups.clear();
-    m_deathTimer = DEATH_DELAY;
 
-    // Reset the wave timer properly
-    m_waveTimer = std::min(WAVE_DURATION, m_waveTimer + 10000);
-    m_betweenWaveTimer = 4000;
+    m_deathTimer = 3000.0f; // Changed from DEATH_DELAY to match C# (3000f)
 
-    // Add death animation
+    // Add death animation sprite - using the correct sprite coordinates
     m_temporarySprites.push_back(TemporaryAnimatedSprite(
         Rectangle{336, 160, 16, 16},
         120.0f, 5, 0,
         Vector2{
-            m_topLeftScreenCoordinate.x + m_playerPosition.x + GetTileSize(),
-            m_topLeftScreenCoordinate.y + m_playerPosition.y + GetTileSize()},
+            m_topLeftScreenCoordinate.x + m_playerPosition.x,
+            m_topLeftScreenCoordinate.y + m_playerPosition.y},
         0.0f, 3.0f, false,
         1.0f, WHITE));
 
+    // Reset the wave timer properly - matches C# logic
+    m_waveTimer = std::min(80000.0f, m_waveTimer + 10000.0f); // Changed from WAVE_DURATION
     m_betweenWaveTimer = 4000;
 
     // Lose a life
     m_lives--;
     m_playerInvincibleTimer = 5000;
+    
     if (m_shootoutLevel)
     {
-        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
-        PlaySound(PrairieKing::GetSoundStatic("Cowboy_monsterDie"));
+        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())}; // Changed Y position
+        PlaySound(GetSound("Cowboy_monsterDie"));
     }
     else
     {
-        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(8 * GetTileSize())};
+        m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize() - GetTileSize()), static_cast<float>(8 * GetTileSize())}; // Changed X position
         m_playerBoundingBox = {
-            m_playerPosition.x,                        // Sin offset en X
-            m_playerPosition.y - GetTileSize() / 4.0f, // Offset negativo en Y para incluir la gorra
-            static_cast<float>(GetTileSize()),         // Ancho completo del tile
-            static_cast<float>(GetTileSize() * 1.25f)  // Alto aumentado para incluir pies y gorra
+            m_playerPosition.x + GetTileSize() / 4.0f,
+            m_playerPosition.y + GetTileSize() / 4.0f,
+            static_cast<float>(GetTileSize()) / 2.0f,
+            static_cast<float>(GetTileSize()) / 2.0f
         };
         PlaySound(GetSound("cowboy_dead"));
     }
 
     if (m_lives < 0)
     {
-        // Add death animation sprite
+        // Add death animation sprite with special properties for game over
         m_temporarySprites.push_back(TemporaryAnimatedSprite(
             Rectangle{336, 160, 16, 16},
             550.0f, 5, 0,
@@ -963,9 +994,10 @@ void PrairieKing::PlayerDie()
         m_deathTimer *= 3.0f;
         // Save game progress reset
         SaveGame();
-
-        // Game over
-        m_gameOver = true;
+    }
+    else if (!m_shootoutLevel)
+    {
+        SaveGame(); // Save when not game over and not in shootout level
     }
 }
 
@@ -975,8 +1007,15 @@ void PrairieKing::AfterPlayerDeathFunction(int extra)
     {
         m_gameOver = true;
 
-        // Stop music
-        StopMusicStream(m_overworldSong);
+        // Stop all music streams
+        if (m_overworldSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+        if (m_outlawSong.stream.buffer != nullptr && IsMusicStreamPlaying(m_outlawSong))
+        {
+            StopMusicStream(m_outlawSong);
+        }
 
         // Clear game objects
         for (auto monster : m_monsters)
@@ -3575,7 +3614,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             else if (m_monsters[i]->type != -2) // Not a boss
             {
                 // Zombie mode - kill the monster!
-                AddGuts({m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
+                AddGuts(Vector2{m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
                 delete m_monsters[i];
                 m_monsters.erase(m_monsters.begin() + i);
                 PlaySound(GetSound("Cowboy_monsterDie"));
@@ -4971,16 +5010,16 @@ bool PrairieKing::Dracula::Move(Vector2 playerPosition, float deltaTime)
             Rectangle attemptedPosition = position;
             switch (movementDirection)
             {
-            case 0:
+            case 0: // Up
                 attemptedPosition.y -= speed;
                 break;
-            case 1:
+            case 1: // Right
                 attemptedPosition.x += speed;
                 break;
-            case 2:
+            case 2: // Down
                 attemptedPosition.y += speed;
                 break;
-            case 3:
+            case 3: // Left
                 attemptedPosition.x -= speed;
                 break;
             }
@@ -5664,6 +5703,7 @@ int PrairieKing::Outlaw::GetLootDrop()
     return 8; // Special loot for Outlaw
 }
 
+// Fix the Outlaw::TakeDamage method
 bool PrairieKing::Outlaw::TakeDamage(int damage)
 {
     if (abs(position.x - homePosition.x) < 5)
@@ -5672,12 +5712,28 @@ bool PrairieKing::Outlaw::TakeDamage(int damage)
     }
 
     health -= damage;
-    if (health < 0)
-    {
-        return true;
-    }
-
     flashColorTimer = 150.0f;
     PlaySound(PrairieKing::GetGameInstance()->GetSound("cowboy_monsterhit"));
+    
+    if (health <= 0)
+    {
+        // Add the special loot drop (life powerup)
+        int lootDrop = GetLootDrop();
+        if (lootDrop != -1)
+        {
+            Vector2 lootPosition = {position.x, position.y};
+            PrairieKing::GetGameInstance()->m_powerups.push_back(
+                CowboyPowerup(lootDrop, lootPosition, LOOT_DURATION));
+        }
+
+        // Add guts animation for death
+        PrairieKing::AddGuts(Vector2{position.x, position.y}, type);
+        
+        // Call the special KillOutlaw function for post-death effects
+        PrairieKing::KillOutlaw();
+        
+        return true; // Monster is dead
+    }
+
     return false;
 }

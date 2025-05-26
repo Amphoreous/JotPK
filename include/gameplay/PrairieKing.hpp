@@ -503,6 +503,7 @@ private:
     bool m_spreadPistol;
 
     Music m_overworldSong;
+    Music m_outlawSong;
     Music m_zombieSong;
 
     // Game variables
