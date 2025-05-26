@@ -192,7 +192,7 @@ PrairieKing::PrairieKing(AssetManager &assets)
 void PrairieKing::Initialize()
 {
     // Initialize game state
-    m_whichWave = 0;
+    m_whichWave = 11;
     m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
     m_waveTimer = 0;
     m_world = 0;
@@ -2978,8 +2978,10 @@ void PrairieKing::UpdateMonsterChancesForWave()
 void PrairieKing::Draw()
 {
     // Handle end cutscene drawing
+
     if (m_endCutscene)
     {
+        const float texelFix = 0.01f;
         switch (m_endCutscenePhase)
         {
         case 0:
@@ -3015,22 +3017,28 @@ void PrairieKing::Draw()
             {
                 for (int y = 0; y < MAP_HEIGHT; y++)
                 {
-                    Rectangle sourceRect = {336.0f + 16.0f * m_map[x][y], 32.0f - m_world * 16.0f, 16.0f, 16.0f};
-                    if (m_map[x][y] == 5 && static_cast<int>(m_cactusDanceTimer / 1600.0f * 4.0f) % 2 == 1)
-                    {
-                        sourceRect.x += 16.0f;
-                    }
-
+                    float tileOffset = (m_map[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f;
                     DrawTexturePro(
                         GetTexture("cursors"),
-                        sourceRect,
-                        Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                                  m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition - 16 * GetTileSize(),
-                                  static_cast<float>(GetTileSize()),
-                                  static_cast<float>(GetTileSize())},
-                        Vector2{0, 0}, 0.0f, WHITE);
+                        Rectangle{
+                            336.0f + 16.0f * m_map[x][y] + tileOffset + texelFix,
+                            32.0f - m_world * 16.0f + texelFix,
+                            16.0f - 2 * texelFix,
+                            16.0f - 2 * texelFix
+                        },
+                        Rectangle{
+                            std::round(m_topLeftScreenCoordinate.x + x * GetTileSize()),
+                            std::round(m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition - 16 * GetTileSize()),
+                            static_cast<float>(GetTileSize()),
+                            static_cast<float>(GetTileSize())
+                        },
+                        Vector2{ 0, 0 },
+                        0.0f,
+                        WHITE
+                    );
                 }
             }
+
 
             // Draw the cowboy statue/monument
             DrawTexturePro(
@@ -3111,9 +3119,9 @@ void PrairieKing::Draw()
             DrawTexturePro(
                 GetTexture("cursors"),
                 Rectangle{96.0f, 96.0f, 64.0f, 48.0f},
-                Rectangle{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                          m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
-                          192.0f, 144.0f},
+                Rectangle{m_topLeftScreenCoordinate.x,
+                          m_topLeftScreenCoordinate.y,
+                          1920.0f, 1440.0f},
                 Vector2{0, 0}, 0.0f,
                 (m_endCutsceneTimer > 0) ? ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f)) : WHITE);
 
@@ -3181,26 +3189,32 @@ void PrairieKing::Draw()
 
     // 1. Background Layer (layerDepth: 0.0)
     // Draw the current game map
+    const float texelFix = 0.01f;
     for (int x = 0; x < MAP_WIDTH; x++)
     {
         for (int y = 0; y < MAP_HEIGHT; y++)
         {
             DrawTexturePro(
                 GetTexture("cursors"),
-                Rectangle{336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                          32.0f - m_world * 16.0f,
-                          16.0f,
-                          16.0f},
-                Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                          m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0),
-                          static_cast<float>(GetTileSize()),
-                          static_cast<float>(GetTileSize())},
-                Vector2{0, 0},
+                Rectangle{
+                    336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f) + texelFix,
+                    32.0f - m_world * 16.0f + texelFix,
+                    16.0f - 2 * texelFix,
+                    16.0f - 2 * texelFix
+                },
+                Rectangle{
+                    std::round(m_topLeftScreenCoordinate.x + x * GetTileSize()),
+                    std::round(m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0)),
+                    static_cast<float>(GetTileSize()),
+                    static_cast<float>(GetTileSize())
+                },
+                Vector2{ 0, 0 },
                 0.0f,
-                WHITE);
+                WHITE
+            );
         }
-    }
 
+    }
     // Draw scrolling map if needed
     if (m_scrollingMap)
     {
@@ -3211,17 +3225,22 @@ void PrairieKing::Draw()
             {
                 DrawTexturePro(
                     GetTexture("cursors"),
-                    Rectangle{336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f),
-                              32.0f - m_world * 16.0f,
-                              16.0f,
-                              16.0f},
-                    Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
-                              m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition,
-                              static_cast<float>(GetTileSize()),
-                              static_cast<float>(GetTileSize())},
-                    Vector2{0, 0},
+                    Rectangle{
+                        336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f) + texelFix,
+                        32.0f - m_world * 16.0f + texelFix,
+                        16.0f - 2 * texelFix,
+                        16.0f - 2 * texelFix
+                    },
+                    Rectangle{
+                        std::round(m_topLeftScreenCoordinate.x + x * GetTileSize()),
+                        std::round(m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition),
+                        static_cast<float>(GetTileSize()),
+                        static_cast<float>(GetTileSize())
+                    },
+                    Vector2{ 0, 0 },
                     0.0f,
-                    WHITE);
+                    WHITE
+                );
             }
         }
 
@@ -3231,14 +3250,8 @@ void PrairieKing::Draw()
             -1,
             16 * GetTileSize(),
             static_cast<int>(m_topLeftScreenCoordinate.y),
-            BLACK);
-
-        DrawRectangle(
-            static_cast<int>(m_topLeftScreenCoordinate.x),
-            static_cast<int>(m_topLeftScreenCoordinate.y + 16 * GetTileSize()),
-            16 * GetTileSize(),
-            static_cast<int>(m_topLeftScreenCoordinate.y + 2),
-            BLACK);
+            BLACK
+        );
     }
 
     // Draw Shop
