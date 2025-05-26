@@ -11,6 +11,7 @@ void GameplayScreen::Update(float deltaTime) {
 
     // Handle debug keys first
     if (IsKeyPressed(KEY_F3)) m_game->SetButtonState(PrairieKing::GameKeys::DebugToggle, true);
+    if (IsKeyPressed(KEY_F4)) m_game->SetButtonState(PrairieKing::GameKeys::DebugGodMode, true);
     if (IsKeyPressed(KEY_F5)) m_game->SetButtonState(PrairieKing::GameKeys::DebugAddLife, true);
     if (IsKeyPressed(KEY_F6)) m_game->SetButtonState(PrairieKing::GameKeys::DebugAddCoins, true);
     if (IsKeyPressed(KEY_F7)) m_game->SetButtonState(PrairieKing::GameKeys::DebugIncDamage, true);

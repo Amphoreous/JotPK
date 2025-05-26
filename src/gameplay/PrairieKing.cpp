@@ -296,12 +296,12 @@ void PrairieKing::Reset()
     GetMap(m_whichWave, m_map);
 
     // Reiniciar la posición del jugador
-    m_playerPosition = { 384.0f, 384.0f };
+    m_playerPosition = {384.0f, 384.0f};
     m_playerBoundingBox = {
         m_playerPosition.x + static_cast<float>(GetTileSize()) / 4.0f,
         m_playerPosition.y + static_cast<float>(GetTileSize()) / 4.0f,
         static_cast<float>(GetTileSize()) / 2.0f,
-        static_cast<float>(GetTileSize()) / 2.0f };
+        static_cast<float>(GetTileSize()) / 2.0f};
 
     // Estado de la wave: NO completada, timer inicial
     m_waveCompleted = false;
@@ -339,6 +339,19 @@ void PrairieKing::ApplyLevelSpecificStates()
         {
             m_monsters.back()->health *= 2;
         }
+
+        // Stop overworld music and play outlaw music for Dracula fight
+        if (IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+
+        // Load and play outlaw music for boss fight
+        if (m_outlawSong.stream.buffer != nullptr)
+        {
+            PlayMusicStream(m_outlawSong);
+            SetMusicVolume(m_outlawSong, 0.7f);
+        }
     }
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
@@ -347,7 +360,18 @@ void PrairieKing::ApplyLevelSpecificStates()
         Vector2 outlawPos = {static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize())};
         int outlawHealth = (m_world == 0) ? 50 : 100;
         m_monsters.push_back(new Outlaw(m_assets, outlawPos, outlawHealth));
-        PlaySound(GetSound("cowboy_outlawsong"));
+
+        // Stop overworld music and play outlaw music
+        if (IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+
+        if (m_outlawSong.stream.buffer != nullptr)
+        {
+            PlayMusicStream(m_outlawSong);
+            SetMusicVolume(m_outlawSong, 0.7f);
+        }
     }
     else
     {
@@ -431,8 +455,37 @@ void PrairieKing::UsePowerup(int which)
         m_itemToHold = 13;
         m_holdItemTimer = 4000;
         PlaySound(GetSound("Cowboy_Secret"));
+
+        // Trigger end cutscene
         m_endCutscene = true;
         m_endCutsceneTimer = 4000;
+        m_endCutscenePhase = 0;
+
+        // Stop all music
+        if (IsMusicStreamPlaying(m_overworldSong))
+        {
+            StopMusicStream(m_overworldSong);
+        }
+        if (IsMusicStreamPlaying(m_outlawSong))
+        {
+            StopMusicStream(m_outlawSong);
+        }
+        if (IsMusicStreamPlaying(m_zombieSong))
+        {
+            StopMusicStream(m_zombieSong);
+        }
+
+        // Clear all monsters and bullets
+        for (auto monster : m_monsters)
+        {
+            delete monster;
+        }
+        m_monsters.clear();
+        m_bullets.clear();
+        m_enemyBullets.clear();
+
+        // Set final map
+        GetMap(-1, m_map); // Special end cutscene map
         m_world = 0;
         break;
 
@@ -988,12 +1041,12 @@ void PrairieKing::UpdateBullets(float deltaTime)
         }
 
         // Check player collision
-        if (m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
+        if (!m_godMode && m_playerInvincibleTimer <= 0 && m_deathTimer <= 0.0f)
         {
             Rectangle bulletRect = {
                 m_enemyBullets[i].position.x,
                 m_enemyBullets[i].position.y,
-                15, 15};
+                15, 15 };
 
             if (CheckCollisionRecs(m_playerBoundingBox, bulletRect))
             {
@@ -1002,6 +1055,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
                 break; // Important: break after PlayerDie to avoid further processing
             }
         }
+
     }
 }
 
@@ -1978,44 +2032,44 @@ void PrairieKing::GetMap(int wave, int (&newMap)[MAP_WIDTH][MAP_HEIGHT])
         break;
 
     case 12:
+    {
+        // Convert barriers to cactus
+        for (int y = 0; y < MAP_HEIGHT; y++)
         {
-            // Convert barriers to cactus
-            for (int y = 0; y < MAP_HEIGHT; y++)
-            {
-                for (int x = 0; x < MAP_WIDTH; x++)
-                {
-                    if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2)
-                    {
-                        newMap[x][y] = MAP_CACTUS;
-                    }
-                }
-            }
-
-            // Add trench borders
             for (int x = 0; x < MAP_WIDTH; x++)
             {
-                newMap[x][0] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
-                newMap[x][15] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+                if (newMap[x][y] == MAP_BARRIER1 || newMap[x][y] == MAP_BARRIER2)
+                {
+                    newMap[x][y] = MAP_CACTUS;
+                }
             }
-
-            // Add bridge border
-            Rectangle r = {1, 1, 14, 14};
-            std::vector<Vector2> border = GetBorderPoints(r);
-            for (const auto &pt : border)
-            {
-                newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
-            }
-
-            // Add rocky inner border
-            r = {2, 2, 12, 12};
-            border = GetBorderPoints(r);
-            for (const auto &pt : border)
-            {
-                newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_ROCKY1;
-            }
-            return; // Important: return early for wave 12
         }
-        break;
+
+        // Add trench borders
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
+            newMap[x][0] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+            newMap[x][15] = (x % 2 == 0) ? MAP_TRENCH1 : MAP_TRENCH2;
+        }
+
+        // Add bridge border
+        Rectangle r = {1, 1, 14, 14};
+        std::vector<Vector2> border = GetBorderPoints(r);
+        for (const auto &pt : border)
+        {
+            newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_BRIDGE;
+        }
+
+        // Add rocky inner border
+        r = {2, 2, 12, 12};
+        border = GetBorderPoints(r);
+        for (const auto &pt : border)
+        {
+            newMap[static_cast<int>(pt.x)][static_cast<int>(pt.y)] = MAP_ROCKY1;
+        }
+        return; // Important: return early for wave 12
+    }
+    break;
 
     default:
         // Default map additions
@@ -2075,6 +2129,10 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
             {
                 switch (key)
                 {
+                case GameKeys::DebugGodMode:
+                    m_godMode = !m_godMode;
+                    std::cout << "God Mode: " << (m_godMode ? "ON" : "OFF") << std::endl;
+                    break;
                 case GameKeys::DebugAddLife:
                     m_lives++;
                     std::cout << "Added life. Total: " << m_lives << std::endl;
@@ -2085,7 +2143,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     break;
                 case GameKeys::DebugIncDamage:
                     m_bulletDamage++;
-                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
+                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl; 
                     break;
                 case GameKeys::DebugClearMonsters:
                 {
@@ -2734,6 +2792,61 @@ void PrairieKing::Update(float deltaTime)
             SaveGame();
         }
     }
+    if (m_endCutscene)
+    {
+        m_endCutsceneTimer -= deltaTime * 1000.0f;
+
+        if (m_endCutsceneTimer < 0)
+        {
+            m_endCutscenePhase++;
+            if (m_endCutscenePhase > 5)
+            {
+                m_endCutscenePhase = 5;
+            }
+
+            switch (m_endCutscenePhase)
+            {
+            case 1:
+                m_endCutsceneTimer = 15500;
+                PlaySound(GetSound("Cowboy_singing"));
+                GetMap(-1, m_map); // Get the special end cutscene map
+                break;
+
+            case 2:
+                m_playerPosition = Vector2{0.0f, 8.0f * GetTileSize()};
+                m_endCutsceneTimer = 12000;
+                break;
+
+            case 3:
+                m_endCutsceneTimer = 5000;
+                break;
+
+            case 4:
+                m_endCutsceneTimer = 1000;
+                break;
+
+            case 5:
+                // Wait for player input to start new game plus
+                // Check for any key press or controller input
+                if (IsKeyPressed(GameKeys::SelectOption))
+                {
+                        StartNewRound();
+                }
+                break;
+            }
+        }
+
+        // Handle player movement during phase 2
+        if (m_endCutscenePhase == 2 && m_playerPosition.x < 9.0f * GetTileSize())
+        {
+            m_playerPosition.x += 1.0f;
+            m_playerMotionAnimationTimer += deltaTime * 1000.0f;
+            if (m_playerMotionAnimationTimer >= 400.0f)
+                m_playerMotionAnimationTimer = fmod(m_playerMotionAnimationTimer, 400.0f);
+        }
+
+        return; // Skip normal updates during end cutscene
+    }
 }
 
 void PrairieKing::UpdateMonsterChancesForWave()
@@ -2814,6 +2927,172 @@ void PrairieKing::UpdateMonsterChancesForWave()
 
 void PrairieKing::Draw()
 {
+    // Handle end cutscene drawing
+    if (m_endCutscene)
+    {
+        switch (m_endCutscenePhase)
+        {
+        case 0:
+            // Phase 0: Player holding heart with black background
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+            
+            // Draw player holding heart
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{256.0f, 112.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4.0f,
+                          48.0f, 48.0f},
+                Vector2{0, 0}, 0.0f, 
+                (m_endCutsceneTimer < 2000) ? 
+                    ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
+            
+            // Draw the heart above player
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                          m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() * 2.0f / 3.0f - GetTileSize() / 4.0f,
+                          48.0f, 48.0f},
+                Vector2{0, 0}, 0.0f, 
+                (m_endCutsceneTimer < 2000) ? 
+                    ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
+            break;
+            
+        case 1:
+        case 2:
+        case 3:
+            // Draw the final map
+            for (int x = 0; x < MAP_WIDTH; x++)
+            {
+                for (int y = 0; y < MAP_HEIGHT; y++)
+                {
+                    Rectangle sourceRect = {336.0f + 16.0f * m_map[x][y], 32.0f - m_world * 16.0f, 16.0f, 16.0f};
+                    if (m_map[x][y] == 5 && static_cast<int>(m_cactusDanceTimer / 1600.0f * 4.0f) % 2 == 1)
+                    {
+                        sourceRect.x += 16.0f;
+                    }
+                    
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        sourceRect,
+                        Rectangle{m_topLeftScreenCoordinate.x + x * GetTileSize(),
+                                  m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition - 16 * GetTileSize(),
+                                  static_cast<float>(GetTileSize()),
+                                  static_cast<float>(GetTileSize())},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                }
+            }
+            
+            // Draw the cowboy statue/monument
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{160.0f, 49.0f, 64.0f, 80.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
+                          m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
+                          192.0f, 240.0f},
+                Vector2{0, 0}, 0.0f, WHITE);
+            
+            if (m_endCutscenePhase == 3)
+            {
+                // Draw reward chest
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{288.0f, 144.0f, 32.0f, 32.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + 9.0f * GetTileSize(),
+                              m_topLeftScreenCoordinate.y + 7.0f * GetTileSize(),
+                              96.0f, 96.0f},
+                    Vector2{0, 0}, 0.0f, WHITE);
+                
+                if (m_endCutsceneTimer < 3000)
+                {
+                    // Fade to black
+                    float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 3000.0f);
+                    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
+                }
+            }
+            else
+            {
+                // Draw the heart floating above the monument
+                int heartFrame = static_cast<int>(-m_endCutsceneTimer / 300) % 4;
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{144.0f - heartFrame * 16.0f, 144.0f, 16.0f, 16.0f},
+                    Rectangle{m_topLeftScreenCoordinate.x + 10.0f * GetTileSize(),
+                              m_topLeftScreenCoordinate.y + 8.0f * GetTileSize(),
+                              48.0f, 48.0f},
+                    Vector2{0, 0}, 0.0f, WHITE);
+                
+                if (m_endCutscenePhase == 2)
+                {
+                    // Draw walking player
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{356.0f, 112.0f + static_cast<int>(m_playerMotionAnimationTimer / 100.0f) * 3.0f, 8.0f, 3.0f},
+                        Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x + 4.0f * 3.0f,
+                                  m_topLeftScreenCoordinate.y + m_playerPosition.y + 13.0f * 3.0f,
+                                  24.0f, 9.0f},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                    
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{256.0f, 112.0f, 16.0f, 13.0f},
+                        Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                                  m_topLeftScreenCoordinate.y + m_playerPosition.y,
+                                  48.0f, 39.0f},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                    
+                    // Draw held item
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{192.0f + m_itemToHold * 16.0f, 128.0f, 16.0f, 16.0f},
+                        Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
+                                  m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() * 2.0f / 3.0f - GetTileSize() / 4.0f,
+                                  48.0f, 48.0f},
+                        Vector2{0, 0}, 0.0f, WHITE);
+                }
+            }
+            
+            // Apply fade effect based on phase
+            if (m_endCutscenePhase == 1)
+            {
+                float alpha = 1.0f - (static_cast<float>(m_endCutsceneTimer) / 15500.0f);
+                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
+            }
+            break;
+            
+        case 4:
+        case 5:
+            // Victory screen with "THE END" message
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+            
+            DrawTexturePro(
+                GetTexture("cursors"),
+                Rectangle{96.0f, 96.0f, 64.0f, 48.0f},
+                Rectangle{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
+                          m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
+                          192.0f, 144.0f},
+                Vector2{0, 0}, 0.0f, 
+                (m_endCutsceneTimer > 0) ? 
+                    ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f)) : WHITE);
+            
+            if (m_endCutscenePhase == 5)
+            {
+                // Draw "Press any key for New Game Plus" message
+                const char* newGameText = "Press any key to start a new game";
+                Font font = GetFontDefault();
+                Vector2 textSize = MeasureTextEx(font, newGameText, 24, 1);
+                DrawTextEx(font, newGameText,
+                          Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
+                                  m_topLeftScreenCoordinate.y + 10.0f * GetTileSize()},
+                          24, 1, WHITE);
+            }
+            break;
+        }
+        
+        return; // Don't draw normal game elements during cutscene
+    }
+
     if (m_gameOver || m_gameRestartTimer > 0)
     {
         // Draw black background
@@ -3388,7 +3667,6 @@ void PrairieKing::Draw()
     {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
 
-
         // Draw gopher train cars
         Rectangle gopherCarRect = {256 + (m_gopherTrainPosition / 30 % 4) * 16, 144, 16, 16};
 
@@ -3872,6 +4150,9 @@ void PrairieKing::UpdatePlayer(float deltaTime)
     {
         if (CheckCollisionRecs(m_monsters[i]->position, m_playerBoundingBox) && m_playerInvincibleTimer <= 0)
         {
+            if (m_godMode)
+                continue; // Ignora el daño si God Mode está activo
+
             if (m_monsters[i]->type == GameConstants::SPIKEY && m_monsters[i]->spikeyIsBlock)
             {
                 PlayerDie();
@@ -3887,7 +4168,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             else if (m_monsters[i]->type != -2) // Not a boss
             {
                 // Zombie mode - kill the monster!
-                AddGuts(Vector2{m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
+                AddGuts(Vector2{ m_monsters[i]->position.x, m_monsters[i]->position.y }, m_monsters[i]->type);
                 delete m_monsters[i];
                 m_monsters.erase(m_monsters.begin() + i);
                 PlaySound(GetSound("Cowboy_monsterDie"));
@@ -5053,6 +5334,8 @@ void PrairieKing::DrawDebugInfo()
     const float rightCol = GetScreenWidth() - 200;
     currentY = startY;
     DrawText("Debug Controls:", rightCol, currentY, 20, debugColor);
+    currentY += lineHeight;
+    DrawText("F4: God Mode", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
     DrawText("F3: Toggle Debug", rightCol, currentY, 20, debugColor);
     currentY += lineHeight;
