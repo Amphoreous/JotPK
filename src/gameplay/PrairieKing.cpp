@@ -1046,7 +1046,7 @@ void PrairieKing::UpdateBullets(float deltaTime)
             Rectangle bulletRect = {
                 m_enemyBullets[i].position.x,
                 m_enemyBullets[i].position.y,
-                15, 15 };
+                15, 15};
 
             if (CheckCollisionRecs(m_playerBoundingBox, bulletRect))
             {
@@ -1055,7 +1055,6 @@ void PrairieKing::UpdateBullets(float deltaTime)
                 break; // Important: break after PlayerDie to avoid further processing
             }
         }
-
     }
 }
 
@@ -2143,7 +2142,7 @@ void PrairieKing::SetButtonState(GameKeys key, bool pressed)
                     break;
                 case GameKeys::DebugIncDamage:
                     m_bulletDamage++;
-                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl; 
+                    std::cout << "Increased damage to: " << m_bulletDamage << std::endl;
                     break;
                 case GameKeys::DebugClearMonsters:
                 {
@@ -2830,7 +2829,7 @@ void PrairieKing::Update(float deltaTime)
                 // Check for any key press or controller input
                 if (IsKeyPressed(GameKeys::SelectOption))
                 {
-                        StartNewRound();
+                    StartNewRound();
                 }
                 break;
             }
@@ -2935,7 +2934,7 @@ void PrairieKing::Draw()
         case 0:
             // Phase 0: Player holding heart with black background
             DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
-            
+
             // Draw player holding heart
             DrawTexturePro(
                 GetTexture("cursors"),
@@ -2943,10 +2942,9 @@ void PrairieKing::Draw()
                 Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                           m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() / 4.0f,
                           48.0f, 48.0f},
-                Vector2{0, 0}, 0.0f, 
-                (m_endCutsceneTimer < 2000) ? 
-                    ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
-            
+                Vector2{0, 0}, 0.0f,
+                (m_endCutsceneTimer < 2000) ? ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
+
             // Draw the heart above player
             DrawTexturePro(
                 GetTexture("cursors"),
@@ -2954,11 +2952,10 @@ void PrairieKing::Draw()
                 Rectangle{m_topLeftScreenCoordinate.x + m_playerPosition.x,
                           m_topLeftScreenCoordinate.y + m_playerPosition.y - GetTileSize() * 2.0f / 3.0f - GetTileSize() / 4.0f,
                           48.0f, 48.0f},
-                Vector2{0, 0}, 0.0f, 
-                (m_endCutsceneTimer < 2000) ? 
-                    ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
+                Vector2{0, 0}, 0.0f,
+                (m_endCutsceneTimer < 2000) ? ColorAlpha(WHITE, 1.0f * (static_cast<float>(m_endCutsceneTimer) / 2000.0f)) : WHITE);
             break;
-            
+
         case 1:
         case 2:
         case 3:
@@ -2972,7 +2969,7 @@ void PrairieKing::Draw()
                     {
                         sourceRect.x += 16.0f;
                     }
-                    
+
                     DrawTexturePro(
                         GetTexture("cursors"),
                         sourceRect,
@@ -2983,7 +2980,7 @@ void PrairieKing::Draw()
                         Vector2{0, 0}, 0.0f, WHITE);
                 }
             }
-            
+
             // Draw the cowboy statue/monument
             DrawTexturePro(
                 GetTexture("cursors"),
@@ -2992,7 +2989,7 @@ void PrairieKing::Draw()
                           m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
                           192.0f, 240.0f},
                 Vector2{0, 0}, 0.0f, WHITE);
-            
+
             if (m_endCutscenePhase == 3)
             {
                 // Draw reward chest
@@ -3003,7 +3000,7 @@ void PrairieKing::Draw()
                               m_topLeftScreenCoordinate.y + 7.0f * GetTileSize(),
                               96.0f, 96.0f},
                     Vector2{0, 0}, 0.0f, WHITE);
-                
+
                 if (m_endCutsceneTimer < 3000)
                 {
                     // Fade to black
@@ -3022,7 +3019,7 @@ void PrairieKing::Draw()
                               m_topLeftScreenCoordinate.y + 8.0f * GetTileSize(),
                               48.0f, 48.0f},
                     Vector2{0, 0}, 0.0f, WHITE);
-                
+
                 if (m_endCutscenePhase == 2)
                 {
                     // Draw walking player
@@ -3033,7 +3030,7 @@ void PrairieKing::Draw()
                                   m_topLeftScreenCoordinate.y + m_playerPosition.y + 13.0f * 3.0f,
                                   24.0f, 9.0f},
                         Vector2{0, 0}, 0.0f, WHITE);
-                    
+
                     DrawTexturePro(
                         GetTexture("cursors"),
                         Rectangle{256.0f, 112.0f, 16.0f, 13.0f},
@@ -3041,7 +3038,7 @@ void PrairieKing::Draw()
                                   m_topLeftScreenCoordinate.y + m_playerPosition.y,
                                   48.0f, 39.0f},
                         Vector2{0, 0}, 0.0f, WHITE);
-                    
+
                     // Draw held item
                     DrawTexturePro(
                         GetTexture("cursors"),
@@ -3052,7 +3049,7 @@ void PrairieKing::Draw()
                         Vector2{0, 0}, 0.0f, WHITE);
                 }
             }
-            
+
             // Apply fade effect based on phase
             if (m_endCutscenePhase == 1)
             {
@@ -3060,36 +3057,35 @@ void PrairieKing::Draw()
                 DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), ColorAlpha(BLACK, alpha));
             }
             break;
-            
+
         case 4:
         case 5:
             // Victory screen with "THE END" message
             DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
-            
+
             DrawTexturePro(
                 GetTexture("cursors"),
                 Rectangle{96.0f, 96.0f, 64.0f, 48.0f},
                 Rectangle{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
                           m_topLeftScreenCoordinate.y + 3.0f * GetTileSize(),
                           192.0f, 144.0f},
-                Vector2{0, 0}, 0.0f, 
-                (m_endCutsceneTimer > 0) ? 
-                    ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f)) : WHITE);
-            
+                Vector2{0, 0}, 0.0f,
+                (m_endCutsceneTimer > 0) ? ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f)) : WHITE);
+
             if (m_endCutscenePhase == 5)
             {
                 // Draw "Press any key for New Game Plus" message
-                const char* newGameText = "Press any key to start a new game";
+                const char *newGameText = "Press any key to start a new game";
                 Font font = GetFontDefault();
                 Vector2 textSize = MeasureTextEx(font, newGameText, 24, 1);
                 DrawTextEx(font, newGameText,
-                          Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
-                                  m_topLeftScreenCoordinate.y + 10.0f * GetTileSize()},
-                          24, 1, WHITE);
+                           Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
+                                   m_topLeftScreenCoordinate.y + 10.0f * GetTileSize()},
+                           24, 1, WHITE);
             }
             break;
         }
-        
+
         return; // Don't draw normal game elements during cutscene
     }
 
@@ -4168,7 +4164,7 @@ void PrairieKing::UpdatePlayer(float deltaTime)
             else if (m_monsters[i]->type != -2) // Not a boss
             {
                 // Zombie mode - kill the monster!
-                AddGuts(Vector2{ m_monsters[i]->position.x, m_monsters[i]->position.y }, m_monsters[i]->type);
+                AddGuts(Vector2{m_monsters[i]->position.x, m_monsters[i]->position.y}, m_monsters[i]->type);
                 delete m_monsters[i];
                 m_monsters.erase(m_monsters.begin() + i);
                 PlaySound(GetSound("Cowboy_monsterDie"));
@@ -5554,7 +5550,6 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
     {
         // Flash sprite when taking damage
         sourceRect = {336, 48, 16, 16}; // Flash sprite
-
     }
     else
     {
@@ -5572,30 +5567,33 @@ void PrairieKing::Dracula::Draw(const Texture2D &texture, Vector2 topLeftScreenC
             sourceRect = {464, 112, 16, 16};
             break;
         }
-
-        // Special effects for gloating phase
-        if (phase == GLOATING_PHASE)
-        {
-            // Draw cape animation
-            Vector2 capePos = {drawPos.x, drawPos.y + PrairieKing::GetGameInstance()->GetTileSize() +
-                                              sinf(static_cast<float>(phaseInternalTimer) / 1000.0f) * 3.0f};
-            Rectangle capeRect = {528, 176, 16, 16};
-            DrawTextureRec(texture, capeRect, capePos, WHITE);
-
-            // Draw speech bubble
-            Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
-                                 drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
-            Rectangle bubbleRect = {480, 80, 32, 32};
-  
-            
-            
-            DrawTexturePro(texture, bubbleRect,
-                Rectangle{ bubblePos.x, bubblePos.y, 96, 96 }, // 32 * 3 = 96 for proper scaling
-                Vector2{ 0, 0 }, 0.0f, WHITE);
-        }
     }
 
-    DrawTextureRec(texture, sourceRect, drawPos, WHITE);
+    // Draw the main Dracula sprite with proper x3 scaling
+    DrawTexturePro(texture, sourceRect,
+                   Rectangle{drawPos.x, drawPos.y, 48, 48}, // 16 * 3 = 48 for proper scaling
+                   Vector2{0, 0}, 0.0f, WHITE);
+
+    // Special effects for gloating phase
+    if (phase == GLOATING_PHASE && flashColorTimer <= 0.0f)
+    {
+        // Draw cape animation with proper x3 scaling
+        Vector2 capePos = {drawPos.x, drawPos.y + PrairieKing::GetGameInstance()->GetTileSize() +
+                                          sinf(static_cast<float>(phaseInternalTimer) / 1000.0f) * 3.0f};
+        Rectangle capeRect = {528, 176, 16, 16};
+        DrawTexturePro(texture, capeRect,
+                       Rectangle{capePos.x, capePos.y, 48, 48}, // 16 * 3 = 48 for proper scaling
+                       Vector2{0, 0}, 0.0f, WHITE);
+
+        // Draw speech bubble (already properly scaled at 96x96)
+        Vector2 bubblePos = {drawPos.x - PrairieKing::GetGameInstance()->GetTileSize() / 2,
+                             drawPos.y - PrairieKing::GetGameInstance()->GetTileSize() * 2};
+        Rectangle bubbleRect = {480, 80, 32, 32};
+
+        DrawTexturePro(texture, bubbleRect,
+                       Rectangle{bubblePos.x, bubblePos.y, 96, 96}, // 32 * 3 = 96, already correct
+                       Vector2{0, 0}, 0.0f, WHITE);
+    }
 }
 
 int PrairieKing::Dracula::GetLootDrop()
