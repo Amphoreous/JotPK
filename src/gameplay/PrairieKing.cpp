@@ -322,10 +322,8 @@ void PrairieKing::ApplyLevelSpecificStates()
         m_shootoutLevel = true;
         // Create Dracula boss
         m_monsters.push_back(new Dracula(m_assets));
-
         if (m_whichRound > 0)
         {
-            // Double health for subsequent rounds
             m_monsters.back()->health *= 2;
         }
     }
@@ -333,13 +331,14 @@ void PrairieKing::ApplyLevelSpecificStates()
     {
         m_shootoutLevel = true;
         // Create Outlaw boss
-        Vector2 outlawPos = {static_cast<float>(8 * GetTileSize()),
-                             static_cast<float>(13 * GetTileSize())};
+        Vector2 outlawPos = { static_cast<float>(8 * GetTileSize()), static_cast<float>(13 * GetTileSize()) };
         int outlawHealth = (m_world == 0) ? 50 : 100;
         m_monsters.push_back(new Outlaw(m_assets, outlawPos, outlawHealth));
-
-        // Play outlaw music
         PlaySound(GetSound("cowboy_outlawsong"));
+    }
+    else
+    {
+        m_shootoutLevel = false;
     }
 }
 
