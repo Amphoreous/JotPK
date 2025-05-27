@@ -192,14 +192,14 @@ PrairieKing::PrairieKing(AssetManager &assets)
 void PrairieKing::Initialize()
 {
     // Initialize game state
-    m_whichWave = 0;
+    m_whichWave = 11;
     m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
     m_waveTimer = 0;
-    m_world = 0;
+    m_world = 1;
     m_lives = 3;
     m_coins = 0;
     m_score = 0;
-    m_bulletDamage = 1;
+    m_bulletDamage = 9999;
     m_fireSpeedLevel = 0;
     m_ammoLevel = 0;
     m_runSpeedLevel = 0;
@@ -227,6 +227,7 @@ void PrairieKing::Initialize()
     m_zombieSong = m_assets.GetMusic("zombie");
     m_draculaSong = m_assets.GetMusic("dracula");
     m_endingSong = m_assets.GetMusic("ending");
+    m_endingSong.looping = false;
 
     // Initialize map
     GetMap(0, m_map);
@@ -3024,21 +3025,17 @@ void PrairieKing::Draw()
                             336.0f + 16.0f * m_map[x][y] + tileOffset + texelFix,
                             32.0f - m_world * 16.0f + texelFix,
                             16.0f - 2 * texelFix,
-                            16.0f - 2 * texelFix
-                        },
+                            16.0f - 2 * texelFix},
                         Rectangle{
                             std::round(m_topLeftScreenCoordinate.x + x * GetTileSize()),
                             std::round(m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition - 16 * GetTileSize()),
                             static_cast<float>(GetTileSize()),
-                            static_cast<float>(GetTileSize())
-                        },
-                        Vector2{ 0, 0 },
+                            static_cast<float>(GetTileSize())},
+                        Vector2{0, 0},
                         0.0f,
-                        WHITE
-                    );
+                        WHITE);
                 }
             }
-
 
             // Draw the cowboy statue/monument
             DrawTexturePro(
@@ -3111,33 +3108,108 @@ void PrairieKing::Draw()
 
             break;
 
-        case 4:
-        case 5:
-            // Victory screen with "THE END" message
-            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
-
-            DrawTexturePro(
-                GetTexture("cursors"),
-                Rectangle{96.0f, 96.0f, 64.0f, 48.0f},
-                Rectangle{m_topLeftScreenCoordinate.x,
-                          m_topLeftScreenCoordinate.y,
-                          1920.0f, 1440.0f},
-                Vector2{0, 0}, 0.0f,
-                (m_endCutsceneTimer > 0) ? ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f)) : WHITE);
-
-            if (m_endCutscenePhase == 5)
-            {
-                // Draw "Press any key for New Game Plus" message
-                const char *newGameText = "Press any key to start a new game";
-                Font font = GetFontDefault();
-                Vector2 textSize = MeasureTextEx(font, newGameText, 24, 1);
-                DrawTextEx(font, newGameText,
-                           Vector2{m_topLeftScreenCoordinate.x + 3.0f * GetTileSize(),
-                                   m_topLeftScreenCoordinate.y + 10.0f * GetTileSize()},
-                           24, 1, WHITE);
+            case 4:
+            case 5:
+                // Victory screen with "THE END" message and menu
+                {
+                    // Draw black background
+                    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+            
+                    // Calculate screen center
+                    float centerX = GetScreenWidth() / 2.0f;
+                    float centerY = GetScreenHeight() / 2.0f;
+            
+                    // Calculate THE END logo scale based on screen size (made bigger)
+                    float baseWidth = 64.0f;                     // Original sprite width
+                    float baseHeight = 48.0f;                    // Original sprite height
+                    float targetWidth = GetScreenWidth() * 0.30f; // Increased from 15% to 20% of screen width
+                    float scale = targetWidth / baseWidth;
+            
+                    // Draw THE END logo - moved higher up for better spacing
+                    DrawTexturePro(
+                        GetTexture("cursors"),
+                        Rectangle{96.0f, 96.0f, baseWidth, baseHeight},
+                        Rectangle{
+                            centerX - (baseWidth * scale) / 2.0f,
+                            centerY - (baseHeight * scale) / 2.0f - 120.0f, // Moved up from -50 to -120
+                            baseWidth * scale,
+                            baseHeight * scale},
+                        Vector2{0, 0}, 0.0f,
+                        (m_endCutsceneTimer > 0) ? ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f))
+                                                 : WHITE);
+            
+                    if (m_endCutscenePhase == 5)
+                    {
+                        const char *options[] = {
+                            "Continue to New Game+",
+                            "Back to Main Menu",
+                            "Quit Game"};
+            
+                        // Calculate menu positioning with better spacing
+                        float menuStartY = centerY + 40.0f; // Moved closer to center
+                        float buttonHeight = 60.0f;         // Increased button height
+                        float buttonSpacing = 30.0f;        // Increased spacing between buttons
+                        float buttonWidth = 350.0f;         // Increased button width
+            
+                        for (int i = 0; i < 3; i++)
+                        {
+                            // Calculate button position
+                            Rectangle buttonRect = {
+                                centerX - buttonWidth / 2.0f,
+                                menuStartY + (buttonHeight + buttonSpacing) * i,
+                                buttonWidth,
+                                buttonHeight};
+            
+                            // Check mouse hover and click
+                            Vector2 mousePos = GetMousePosition();
+                            bool isHovered = CheckCollisionPointRec(mousePos, buttonRect);
+                            Color buttonColor = isHovered ? RED : WHITE;
+            
+                            // Draw button background with semi-transparency
+                            DrawRectangleRec(buttonRect,
+                                             ColorAlpha(BLACK, isHovered ? 0.8f : 0.6f));
+            
+                            // Draw button border
+                            DrawRectangleLinesEx(buttonRect, 2, buttonColor);
+            
+                            // Calculate text position to center it in button
+                            Vector2 textSize = MeasureTextEx(m_assets.GetFont("text"), options[i], 28, 1); // Increased font size
+                            Vector2 textPos = {
+                                buttonRect.x + (buttonRect.width - textSize.x) / 2.0f,
+                                buttonRect.y + (buttonRect.height - textSize.y) / 2.0f};
+            
+                            // Draw button text
+                            DrawTextEx(m_assets.GetFont("text"), options[i],
+                                       textPos, 28, 1, buttonColor); // Increased font size from 24 to 28
+            
+                            // Handle click
+                            if (isHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                            {
+                                switch (i)
+                                {
+                                case 0: // Continue to New Game+
+                                    m_whichRound++;
+                                    StartNewRound();
+                                    m_endCutscene = false;
+                                    m_endCutscenePhase = 0;
+                                    break;
+            
+                                case 1: // Back to Main Menu
+                                    // Use Screen's finish mechanism to return to menu
+                                    m_isGameOver = true;
+                                    break;
+            
+                                case 2: // Quit Game
+                                    // Use same quit mechanism as MenuScreen
+                                    CloseWindow();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
             }
-            break;
-        }
 
         return; // Don't draw normal game elements during cutscene
     }
@@ -3200,20 +3272,16 @@ void PrairieKing::Draw()
                     336.0f + 16.0f * m_map[x][y] + ((m_map[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f) + texelFix,
                     32.0f - m_world * 16.0f + texelFix,
                     16.0f - 2 * texelFix,
-                    16.0f - 2 * texelFix
-                },
+                    16.0f - 2 * texelFix},
                 Rectangle{
                     std::round(m_topLeftScreenCoordinate.x + x * GetTileSize()),
                     std::round(m_topLeftScreenCoordinate.y + y * GetTileSize() + (m_scrollingMap ? (m_newMapPosition - 16 * GetTileSize()) : 0)),
                     static_cast<float>(GetTileSize()),
-                    static_cast<float>(GetTileSize())
-                },
-                Vector2{ 0, 0 },
+                    static_cast<float>(GetTileSize())},
+                Vector2{0, 0},
                 0.0f,
-                WHITE
-            );
+                WHITE);
         }
-
     }
     // Draw scrolling map if needed
     if (m_scrollingMap)
@@ -3229,18 +3297,15 @@ void PrairieKing::Draw()
                         336.0f + 16.0f * m_nextMap[x][y] + ((m_nextMap[x][y] == MAP_CACTUS && m_cactusDanceTimer > 800.0f) ? 16.0f : 0.0f) + texelFix,
                         32.0f - m_world * 16.0f + texelFix,
                         16.0f - 2 * texelFix,
-                        16.0f - 2 * texelFix
-                    },
+                        16.0f - 2 * texelFix},
                     Rectangle{
                         std::round(m_topLeftScreenCoordinate.x + x * GetTileSize()),
                         std::round(m_topLeftScreenCoordinate.y + y * GetTileSize() + m_newMapPosition),
                         static_cast<float>(GetTileSize()),
-                        static_cast<float>(GetTileSize())
-                    },
-                    Vector2{ 0, 0 },
+                        static_cast<float>(GetTileSize())},
+                    Vector2{0, 0},
                     0.0f,
-                    WHITE
-                );
+                    WHITE);
             }
         }
 
@@ -3250,8 +3315,7 @@ void PrairieKing::Draw()
             -1,
             16 * GetTileSize(),
             static_cast<int>(m_topLeftScreenCoordinate.y),
-            BLACK
-        );
+            BLACK);
     }
 
     // Draw Shop
