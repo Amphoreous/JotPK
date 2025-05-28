@@ -3,6 +3,7 @@
 #include <ctime>
 
 std::unique_ptr<discord::Core> DiscordManager::s_core;
+std::int64_t DiscordManager::s_startTime = 0;
 
 bool DiscordManager::Initialize() {
     discord::ClientId clientId = 1342619188707197019;
@@ -15,9 +16,12 @@ bool DiscordManager::Initialize() {
 
     s_core.reset(rawCore);
 
+    // Set the start time once during initialization
+    s_startTime = std::time(nullptr);
+
     discord::Activity activity{};
     activity.SetType(discord::ActivityType::Playing);
-    activity.GetTimestamps().SetStart(std::time(nullptr));
+    activity.GetTimestamps().SetStart(s_startTime);
     activity.GetAssets().SetLargeImage("icon");
 
     s_core->ActivityManager().UpdateActivity(activity, [](discord::Result result) {});
@@ -38,7 +42,8 @@ void DiscordManager::UpdatePresence(const char* state, const char* details) {
     activity.SetType(discord::ActivityType::Playing);
     activity.SetState(state);
     activity.SetDetails(details);
-    activity.GetTimestamps().SetStart(std::time(nullptr));
+    // Use the stored start time instead of resetting it
+    activity.GetTimestamps().SetStart(s_startTime);
     activity.GetAssets().SetLargeImage("icon");
     
     s_core->ActivityManager().UpdateActivity(activity, [](discord::Result result) {});

@@ -1129,11 +1129,12 @@ void PrairieKing::PlayerDie()
     // Lose a life
     m_lives--;
     m_playerInvincibleTimer = 5000;
+    PlaySound(GetSound("cowboy_dead"));
 
     if (m_shootoutLevel)
     {
         m_playerPosition = Vector2{static_cast<float>(8 * GetTileSize()), static_cast<float>(3 * GetTileSize())}; // Fixed Y position
-        PlaySound(GetSound("Cowboy_monsterDie"));
+        PlaySound(GetSound("cowboy_dead"));
     }
     else
     {
@@ -2364,7 +2365,8 @@ void PrairieKing::Update(float deltaTime)
 
     // TIMER FIX 2: Update between wave timer during motion pause as well
     // This ensures proper wave progression timing
-    if (m_betweenWaveTimer > 0)
+    // Skip between wave timer for shootout levels
+    if (m_betweenWaveTimer > 0 && !m_shootoutLevel)
     {
         m_betweenWaveTimer -= deltaTime * 1000.0f;
         if (m_betweenWaveTimer <= 0)
@@ -2768,7 +2770,7 @@ void PrairieKing::Update(float deltaTime)
             memcpy(m_map, m_nextMap, sizeof(m_map));
             m_newMapPosition = 16 * GetTileSize();
             m_shopping = false;
-            m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
+            if (!m_shootoutLevel) m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
             m_waitingForPlayerToMoveDownAMap = false;
             m_playerMovementDirections.clear();
             ApplyLevelSpecificStates();
@@ -2786,6 +2788,11 @@ void PrairieKing::Update(float deltaTime)
         const char *state = TextFormat("Score: %d", m_score);
         DiscordManager::UpdatePresence(state, details);
     }
+    if (m_endCutscene)
+    {
+        DiscordManager::UpdatePresence("End Cutscene", "Completing Prairie King");
+    }
+    
 
     // Add this to PrairieKing::Update() method
     if (m_gopherTrain)
@@ -3648,7 +3655,7 @@ void PrairieKing::Draw()
             GetTileSize() / 4,
             timerColor);
     }
-    else
+    else if (!m_shootoutLevel)
     {
         // Not in active wave state - show full timer bar
         DrawRectangle(
