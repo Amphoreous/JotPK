@@ -192,10 +192,10 @@ PrairieKing::PrairieKing(AssetManager &assets)
 void PrairieKing::Initialize()
 {
     // Initialize game state
-    m_whichWave = 11;
+    m_whichWave = 0;
     m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
     m_waveTimer = 0;
-    m_world = 1;
+    m_world = 0;
     m_lives = 3;
     m_coins = 0;
     m_score = 0;
@@ -1522,24 +1522,28 @@ bool PrairieKing::IsCollidingWithMapForMonsters(Rectangle positionToCheck)
     int tileX2 = static_cast<int>(positionToCheck.x + positionToCheck.width - 1) / GetTileSize();
     int tileY2 = static_cast<int>(positionToCheck.y + positionToCheck.height - 1) / GetTileSize();
 
+    // Check if any part of the monster would be outside the 16x16 map boundaries
+    // Map boundaries are from tile (0,0) to tile (15,15)
+    // For pixel-perfect boundaries, check the actual pixel positions
+    if (positionToCheck.x < 0 || positionToCheck.y < 0 || 
+        positionToCheck.x + positionToCheck.width > 16 * GetTileSize() || 
+        positionToCheck.y + positionToCheck.height > 16 * GetTileSize())
+    {
+        return true; // Collision with map boundary
+    }
+
+    // Check for collisions with impassable tiles within the map
     for (int y = tileY1; y <= tileY2; y++)
     {
         for (int x = tileX1; x <= tileX2; x++)
         {
-            if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT)
+            if (!IsMapTilePassableForMonsters(m_map[x][y]))
             {
-                if (!IsMapTilePassableForMonsters(m_map[x][y]))
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                // Off-map is considered a collision
                 return true;
             }
         }
     }
+    
     return false;
 }
 
