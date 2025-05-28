@@ -3131,7 +3131,7 @@ void PrairieKing::Draw()
                     Rectangle{96.0f, 96.0f, baseWidth, baseHeight},
                     Rectangle{
                         centerX - (baseWidth * scale) / 2.0f,
-                        centerY - (baseHeight * scale) / 2.0f - 120.0f, // Moved up from -50 to -120
+                        centerY - (baseHeight * scale) / 2.0f - 150.0f, // Moved up from -50 to -120
                         baseWidth * scale,
                         baseHeight * scale},
                     Vector2{0, 0}, 0.0f,
@@ -3146,10 +3146,10 @@ void PrairieKing::Draw()
                         "Quit Game"};
 
                     // Calculate menu positioning with better spacing
-                    float menuStartY = centerY + 40.0f; // Moved closer to center
-                    float buttonHeight = 60.0f;         // Increased button height
-                    float buttonSpacing = 30.0f;        // Increased spacing between buttons
-                    float buttonWidth = 350.0f;         // Increased button width
+                    float menuStartY = centerY + GetScreenHeight() / 4.0f; // Moved closer to center
+                    float buttonHeight = 60.0f;                            // Increased button height
+                    float buttonSpacing = 30.0f;                           // Increased spacing between buttons
+                    float buttonWidth = 350.0f;                            // Increased button width
 
                     for (int i = 0; i < 3; i++)
                     {
@@ -3630,10 +3630,11 @@ void PrairieKing::Draw()
         0.0f,
         WHITE);
 
-    // Only draw the timer bar if we're in an active wave state
+    // Draw the timer bar - show full when not in active wave, actual timer when in active wave
     if (!m_shootoutLevel && m_betweenWaveTimer <= 0 && !m_shopping &&
         !m_merchantArriving && !m_merchantLeaving && !m_waitingForPlayerToMoveDownAMap)
     {
+        // Active wave state - show actual timer
         Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
 
         int timerWidth = static_cast<int>((16 * GetTileSize() - 60) *
@@ -3646,6 +3647,16 @@ void PrairieKing::Draw()
             timerWidth,
             GetTileSize() / 4,
             timerColor);
+    }
+    else
+    {
+        // Not in active wave state - show full timer bar
+        DrawRectangle(
+            static_cast<int>(m_topLeftScreenCoordinate.x + 30),
+            static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
+            16 * GetTileSize() - 60, // Full width
+            GetTileSize() / 4,
+            Color{147, 177, 38, 255}); // Green color (same as when timer > 8000)
     }
 
     // Draw powerup indicators
