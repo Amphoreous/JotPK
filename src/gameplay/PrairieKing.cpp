@@ -1217,31 +1217,37 @@ void PrairieKing::ProcessInputs()
 {
     if (m_gameOver)
     {
-        // Handle game over menu navigation
-        if (IsKeyDown(GameKeys::ShootUp))
+        // Handle game over menu navigation with 3 options
+        if (IsKeyPressed(GameKeys::ShootUp))
         {
             m_gameOverOption = std::max(0, m_gameOverOption - 1);
             PlaySound(GetSound("Cowboy_gunshot"));
         }
-        if (IsKeyDown(GameKeys::ShootDown))
+        if (IsKeyPressed(GameKeys::ShootDown))
         {
-            m_gameOverOption = std::min(1, m_gameOverOption + 1);
+            m_gameOverOption = std::min(2, m_gameOverOption + 1); // Changed from 1 to 2
             PlaySound(GetSound("Cowboy_gunshot"));
         }
 
-        if (IsKeyDown(GameKeys::SelectOption))
+        if (IsKeyPressed(GameKeys::SelectOption))
         {
-            if (m_gameOverOption == 1)
+            switch (m_gameOverOption)
             {
-                CloseWindow();
-            }
-            else
-            {
+            case 0: // Retry
                 Reset();
+                Initialize();
                 m_gameRestartTimer = 1500;
                 m_gameOver = false;
                 m_gameOverOption = 0;
                 PlaySound(GetSound("pickup_coin"));
+                break;
+            case 1: // Back to Main Menu
+                m_shouldReturnToMenu = true;
+                m_gameOver = false;
+                break;
+            case 2: // Quit Game
+                CloseWindow();
+                break;
             }
         }
         return;
@@ -3257,24 +3263,26 @@ void PrairieKing::Draw()
         DrawTextEx(m_assets.GetFont("title"), gameOverText,
                    textPos, 48, 1, WHITE);
 
-        // Draw options
-        const char *retryText = TextFormat("%sRetry", m_gameOverOption == 0 ? "> " : "  ");
-        const char *quitText = TextFormat("%sQuit", m_gameOverOption == 1 ? "> " : "  ");
-
-        // Only draw retry if not restarting or during blink
-        if (m_gameRestartTimer <= 0 || m_gameRestartTimer / 500 % 2 == 0)
+        // Draw options with 3 choices
+        const char *options[] = {"Retry", "Back to Main Menu", "Quit Game"};
+        
+        for (int i = 0; i < 3; i++)
         {
-            DrawTextEx(m_assets.GetFont("text"), retryText,
-                       Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                               m_topLeftScreenCoordinate.y + 9.0f * GetTileSize()},
-                       32, 1, WHITE);
+            const char *optionText = TextFormat("%s%s", 
+                m_gameOverOption == i ? "> " : "  ", options[i]);
+            
+            Vector2 optionPos = {
+                textPos.x,
+                textPos.y + 80.0f + (i * 40.0f)
+            };
+            
+            // Only draw if not restarting or during blink
+            if (m_gameRestartTimer <= 0 || m_gameRestartTimer / 500 % 2 == 0)
+            {
+                DrawTextEx(m_assets.GetFont("text"), optionText,
+                           optionPos, 32, 1, WHITE);
+            }
         }
-
-        DrawTextEx(m_assets.GetFont("text"), quitText,
-                   Vector2{m_topLeftScreenCoordinate.x + 6.0f * GetTileSize(),
-                           m_topLeftScreenCoordinate.y + 9.0f * GetTileSize() + GetTileSize() * 2 / 3.0f},
-                   32, 1, WHITE);
-
         return;
     }
 
@@ -3813,19 +3821,56 @@ void PrairieKing::Draw()
 
     DrawDebugInfo();
 
+    // Draw pause overlay if paused
     if (m_isPaused)
     {
-        // Draw semi-transparent black background
-        Color semiTransparentBlack = {0, 0, 0, 128}; // Last value (128) is alpha: 0-255
-        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), semiTransparentBlack);
-
-        DrawTextEx(m_assets.GetFont("text"), "GAME PAUSED",
-                   Vector2{GetScreenWidth() / 2.0f - 500, 100},
-                   200, 10, WHITE);
-        DrawTextEx(m_assets.GetFont("text"), "Press P to resume the game",
-                   Vector2{GetScreenWidth() / 2.0f - 242, 400},
-                   50, 2, WHITE);
-        return;
+        // Draw semi-transparent overlay
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), 
+                     ColorAlpha(BLACK, 0.7f));
+        
+        float centerX = GetScreenWidth() / 2.0f;
+        float centerY = GetScreenHeight() / 2.0f;
+        
+        // Draw "PAUSED" text
+        const char *pausedText = "PAUSED";
+        Vector2 pausedSize = MeasureTextEx(m_assets.GetFont("title"), pausedText, 48, 1);
+        DrawTextEx(m_assets.GetFont("title"), pausedText,
+                   Vector2{centerX - pausedSize.x/2, centerY - 100},
+                   48, 1, WHITE);
+        
+        if (!m_showPauseSettings)
+        {
+            // Draw pause menu options
+            const char *options[] = {"Resume", "Settings", "Back to Main Menu"};
+            
+            for (int i = 0; i < 3; i++)
+            {
+                const char *optionText = TextFormat("%s%s", 
+                    m_pauseOption == i ? "> " : "  ", options[i]);
+                
+                Vector2 optionPos = {
+                    centerX - 100,
+                    centerY + (i * 40.0f)
+                };
+                
+                DrawTextEx(m_assets.GetFont("text"), optionText,
+                           optionPos, 32, 1, WHITE);
+            }
+        }
+        else
+        {
+            // Draw settings menu (simplified version)
+            DrawTextEx(m_assets.GetFont("text"), "Settings (Press ESC to go back)",
+                       Vector2{centerX - 150, centerY},
+                       24, 1, WHITE);
+            
+            if (IsKeyPressed(GameKeys::Exit))
+            {
+                m_showPauseSettings = false;
+            }
+        }
+        
+        return; // Don't draw game elements when paused
     }
 
     // Add to PrairieKing::Draw() method
@@ -5692,9 +5737,42 @@ void PrairieKing::DrawShopping(const Texture2D &texture, Vector2 topLeftScreenCo
 
 void PrairieKing::PauseScreen()
 {
-}
+    // Handle pause menu navigation
+    if (IsKeyPressed(GameKeys::ShootUp))
+    {
+        m_pauseOption = std::max(0, m_pauseOption - 1);
+        PlaySound(GetSound("Cowboy_gunshot"));
+    }
+    if (IsKeyPressed(GameKeys::ShootDown))
+    {
+        m_pauseOption = std::min(2, m_pauseOption + 1);
+        PlaySound(GetSound("Cowboy_gunshot"));
+    }
 
-// Add these implementations to your PrairieKing.cpp file
+    if (IsKeyPressed(GameKeys::SelectOption))
+    {
+        switch (m_pauseOption)
+        {
+        case 0: // Resume
+            m_isPaused = false;
+            m_pauseOption = 0;
+            break;
+        case 1: // Settings
+            m_showPauseSettings = true;
+            break;
+        case 2: // Back to Main Menu
+            m_shouldReturnToMenu = true;
+            m_isPaused = false;
+            break;
+        }
+    }
+
+    if (IsKeyPressed(GameKeys::Pause) || IsKeyPressed(GameKeys::Exit))
+    {
+        m_isPaused = false;
+        m_pauseOption = 0;
+    }
+}
 
 // ====================
 // DRACULA IMPLEMENTATION

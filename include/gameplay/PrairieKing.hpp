@@ -604,4 +604,7 @@ private:
 
     void ApplyPurchasedUpgrade(int itemId);
     void DrawShopping(const Texture2D &texture, Vector2 topLeftScreenCoordinate);
+
+    int m_pauseOption = 0;
+    bool m_showPauseSettings = false;
 };
