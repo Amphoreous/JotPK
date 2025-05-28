@@ -199,7 +199,7 @@ void PrairieKing::Initialize()
     m_lives = 3;
     m_coins = 0;
     m_score = 0;
-    m_bulletDamage = 9999;
+    m_bulletDamage = 1;
     m_fireSpeedLevel = 0;
     m_ammoLevel = 0;
     m_runSpeedLevel = 0;
@@ -355,6 +355,9 @@ void PrairieKing::ApplyLevelSpecificStates()
             PlayMusicStream(m_draculaSong);
             SetMusicVolume(m_draculaSong, 0.7f);
         }
+
+        // Set betweenWaveTimer to 0 for immediate boss fight start
+        m_betweenWaveTimer = 0;
     }
     else if (m_whichWave > 0 && m_whichWave % 4 == 0)
     {
@@ -375,6 +378,10 @@ void PrairieKing::ApplyLevelSpecificStates()
             PlayMusicStream(m_outlawSong);
             SetMusicVolume(m_outlawSong, 0.7f);
         }
+
+        // Set betweenWaveTimer to 0 for immediate boss fight start
+        m_betweenWaveTimer = 0;
+        m_waveTimer = GameConstants::WAVE_DURATION;
     }
     else
     {
