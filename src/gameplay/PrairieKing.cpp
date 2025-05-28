@@ -1525,8 +1525,8 @@ bool PrairieKing::IsCollidingWithMapForMonsters(Rectangle positionToCheck)
     // Check if any part of the monster would be outside the 16x16 map boundaries
     // Map boundaries are from tile (0,0) to tile (15,15)
     // For pixel-perfect boundaries, check the actual pixel positions
-    if (positionToCheck.x < 0 || positionToCheck.y < 0 || 
-        positionToCheck.x + positionToCheck.width > 16 * GetTileSize() || 
+    if (positionToCheck.x < 0 || positionToCheck.y < 0 ||
+        positionToCheck.x + positionToCheck.width > 16 * GetTileSize() ||
         positionToCheck.y + positionToCheck.height > 16 * GetTileSize())
     {
         return true; // Collision with map boundary
@@ -1543,7 +1543,7 @@ bool PrairieKing::IsCollidingWithMapForMonsters(Rectangle positionToCheck)
             }
         }
     }
-    
+
     return false;
 }
 
@@ -2774,7 +2774,8 @@ void PrairieKing::Update(float deltaTime)
             memcpy(m_map, m_nextMap, sizeof(m_map));
             m_newMapPosition = 16 * GetTileSize();
             m_shopping = false;
-            if (!m_shootoutLevel) m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
+            if (!m_shootoutLevel)
+                m_betweenWaveTimer = GameConstants::BETWEEN_WAVE_DURATION;
             m_waitingForPlayerToMoveDownAMap = false;
             m_playerMovementDirections.clear();
             ApplyLevelSpecificStates();
@@ -2796,7 +2797,6 @@ void PrairieKing::Update(float deltaTime)
     {
         DiscordManager::UpdatePresence("End Cutscene", "Completing Prairie King");
     }
-    
 
     // Add this to PrairieKing::Update() method
     if (m_gopherTrain)
@@ -3661,13 +3661,31 @@ void PrairieKing::Draw()
     }
     else if (!m_shootoutLevel)
     {
-        // Not in active wave state - show full timer bar
-        DrawRectangle(
-            static_cast<int>(m_topLeftScreenCoordinate.x + 30),
-            static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
-            16 * GetTileSize() - 60, // Full width
-            GetTileSize() / 4,
-            Color{147, 177, 38, 255}); // Green color (same as when timer > 8000)
+        if (m_died)
+        {
+            Color timerColor = (m_waveTimer < 8000) ? Color{188, 51, 74, 255} : Color{147, 177, 38, 255};
+
+            int timerWidth = static_cast<int>((16 * GetTileSize() - 60) *
+                                              (static_cast<float>(m_waveTimer) / WAVE_DURATION));
+            timerWidth = std::min(timerWidth, 16 * GetTileSize() - 60);
+
+            DrawRectangle(
+                static_cast<int>(m_topLeftScreenCoordinate.x + 30),
+                static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
+                timerWidth,
+                GetTileSize() / 4,
+                timerColor);
+        }
+        else
+        {
+            // Not in active wave state - show full timer bar
+            DrawRectangle(
+                static_cast<int>(m_topLeftScreenCoordinate.x + 30),
+                static_cast<int>(m_topLeftScreenCoordinate.y - GetTileSize() / 2 + 3),
+                16 * GetTileSize() - 60, // Full width
+                GetTileSize() / 4,
+                Color{147, 177, 38, 255}); // Green color (same as when timer > 8000)
+        }
     }
 
     // Draw powerup indicators
