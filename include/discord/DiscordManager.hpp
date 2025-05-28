@@ -14,4 +14,5 @@ public:
 
 private:
     static std::unique_ptr<discord::Core> s_core;
+    static std::int64_t s_startTime;
 };
