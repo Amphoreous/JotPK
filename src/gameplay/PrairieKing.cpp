@@ -381,7 +381,6 @@ void PrairieKing::ApplyLevelSpecificStates()
 
         // Set betweenWaveTimer to 0 for immediate boss fight start
         m_betweenWaveTimer = 0;
-        m_waveTimer = GameConstants::WAVE_DURATION;
     }
     else
     {
