@@ -96,5 +96,5 @@ void GameplayScreen::Draw() {
 }
 
 bool GameplayScreen::IsFinished() const {
-    return m_game->IsGameOver();
+    return m_game->IsGameOver() || m_game->ShouldReturnToMenu();
 }

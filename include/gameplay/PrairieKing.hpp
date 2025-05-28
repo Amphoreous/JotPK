@@ -399,6 +399,8 @@ public:
     void Update(float deltaTime);
     void Draw();
     bool IsGameOver() const { return m_gameOver; }
+    bool ShouldReturnToMenu() const { return m_shouldReturnToMenu; }
+    void SetShouldReturnToMenu(bool value) { m_shouldReturnToMenu = value; }
 
     // Game state functions
     bool LoadGame();
@@ -545,6 +547,7 @@ private:
     int m_world;
     bool m_waveCompleted = false;
     bool m_godMode = false;
+    bool m_shouldReturnToMenu = false;
 
     // Game objects
     Vector2 m_playerPosition;
