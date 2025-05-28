@@ -1233,7 +1233,7 @@ void PrairieKing::ProcessInputs()
         {
             if (m_gameOverOption == 1)
             {
-                m_quit = true;
+                CloseWindow();
             }
             else
             {
@@ -4467,11 +4467,25 @@ PrairieKing::CowboyMonster::CowboyMonster(AssetManager &assets, int which, Vecto
         break;
 
     case GameConstants::SPIKEY:
-        health = 2; // Vida normal
-        speed = 1.8f;
+    {
+        health = 2;
+        speed = 3.0f; // Changed from 1.8f to 3.0f to match C#
         spikeyIsBlock = false;
         spikeyWalkTimer = 0.0f;
+        invisible = false; // Add this
+        special = false;   // Add this
+
+        // Set random target position like C# does
+        int tries = 0;
+        do
+        {
+            targetPosition = {
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
+                static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize())};
+            tries++;
+        } while (PrairieKing::GetGameInstance()->IsCollidingWithMap(targetPosition) && tries < 10);
         break;
+    }
 
     case GameConstants::OGRE:
         health = 3;   // Los ogros son más resistentes
@@ -4551,33 +4565,15 @@ PrairieKing::Outlaw::Outlaw(AssetManager &assets, Vector2 position, int health)
 }
 
 // Implementación de los métodos virtuales de CowboyMonster
+// Update the Draw method to handle invisible and special states:
 void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftScreenCoordinate)
 {
-
-    if (type == GameConstants::SPIKEY && spikeyIsBlock)
-    {
-        Rectangle blockSource;
-        if (flashColorTimer > 0.0f)
-        {
-            // Textura de impacto para Spikey bloqueado
-            blockSource = {352.0f, 48.0f, 16.0f, 16.0f};
-        }
-        else
-        {
-            // Textura normal de bloque
-            blockSource = {448.0f, 64.0f, 16.0f, 16.0f};
-        }
-        Rectangle destRect = {
-            topLeftScreenCoordinate.x + position.x,
-            topLeftScreenCoordinate.y + position.y,
-            position.width,
-            position.height};
-        DrawTexturePro(texture, blockSource, destRect, Vector2{0, 0}, 0.0f, WHITE);
-        return;
-    }
-
-    // Don't draw if the monster is invisible
+    // Don't draw if invisible (except spikey which has special handling)
     if (invisible && type != GameConstants::SPIKEY)
+        return;
+
+    // For spikey, don't draw anything when invisible
+    if (type == GameConstants::SPIKEY && invisible)
         return;
 
     Rectangle destRect = {
@@ -4586,7 +4582,6 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         position.width,
         position.height};
 
-    // Determine the texture rectangle based on monster type
     Rectangle sourceRect;
 
     if (type == GameConstants::SPIKEY && special)
@@ -4594,11 +4589,11 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         // Special Spikey has different sprites
         if (flashColorTimer > 0.0f)
         {
-            sourceRect = {480.0f, 112.0f, 16.0f, 16.0f};
+            sourceRect = {352.0f, 48.0f, 16.0f, 16.0f}; // Flash sprite for special spikey
         }
         else
         {
-            sourceRect = {576.0f, 128.0f, 16.0f, 16.0f};
+            sourceRect = {448.0f, 64.0f, 16.0f, 16.0f}; // Special spikey sprite
         }
     }
     else if (!invisible)
@@ -4611,34 +4606,34 @@ void PrairieKing::CowboyMonster::Draw(const Texture2D &texture, Vector2 topLeftS
         }
         else
         {
-            // Walking animation
-            sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), 64.0f, 16.0f, 16.0f};
+            // Walking animation - corrected for spikey
+            if (type == GameConstants::SPIKEY)
+            {
+                sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), 64.0f, 16.0f, 16.0f};
+            }
+            else
+            {
+                sourceRect = {static_cast<float>(224 + (type * 2 + ((movementAnimationTimer < 250.0f) ? 1 : 0)) * 16), 64.0f, 16.0f, 16.0f};
+            }
         }
+    }
 
-        // Draw the monster
-        DrawTexturePro(texture, sourceRect, destRect, Vector2{0, 0}, 0.0f, WHITE);
+    // Draw the monster
+    DrawTexturePro(texture, sourceRect, destRect, Vector2{0, 0}, 0.0f, WHITE);
 
-        // Draw confusion indicator if monster is confused
-        if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
-        {
-            // Get font and text measurements from the asset manager
-            Font smallFont = PrairieKing::GetGameInstance()->m_assets.GetFont("small");
-            const char *text = "?";
-            Vector2 textSize = MeasureTextEx(smallFont, text, 16.0f, 1.0f);
+    // Draw confusion indicator if monster is confused
+    if (PrairieKing::GetGameInstance()->m_monsterConfusionTimer > 0)
+    {
+        Font smallFont = PrairieKing::GetGameInstance()->m_assets.GetFont("small");
+        const char *text = "?";
+        Vector2 textSize = MeasureTextEx(smallFont, text, 16.0f, 1.0f);
 
-            // Position for the question mark
-            Vector2 textPos = {
-                topLeftScreenCoordinate.x + position.x + position.width / 2 - textSize.x / 2,
-                topLeftScreenCoordinate.y + position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2};
+        Vector2 textPos = {
+            topLeftScreenCoordinate.x + position.x + position.width / 2 - textSize.x / 2,
+            topLeftScreenCoordinate.y + position.y - PrairieKing::GetGameInstance()->GetTileSize() / 2};
 
-            // Draw with "drop shadow" effect
-            Color confusionColor = {88, 29, 43, 255}; // Dark red color
-
-            // Draw question mark with slight offsets for outline effect
-            DrawTextEx(smallFont, text, Vector2{textPos.x, textPos.y}, 16.0f, 1.0f, confusionColor);
-            DrawTextEx(smallFont, text, Vector2{textPos.x + 1.0f, textPos.y}, 16.0f, 1.0f, confusionColor);
-            DrawTextEx(smallFont, text, Vector2{textPos.x - 1.0f, textPos.y}, 16.0f, 1.0f, confusionColor);
-        }
+        Color confusionColor = {88, 29, 43, 255};
+        DrawTextEx(smallFont, text, textPos, 16.0f, 1.0f, confusionColor);
     }
 }
 
@@ -4937,28 +4932,13 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
     }
     case GameConstants::SPIKEY:
     {
-        // --- SOLO SPIKEYS PUEDEN ENTRAR EN MODO BLOQUE ---
-        if (spikeyIsBlock)
+        // Skip movement if special or invisible
+        if (special || invisible)
         {
-            // No se mueve si es bloque
-            return false;
-        }
-        spikeyWalkTimer += deltaTime;
-        if (spikeyWalkTimer >= 7.0f)
-        {
-            spikeyIsBlock = true;
-            health = 7;
-            position.width = PrairieKing::GetGameInstance()->GetTileSize();
-            position.height = PrairieKing::GetGameInstance()->GetTileSize();
-            position.x = std::round(position.x / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
-            position.y = std::round(position.y / PrairieKing::GetGameInstance()->GetTileSize()) * PrairieKing::GetGameInstance()->GetTileSize();
             return false;
         }
 
-        if (special || invisible)
-        {
-            break;
-        }
+        // Get new random target after being stuck
         if (ticksSinceLastMovement > 20)
         {
             int tries = 0;
@@ -4987,8 +4967,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         }
 
         // Determine movement direction
-        if ((!oppositeMotionGuy) ||
-            std::abs(target.x - position.x) > std::abs(target.y - position.y))
+        if (!oppositeMotionGuy || std::abs(target.x - position.x) > std::abs(target.y - position.y))
         {
             if (target.x + speed < position.x && (movedLastTurn || movementDirection != 3))
             {
@@ -5060,7 +5039,7 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
             PrairieKing::GetGameInstance()->IsCollidingWithMonster(attemptedPosition, this) ||
             PrairieKing::GetGameInstance()->m_deathTimer > 0.0f)
         {
-            // Si el monstruo está atascado, elige un nuevo target aleatorio
+            // If stuck, get new target
             ticksSinceLastMovement = 0;
             targetPosition = {
                 static_cast<float>(GetRandomInt(2, 14) * PrairieKing::GetGameInstance()->GetTileSize()),
@@ -5074,17 +5053,33 @@ bool PrairieKing::CowboyMonster::Move(Vector2 playerPosition, float deltaTime)
         movedLastTurn = true;
 
         // Check if we reached the target
-        if (!CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
-                                     target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
-                                    position))
+        if (CheckCollisionPointRec({target.x + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f,
+                                    target.y + PrairieKing::GetGameInstance()->GetTileSize() / 2.0f},
+                                   position))
         {
-            break;
-        }
+            // Reset target
+            targetPosition = {0.0f, 0.0f};
 
-        // Reset target
-        targetPosition = {0.0f, 0.0f};
+            // SPECIAL SPIKEY TRANSFORMATION (matching C# exactly)
+            if (!invisible)
+            {
+                // Add transformation effect
+                PrairieKing::TemporaryAnimatedSprite transformEffect(
+                    Rectangle{224, 80, 16, 16}, 60.0f, 3, 0,
+                    {position.x + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.x,
+                     position.y + PrairieKing::GetGameInstance()->m_topLeftScreenCoordinate.y},
+                    0.0f, 3.0f, false, position.y / 10000.0f, WHITE);
+
+                transformEffect.endFunction = [this](int extra)
+                { SpikeyEndBehavior(extra); };
+                PrairieKing::GetGameInstance()->AddTemporarySprite(transformEffect);
+
+                invisible = true;
+            }
+        }
         break;
     }
+
     case GameConstants::EVIL_BUTTERFLY:
     case GameConstants::IMP:
     {

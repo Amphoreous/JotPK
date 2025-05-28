@@ -161,7 +161,6 @@ public:
     static constexpr int PLAYER_FOOTSTEP_DELAY = 200;
     static constexpr int DEATH_DELAY = 3000;
 
-
     // Map tile types
     static constexpr int MAP_BARRIER1 = 0;
     static constexpr int MAP_BARRIER2 = 1;
@@ -306,7 +305,7 @@ public:
         int health;
         int type;
         int speed;
-        //Spikey
+        // Spikey
         bool spikeyIsBlock = false;
         float spikeyWalkTimer = 0.0f;
         float movementAnimationTimer;
@@ -333,8 +332,12 @@ public:
         virtual bool TakeDamage(int damage);
         virtual int GetLootDrop();
         virtual bool Move(Vector2 playerPosition, float deltaTime);
-        void SpikeyEndBehavior(int extraInfo);
-
+        void SpikeyEndBehavior(int extraInfo)
+        {
+            invisible = false; // Become visible again
+            health += 5;       // Gain 5 health (total 7)
+            special = true;    // Mark as special
+        }
         // Funciones auxiliares para el movimiento
         Vector2 GetVelocityTowardPoint(Vector2 start, Vector2 end, float speed);
         int GetRandomInt(int min, int max);
