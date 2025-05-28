@@ -3108,108 +3108,110 @@ void PrairieKing::Draw()
 
             break;
 
-            case 4:
-            case 5:
-                // Victory screen with "THE END" message and menu
+        case 4:
+        case 5:
+            // Victory screen with "THE END" message and menu
+            {
+                // Draw black background
+                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+
+                // Calculate screen center
+                float centerX = GetScreenWidth() / 2.0f;
+                float centerY = GetScreenHeight() / 2.0f;
+
+                // Calculate THE END logo scale based on screen size (made bigger)
+                float baseWidth = 64.0f;                      // Original sprite width
+                float baseHeight = 48.0f;                     // Original sprite height
+                float targetWidth = GetScreenWidth() * 0.30f; // Increased from 15% to 20% of screen width
+                float scale = targetWidth / baseWidth;
+
+                // Draw THE END logo - moved higher up for better spacing
+                DrawTexturePro(
+                    GetTexture("cursors"),
+                    Rectangle{96.0f, 96.0f, baseWidth, baseHeight},
+                    Rectangle{
+                        centerX - (baseWidth * scale) / 2.0f,
+                        centerY - (baseHeight * scale) / 2.0f - 120.0f, // Moved up from -50 to -120
+                        baseWidth * scale,
+                        baseHeight * scale},
+                    Vector2{0, 0}, 0.0f,
+                    (m_endCutsceneTimer > 0) ? ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f))
+                                             : WHITE);
+
+                if (m_endCutscenePhase == 5)
                 {
-                    // Draw black background
-                    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
-            
-                    // Calculate screen center
-                    float centerX = GetScreenWidth() / 2.0f;
-                    float centerY = GetScreenHeight() / 2.0f;
-            
-                    // Calculate THE END logo scale based on screen size (made bigger)
-                    float baseWidth = 64.0f;                     // Original sprite width
-                    float baseHeight = 48.0f;                    // Original sprite height
-                    float targetWidth = GetScreenWidth() * 0.30f; // Increased from 15% to 20% of screen width
-                    float scale = targetWidth / baseWidth;
-            
-                    // Draw THE END logo - moved higher up for better spacing
-                    DrawTexturePro(
-                        GetTexture("cursors"),
-                        Rectangle{96.0f, 96.0f, baseWidth, baseHeight},
-                        Rectangle{
-                            centerX - (baseWidth * scale) / 2.0f,
-                            centerY - (baseHeight * scale) / 2.0f - 120.0f, // Moved up from -50 to -120
-                            baseWidth * scale,
-                            baseHeight * scale},
-                        Vector2{0, 0}, 0.0f,
-                        (m_endCutsceneTimer > 0) ? ColorAlpha(WHITE, 1.0f - (static_cast<float>(m_endCutsceneTimer) / 1000.0f))
-                                                 : WHITE);
-            
-                    if (m_endCutscenePhase == 5)
+                    const char *options[] = {
+                        "Continue to New Game+",
+                        "Back to Main Menu",
+                        "Quit Game"};
+
+                    // Calculate menu positioning with better spacing
+                    float menuStartY = centerY + 40.0f; // Moved closer to center
+                    float buttonHeight = 60.0f;         // Increased button height
+                    float buttonSpacing = 30.0f;        // Increased spacing between buttons
+                    float buttonWidth = 350.0f;         // Increased button width
+
+                    for (int i = 0; i < 3; i++)
                     {
-                        const char *options[] = {
-                            "Continue to New Game+",
-                            "Back to Main Menu",
-                            "Quit Game"};
-            
-                        // Calculate menu positioning with better spacing
-                        float menuStartY = centerY + 40.0f; // Moved closer to center
-                        float buttonHeight = 60.0f;         // Increased button height
-                        float buttonSpacing = 30.0f;        // Increased spacing between buttons
-                        float buttonWidth = 350.0f;         // Increased button width
-            
-                        for (int i = 0; i < 3; i++)
+                        // Calculate button position
+                        Rectangle buttonRect = {
+                            centerX - buttonWidth / 2.0f,
+                            menuStartY + (buttonHeight + buttonSpacing) * i,
+                            buttonWidth,
+                            buttonHeight};
+
+                        // Check mouse hover and click
+                        Vector2 mousePos = GetMousePosition();
+                        bool isHovered = CheckCollisionPointRec(mousePos, buttonRect);
+                        Color buttonColor = isHovered ? RED : WHITE;
+
+                        // Draw button background with semi-transparency
+                        DrawRectangleRec(buttonRect,
+                                         ColorAlpha(BLACK, isHovered ? 0.8f : 0.6f));
+
+                        // Draw button border
+                        DrawRectangleLinesEx(buttonRect, 2, buttonColor);
+
+                        // Calculate text position to center it in button
+                        Vector2 textSize = MeasureTextEx(m_assets.GetFont("text"), options[i], 28, 1); // Increased font size
+                        Vector2 textPos = {
+                            buttonRect.x + (buttonRect.width - textSize.x) / 2.0f,
+                            buttonRect.y + (buttonRect.height - textSize.y) / 2.0f};
+
+                        // Draw button text
+                        DrawTextEx(m_assets.GetFont("text"), options[i],
+                                   textPos, 28, 1, buttonColor); // Increased font size from 24 to 28
+
+                        // Handle click
+                        if (isHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
                         {
-                            // Calculate button position
-                            Rectangle buttonRect = {
-                                centerX - buttonWidth / 2.0f,
-                                menuStartY + (buttonHeight + buttonSpacing) * i,
-                                buttonWidth,
-                                buttonHeight};
-            
-                            // Check mouse hover and click
-                            Vector2 mousePos = GetMousePosition();
-                            bool isHovered = CheckCollisionPointRec(mousePos, buttonRect);
-                            Color buttonColor = isHovered ? RED : WHITE;
-            
-                            // Draw button background with semi-transparency
-                            DrawRectangleRec(buttonRect,
-                                             ColorAlpha(BLACK, isHovered ? 0.8f : 0.6f));
-            
-                            // Draw button border
-                            DrawRectangleLinesEx(buttonRect, 2, buttonColor);
-            
-                            // Calculate text position to center it in button
-                            Vector2 textSize = MeasureTextEx(m_assets.GetFont("text"), options[i], 28, 1); // Increased font size
-                            Vector2 textPos = {
-                                buttonRect.x + (buttonRect.width - textSize.x) / 2.0f,
-                                buttonRect.y + (buttonRect.height - textSize.y) / 2.0f};
-            
-                            // Draw button text
-                            DrawTextEx(m_assets.GetFont("text"), options[i],
-                                       textPos, 28, 1, buttonColor); // Increased font size from 24 to 28
-            
-                            // Handle click
-                            if (isHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                            switch (i)
                             {
-                                switch (i)
-                                {
-                                case 0: // Continue to New Game+
-                                    m_whichRound++;
-                                    StartNewRound();
-                                    m_endCutscene = false;
-                                    m_endCutscenePhase = 0;
-                                    break;
-            
-                                case 1: // Back to Main Menu
-                                    // Use Screen's finish mechanism to return to menu
-                                    m_isGameOver = true;
-                                    break;
-            
-                                case 2: // Quit Game
-                                    // Use same quit mechanism as MenuScreen
-                                    CloseWindow();
-                                    break;
-                                }
+                            case 0: // Continue to New Game+
+                                m_whichRound++;
+                                StartNewRound();
+                                m_endCutscene = false;
+                                m_endCutscenePhase = 0;
+                                break;
+
+                            case 1: // Back to Main Menu
+                                // Set flag to return to main menu instead of setting m_isGameOver
+                                m_shouldReturnToMenu = true;
+                                m_endCutscene = false;
+                                m_endCutscenePhase = 0;
+                                break;
+
+                            case 2: // Quit Game
+                                // Use same quit mechanism as MenuScreen
+                                CloseWindow();
+                                break;
                             }
                         }
                     }
                 }
-                break;
             }
+            break;
+        }
 
         return; // Don't draw normal game elements during cutscene
     }

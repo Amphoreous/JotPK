@@ -43,6 +43,12 @@ void Game::Update(float deltaTime) {
                  dynamic_cast<HowToPlayScreen*>(m_currentScreen.get())) {
             m_currentScreen = std::make_unique<MenuScreen>(m_assets, m_pixelScale);
         }
+        else if (auto* gameplayScreen = dynamic_cast<GameplayScreen*>(m_currentScreen.get())) {
+            // Handle return from gameplay screen
+            m_state = GameState::Menu;
+            m_currentScreen = nullptr; // Clear current screen first
+            m_currentScreen = std::make_unique<MenuScreen>(m_assets, m_pixelScale);
+        }
     }
     
     if (m_currentScreen) {
