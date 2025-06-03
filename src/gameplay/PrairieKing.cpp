@@ -5524,7 +5524,7 @@ void PrairieKing::DrawDebugInfo()
     DrawText(TextFormat("Bullets: %d", m_bullets.size()), 10, currentY, 20, debugColor);
     currentY += lineHeight;
 
-    DrawText(TextFormat("Powerups: %d", m_powerups.size()), 10, currentY, 20, debugColor);
+    DrawText(TextFormat("Powerups: %zu", m_powerups.size()), 10, currentY, 20, debugColor);
     currentY += lineHeight;
 
     // Player Stats
