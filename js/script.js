@@ -26,6 +26,9 @@ const navMenu = document.getElementById('nav-menu');
 hamburger.addEventListener('click', () => {
     hamburger.classList.toggle('active');
     navMenu.classList.toggle('active');
+    
+    // Prevent body scroll when menu is open
+    document.body.classList.toggle('menu-open');
 });
 
 // Close mobile menu when clicking a link
@@ -33,7 +36,17 @@ document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', () => {
         hamburger.classList.remove('active');
         navMenu.classList.remove('active');
+        document.body.classList.remove('menu-open');
     });
+});
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
+        hamburger.classList.remove('active');
+        navMenu.classList.remove('active');
+        document.body.classList.remove('menu-open');
+    }
 });
 
 // Smooth Scrolling for Anchor Links
